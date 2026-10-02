@@ -1,0 +1,64 @@
+.collection-drawer-actions {
+  flex: 0 0 auto;
+  padding: 18px 22px 22px;
+  border-top: 1px solid rgba(6, 28, 43, 0.14);
+  background: #ffffff;
+}
+
+.collection-drawer-total {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  color: #061C2B;
+  font-size: 12px;
+}
+
+.collection-drawer-total strong {
+  color: #9A741F;
+  font-family: "Cinzel", serif;
+  font-size: 15px;
+}
+
+.collection-drawer-actions > button {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #C9A24B;
+  background: #C9A24B;
+  color: #061C2B;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.3px;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.collection-drawer-actions > button:hover {
+  background: #061C2B;
+  color: #C9A24B;
+}
+
+.about-drawer,
+.gem-drawer,
+.detail-cart-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.about-drawer-header,
+.gem-drawer-header,
+.detail-cart-header {
+  flex: 0 0 80px;
+}
+
+.about-drawer-body,
+.gem-drawer-body,
+.detail-cart-items {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.detail-cart-panel {
+  overflow: hidden;
+}

@@ -1,0 +1,175 @@
+.trust-page-shell {
+  min-height: 100vh;
+  padding-top: 0;
+  background: #f7f3e8;
+  font-family: "Montserrat", sans-serif;
+  position: relative;
+}
+
+.trust-page-hero {
+  min-height: 480px;
+  height: 55vh;
+  padding-top: 100px;
+}
+
+.trust-page-hero h1 {
+  font-family: "Cinzel", serif;
+  font-size: clamp(32px, 5vw, 54px);
+  color: #ffffff;
+  margin: 14px 0 16px;
+  font-weight: 600;
+}
+
+.trust-page-hero p {
+  max-width: 760px;
+  margin: 0 auto;
+  color: rgba(247, 243, 232, 0.88);
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+.trust-page-shell .trust-certification {
+  padding-top: 40px !important;
+}
+
+.trust-certification {
+  color: #061c2b;
+  background: #f7f3e8 !important;
+}
+
+.trust-certification .text-slate-900,
+.trust-certification .text-slate-800,
+.trust-certification .text-slate-700 {
+  color: #061c2b !important;
+}
+
+.trust-certification .text-slate-600,
+.trust-certification .text-slate-500,
+.trust-certification .text-slate-400 {
+  color: #65736d !important;
+}
+
+.trust-certification .text-amber-600,
+.trust-certification .text-amber-700,
+.trust-certification .text-amber-800 {
+  color: #806522 !important;
+}
+
+.trust-certification .bg-amber-600 {
+  background: #c9a24b !important;
+  color: #061c2b !important;
+}
+
+.trust-certification .hover\:bg-amber-700:hover {
+  background: #b48b35 !important;
+}
+
+.trust-certification .bg-amber-100,
+.trust-certification .bg-amber-50 {
+  background: #f3e7c6 !important;
+}
+
+.trust-certification .border-slate-200,
+.trust-certification .border-slate-300 {
+  border-color: #e5dcc7 !important;
+}
+
+.trust-certification .bg-slate-900,
+.trust-certification .bg-slate-800 {
+  background: #061c2b !important;
+}
+
+.trust-certification .bg-slate-800 {
+  color: #f7f3e8 !important;
+}
+
+.trust-certification .text-slate-300,
+.trust-certification .text-slate-200 {
+  color: #f7f3e8 !important;
+}
+
+.trust-report-image-frame {
+  display: grid;
+  place-items: center;
+  max-height: 65vh;
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid #e5dcc7;
+  border-radius: 4px;
+  background: #f7f3e8;
+}
+
+.trust-report-image-frame img {
+  display: block;
+  width: 100%;
+  max-height: 62vh;
+  object-fit: contain;
+}
+
+.trust-result-report-preview {
+  display: block;
+  width: min(220px, 100%);
+  height: 150px;
+  margin: 18px 0 4px;
+  padding: 6px;
+  overflow: hidden;
+  border: 1px solid #e5dcc7;
+  border-radius: 4px;
+  background: #ffffff;
+  cursor: zoom-in;
+}
+
+.trust-result-report-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.trust-certificate-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 10px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.trust-certificate-status.verified {
+  background: #e8f1e8;
+  color: #386344;
+}
+
+.trust-certificate-status.record-found {
+  background: #f3e7c6;
+  color: #806522;
+}
+
+.trust-certificate-pending {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  border-left: 3px solid #c9a24b;
+  background: #f7f3e8;
+  color: #65736d;
+  font-size: 12px;
+}
+
+/* Smooth scrolling for page navigation */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar for modal reports or search areas */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

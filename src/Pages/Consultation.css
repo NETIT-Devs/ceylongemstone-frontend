@@ -1,0 +1,346 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&display=swap');
+
+.consultation-page {
+  min-height: 100vh;
+  background: #f5f4ef;
+  color: #102d2a;
+  font-family: "Montserrat", sans-serif;
+  position: relative;
+}
+
+.consultation-navbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  height: 88px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5%;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(201, 162, 75, 0.35);
+}
+
+.consultation-page a {
+  text-decoration: none;
+}
+
+.consultation-nav-back {
+  padding: 10px 14px;
+  border: 1px solid #c9a24b;
+  color: #e1c475;
+  font-size: 10px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.consultation-video-section {
+  width: min(1240px, 90%);
+  margin: 0 auto;
+  padding: 112px 0 42px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, .85fr);
+  align-items: center;
+  gap: 48px;
+}
+
+.consultation-video-frame {
+  position: relative;
+  min-width: 0;
+  aspect-ratio: 16 / 9;
+  background: #081c1a;
+}
+
+.consultation-video-frame video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.consultation-video-caption {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 10px 14px;
+  background: linear-gradient(transparent, rgba(0,0,0,.75));
+  color: #ffffff;
+  font-size: 10px;
+  pointer-events: none;
+}
+
+.consultation-eyebrow {
+  margin: 0 0 12px;
+  color: #98752e;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.7px;
+}
+
+.consultation-video-copy h1 {
+  margin: 0;
+  color: #082d2b;
+  font: 500 34px/1.2 "Cinzel", serif;
+}
+
+.consultation-video-copy > p:not(.consultation-eyebrow) {
+  margin: 16px 0 22px;
+  color: #586762;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.consultation-video-copy > a {
+  color: #876821;
+  font-size: 10px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.consultation-video-copy > a span {
+  margin-left: 7px;
+}
+
+.consultation-specialists {
+  padding: 40px max(5%, calc((100vw - 1240px) / 2)) 52px;
+  background: #082d2b;
+  color: #f5f4ef;
+}
+
+.consultation-section-heading {
+  margin-bottom: 26px;
+  text-align: center;
+}
+
+.consultation-section-heading h2,
+.consultation-booking-heading h2 {
+  margin: 0;
+  font: 500 25px "Cinzel", serif;
+}
+
+.consultation-section-heading > p:last-child {
+  margin: 9px 0 0;
+  color: rgba(245,244,239,.65);
+  font-size: 11px;
+}
+
+.consultant-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.consultant-option {
+  min-width: 0;
+  min-height: 268px;
+  padding: 20px 18px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  border: 1px solid rgba(201,162,75,.32);
+  background: rgba(255,255,255,.035);
+  color: #f5f4ef;
+  text-align: left;
+  cursor: pointer;
+  transition: background .2s ease, border-color .2s ease, transform .2s ease;
+}
+
+.consultant-option:hover,
+.consultant-option.selected {
+  transform: translateY(-3px);
+  border-color: #c9a24b;
+  background: rgba(201,162,75,.1);
+}
+
+.consultant-number {
+  color: #c9a24b;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.consultant-profile {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 76px;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.consultant-profile-copy {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.consultant-photo {
+  width: 76px;
+  height: 76px;
+  flex: 0 0 auto;
+  border: 2px solid rgba(201,162,75,.7);
+  border-radius: 3px;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
+.consultant-title {
+  font: 500 15px/1.4 "Cinzel", serif;
+}
+
+.consultant-specialty {
+  margin-top: 7px;
+  color: #d9b85d;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.consultant-experience {
+  margin-top: 10px;
+  color: rgba(245,244,239,.67);
+  font-size: 10px;
+  line-height: 1.65;
+}
+
+.consultant-select-label {
+  margin-top: auto;
+  padding-top: 16px;
+  color: #dfc373;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.consultation-booking {
+  width: min(1050px, 88%);
+  margin: 0 auto;
+  padding: 52px 0 60px;
+  display: grid;
+  grid-template-columns: .75fr 1.25fr;
+  gap: 44px;
+}
+
+.consultation-booking-heading h2 {
+  color: #082d2b;
+  font-size: 22px;
+}
+
+.consultation-booking-heading > p:last-child {
+  color: #5b6b66;
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.consultation-booking-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 13px;
+}
+
+.consultation-booking-form label {
+  display: grid;
+  gap: 6px;
+  color: #344d47;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.consultation-booking-form input,
+.consultation-booking-form select,
+.consultation-booking-form textarea {
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 11px;
+  border: 1px solid #d4dbd5;
+  background: #ffffff;
+  color: #102d2a;
+  font: 11px "Montserrat", sans-serif;
+}
+
+.consultation-field-wide,
+.consultation-submit,
+.consultation-status {
+  grid-column: 1 / -1;
+}
+
+.consultation-submit {
+  min-height: 46px;
+  border: 1px solid #c9a24b;
+  background: #c9a24b;
+  color: #082d2b;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  cursor: pointer;
+}
+
+.consultation-submit:hover {
+  background: #082d2b;
+  color: #e3c46a;
+}
+
+.consultation-status {
+  margin: 0;
+  color: #2f6655;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+@media (max-width: 1000px) {
+  .consultant-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .consultation-video-section {
+    gap: 30px;
+  }
+}
+
+@media (max-width: 700px) {
+  .consultation-navbar .about-nav-links {
+    display: none;
+  }
+
+  .consultation-video-section {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 96px 0 34px;
+  }
+
+  .consultation-video-copy h1 {
+    font-size: 29px;
+  }
+
+  .consultation-booking {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 38px 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .consultant-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .consultant-option {
+    min-height: 230px;
+  }
+
+  .consultation-booking-form {
+    grid-template-columns: 1fr;
+  }
+
+  .consultation-field-wide,
+  .consultation-submit,
+  .consultation-status {
+    grid-column: auto;
+  }
+}
