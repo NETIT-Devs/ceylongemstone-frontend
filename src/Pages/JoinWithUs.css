@@ -1,0 +1,894 @@
+/* =========================================================
+   JOIN WITH US PAGE STYLES - CEYLON ROYAL GEMSTONES
+   Harmonized with the site palette (#F7F3E8, #061C2B, #C9A24B)
+========================================================= */
+
+.joinus-page-shell {
+  min-height: 100vh;
+  background-color: #F7F3E8;
+  color: #061C2B;
+  font-family: 'Montserrat', sans-serif;
+  overflow-x: hidden;
+}
+
+/* TOP BAR / BACK TO HOME LINK */
+.joinus-top-bar {
+  width: min(1280px, 92%);
+  margin: 18px auto 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 6px 0;
+}
+
+.joinus-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #061C2B;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  padding: 7px 16px;
+  border-radius: 4px;
+  border: 1px solid rgba(201, 162, 75, 0.5);
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(6, 28, 43, 0.06);
+  transition: all 0.25s ease;
+}
+
+.joinus-back-btn:hover {
+  background: #c9a24b;
+  border-color: #c9a24b;
+  transform: translateX(-3px);
+  color: #061C2B;
+  box-shadow: 0 4px 14px rgba(201, 162, 75, 0.3);
+}
+
+/* =========================================================
+   HERO / INTRODUCTION SECTION
+========================================================= */
+.joinus-hero-section {
+  width: min(1280px, 92%);
+  margin: 24px auto 60px;
+  padding: 44px clamp(20px, 4vw, 52px);
+  background: radial-gradient(circle at top right, rgba(201, 162, 75, 0.16), transparent 55%),
+              linear-gradient(145deg, #092336 0%, #061c2b 100%);
+  border: 1px solid rgba(201, 162, 75, 0.4);
+  border-radius: 8px;
+  box-shadow: 0 16px 40px rgba(6, 28, 43, 0.2);
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: clamp(30px, 5vw, 60px);
+  align-items: center;
+  color: #f7f3e8;
+}
+
+.joinus-hero-content {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.joinus-luxury-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  color: #c9a24b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 5px 14px;
+  border-radius: 20px;
+  background: rgba(201, 162, 75, 0.14);
+  border: 1px solid rgba(201, 162, 75, 0.5);
+}
+
+.joinus-luxury-tag svg {
+  font-size: 11px;
+}
+
+.joinus-hero-title {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(32px, 4.2vw, 48px);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.15;
+  color: #ffffff;
+  margin: 0;
+}
+
+.joinus-hero-title span {
+  color: #c9a24b;
+  display: block;
+}
+
+.joinus-hero-tagline {
+  font-size: clamp(16px, 1.8vw, 19px);
+  color: #c9a24b;
+  font-weight: 600;
+  line-height: 1.5;
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+.joinus-hero-desc {
+  font-size: 14px;
+  line-height: 1.75;
+  color: rgba(247, 243, 232, 0.85);
+  margin: 0;
+}
+
+.joinus-hero-highlights {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.joinus-hero-highlights li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: rgba(247, 243, 232, 0.95);
+}
+
+.joinus-hero-highlights li svg {
+  color: #c9a24b;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.joinus-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.joinus-primary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #c9a24b;
+  color: #061c2b;
+  font-family: 'Cinzel', serif;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 16px 34px;
+  border-radius: 6px;
+  border: 1px solid #c9a24b;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.25s ease;
+  box-shadow: 0 6px 22px rgba(201, 162, 75, 0.38);
+}
+
+.joinus-primary-btn:hover {
+  background: transparent;
+  color: #c9a24b;
+  box-shadow: 0 8px 28px rgba(201, 162, 75, 0.48);
+  transform: translateY(-3px);
+}
+
+.joinus-secondary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: transparent;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 14px 26px;
+  border-radius: 6px;
+  border: 1px solid rgba(201, 162, 75, 0.5);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.25s ease;
+}
+
+.joinus-secondary-btn:hover {
+  background: rgba(201, 162, 75, 0.15);
+  border-color: #c9a24b;
+  color: #c9a24b;
+}
+
+/* HERO IMAGE AREA */
+.joinus-hero-image-wrap {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  padding: 6px;
+  background: linear-gradient(135deg, rgba(201, 162, 75, 0.55) 0%, rgba(201, 162, 75, 0.15) 100%);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
+}
+
+.joinus-hero-image-inner {
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #061c2b;
+}
+
+.joinus-hero-img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.joinus-hero-image-wrap:hover .joinus-hero-img {
+  transform: scale(1.03);
+}
+
+.joinus-image-badge {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  right: 14px;
+  background: rgba(6, 28, 43, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(201, 162, 75, 0.45);
+  border-radius: 6px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.joinus-image-badge-text h5 {
+  margin: 0;
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  color: #c9a24b;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.joinus-image-badge-text p {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: rgba(247, 243, 232, 0.8);
+}
+
+.joinus-image-badge-icon {
+  color: #c9a24b;
+  font-size: 18px;
+}
+
+/* =========================================================
+   BENEFITS SECTION - IVORY/CREAM THEME
+========================================================= */
+.joinus-benefits-section {
+  width: min(1280px, 92%);
+  margin: 70px auto;
+}
+
+.joinus-section-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.joinus-section-tag {
+  color: #806522;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.joinus-section-title {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(28px, 3.2vw, 38px);
+  color: #061c2b;
+  letter-spacing: 0.05em;
+  margin: 0 0 10px;
+}
+
+.joinus-section-subtitle {
+  font-size: 14.5px;
+  color: #65736d;
+  max-width: 620px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.joinus-benefits-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: clamp(16px, 2vw, 24px);
+}
+
+.joinus-benefit-card {
+  background: #ffffff;
+  border: 1px solid rgba(201, 162, 75, 0.35);
+  border-radius: 6px;
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(6, 28, 43, 0.05);
+}
+
+.joinus-benefit-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #c9a24b, transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.joinus-benefit-card:hover {
+  transform: translateY(-5px);
+  border-color: #c9a24b;
+  box-shadow: 0 14px 35px rgba(201, 162, 75, 0.18);
+}
+
+.joinus-benefit-card:hover::before {
+  opacity: 1;
+}
+
+.joinus-benefit-icon-box {
+  width: 50px;
+  height: 50px;
+  border-radius: 6px;
+  background: rgba(201, 162, 75, 0.12);
+  border: 1px solid rgba(201, 162, 75, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #806522;
+  font-size: 22px;
+  margin-bottom: 20px;
+  transition: all 0.3s ease;
+}
+
+.joinus-benefit-card:hover .joinus-benefit-icon-box {
+  background: #c9a24b;
+  color: #061c2b;
+  transform: rotate(5deg) scale(1.05);
+}
+
+.joinus-benefit-title {
+  font-family: 'Cinzel', serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #061c2b;
+  margin: 0 0 10px;
+  letter-spacing: 0.02em;
+}
+
+.joinus-benefit-desc {
+  font-size: 14px;
+  line-height: 1.65;
+  color: #65736d;
+  margin: 0;
+}
+
+/* =========================================================
+   CTA BANNER BEFORE FOOTER
+========================================================= */
+.joinus-cta-banner {
+  width: min(1280px, 92%);
+  margin: 70px auto 90px;
+  background: radial-gradient(circle at center, rgba(201, 162, 75, 0.18), transparent 70%),
+              linear-gradient(135deg, #092336 0%, #061c2b 100%);
+  border: 1px solid rgba(201, 162, 75, 0.4);
+  border-radius: 8px;
+  padding: 48px clamp(20px, 4vw, 50px);
+  text-align: center;
+  box-shadow: 0 16px 40px rgba(6, 28, 43, 0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  color: #f7f3e8;
+}
+
+.joinus-cta-banner h3 {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(24px, 3.2vw, 36px);
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: 0.04em;
+}
+
+.joinus-cta-banner p {
+  font-size: 14.5px;
+  color: rgba(247, 243, 232, 0.85);
+  max-width: 620px;
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* =========================================================
+   APPLICATION FORM MODAL OVERLAY - MATCHING SITE MODALS
+   (Palette: #F7F3E8 background, #C9A24B border, #061C2B text)
+========================================================= */
+.joinus-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(6, 28, 43, 0.75);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
+  animation: joinusFadeIn 0.25s ease-out;
+}
+
+.joinus-modal-container {
+  width: min(760px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #F7F3E8;
+  border: 1px solid #C9A24B;
+  border-radius: 4px;
+  padding: clamp(28px, 4.5vw, 44px);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+  position: relative;
+  color: #061C2B;
+  animation: joinusSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.joinus-modal-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: transparent;
+  border: 1px solid rgba(6, 28, 43, 0.18);
+  border-radius: 4px;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #061C2B;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.22s ease;
+  z-index: 10;
+}
+
+.joinus-modal-close-btn:hover {
+  background: #c9a24b;
+  border-color: #c9a24b;
+  color: #061c2b;
+}
+
+@keyframes joinusFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes joinusSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* MODAL FORM INNER CONTENT */
+.joinus-form-header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.joinus-form-tag {
+  color: #806522;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.joinus-form-title {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(22px, 2.8vw, 28px);
+  font-weight: 700;
+  color: #061C2B;
+  letter-spacing: 0.05em;
+  margin: 0 0 6px;
+}
+
+.joinus-form-subtitle {
+  font-size: 13px;
+  color: #78828a;
+  margin: 0;
+}
+
+.joinus-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.joinus-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.joinus-form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.joinus-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #061C2B;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+}
+
+.joinus-label-optional {
+  font-size: 10.5px;
+  color: #78828a;
+  text-transform: lowercase;
+  font-weight: 400;
+}
+
+.joinus-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.joinus-input-icon {
+  position: absolute;
+  left: 14px;
+  color: #806522;
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.joinus-input {
+  width: 100%;
+  height: 42px;
+  padding: 0 14px 0 40px;
+  background: #ffffff;
+  border: 1px solid #ddd8cb;
+  border-radius: 3px;
+  color: #061C2B;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  transition: all 0.22s ease;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.joinus-input:focus {
+  border-color: #C9A24B;
+  box-shadow: 0 0 10px rgba(201, 162, 75, 0.22);
+}
+
+.joinus-input::placeholder {
+  color: rgba(6, 28, 43, 0.4);
+  font-size: 12.5px;
+}
+
+/* GEMSTONES SELECTION PILLS */
+.joinus-gem-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.joinus-gem-pill {
+  padding: 7px 14px;
+  border-radius: 3px;
+  border: 1px solid #ddd8cb;
+  background: #ffffff;
+  color: #061C2B;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.joinus-gem-pill:hover {
+  border-color: #C9A24B;
+  background: rgba(201, 162, 75, 0.08);
+}
+
+.joinus-gem-pill.selected {
+  background: #C9A24B;
+  border-color: #C9A24B;
+  color: #061C2B;
+  font-weight: 700;
+}
+
+.joinus-gem-pill-icon {
+  font-size: 10px;
+}
+
+/* CERTIFICATE UPLOAD AREA */
+.joinus-upload-area {
+  border: 1.5px dashed rgba(201, 162, 75, 0.65);
+  border-radius: 4px;
+  background: #ffffff;
+  padding: 24px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.22s ease;
+  position: relative;
+}
+
+.joinus-upload-area:hover,
+.joinus-upload-area.is-dragging {
+  border-color: #C9A24B;
+  background: rgba(201, 162, 75, 0.08);
+}
+
+.joinus-file-input {
+  display: none;
+}
+
+.joinus-upload-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.joinus-upload-icon {
+  font-size: 28px;
+  color: #806522;
+  margin-bottom: 2px;
+}
+
+.joinus-upload-text {
+  font-size: 13px;
+  color: #061C2B;
+  font-weight: 600;
+}
+
+.joinus-upload-text span {
+  color: #806522;
+  text-decoration: underline;
+}
+
+.joinus-upload-hint {
+  font-size: 11px;
+  color: #78828a;
+}
+
+/* FILE PREVIEW */
+.joinus-preview-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  border: 1px solid #ddd8cb;
+  border-radius: 4px;
+  padding: 10px 14px;
+  gap: 14px;
+}
+
+.joinus-preview-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.joinus-preview-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 3px;
+  object-fit: cover;
+  border: 1px solid #ddd8cb;
+  flex-shrink: 0;
+}
+
+.joinus-preview-info {
+  text-align: left;
+  min-width: 0;
+}
+
+.joinus-preview-name {
+  font-size: 12.5px;
+  color: #061C2B;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 320px;
+}
+
+.joinus-preview-size {
+  font-size: 11px;
+  color: #806522;
+  margin-top: 2px;
+}
+
+.joinus-preview-remove {
+  background: transparent;
+  border: none;
+  color: #c94b4b;
+  cursor: pointer;
+  font-size: 15px;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.joinus-preview-remove:hover {
+  transform: scale(1.15);
+}
+
+/* SUBMIT BUTTON */
+.joinus-submit-wrap {
+  grid-column: 1 / -1;
+  margin-top: 8px;
+}
+
+.joinus-submit-btn {
+  width: 100%;
+  height: 46px;
+  background: #C9A24B;
+  color: #061C2B;
+  border: 1px solid #C9A24B;
+  border-radius: 3px;
+  font-family: 'Cinzel', serif;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 14px rgba(201, 162, 75, 0.25);
+}
+
+.joinus-submit-btn:hover:not(:disabled) {
+  background: transparent;
+  color: #061C2B;
+  box-shadow: 0 6px 20px rgba(201, 162, 75, 0.35);
+  transform: translateY(-2px);
+}
+
+.joinus-submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* SUCCESS CARD */
+.joinus-success-card {
+  text-align: center;
+  padding: 24px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  color: #061C2B;
+}
+
+.joinus-success-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: rgba(201, 162, 75, 0.15);
+  border: 2px solid #C9A24B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #806522;
+  font-size: 28px;
+  margin-bottom: 4px;
+}
+
+.joinus-success-title {
+  font-family: 'Cinzel', serif;
+  font-size: 23px;
+  color: #061C2B;
+  margin: 0;
+}
+
+.joinus-success-message {
+  font-size: 13.5px;
+  color: #65736d;
+  line-height: 1.7;
+  max-width: 520px;
+  margin: 0;
+}
+
+.joinus-success-ref {
+  display: inline-block;
+  background: #ffffff;
+  border: 1px dashed #C9A24B;
+  padding: 8px 16px;
+  border-radius: 3px;
+  font-size: 12.5px;
+  color: #806522;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.joinus-success-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* =========================================================
+   RESPONSIVE MEDIA QUERIES
+========================================================= */
+@media (max-width: 1024px) {
+  .joinus-hero-section {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+
+  .joinus-benefits-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .joinus-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .joinus-benefits-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .joinus-hero-section {
+    padding: 24px 18px;
+    margin: 16px auto 40px;
+  }
+
+  .joinus-modal-container {
+    padding: 24px 16px;
+  }
+
+  .joinus-preview-name {
+    max-width: 180px;
+  }
+}
