@@ -7,10 +7,10 @@ import {
   FaInstagram,
   FaMapMarkerAlt,
   FaPhoneAlt,
-  FaSearch,
   FaShoppingBag,
   FaTimes,
   FaTrash,
+  FaUser,
   FaWhatsapp
 } from 'react-icons/fa';
 import TrustAndCertification from '../components/TrustAndCertification';
@@ -19,6 +19,7 @@ import InternationalNavEntry from '../components/InternationalNavEntry.jsx';
 import { getCollectionItemKey, useSharedCollection } from '../useSharedCollection.js';
 import './About.css';
 import './TrustPage.css';
+import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
 
 const TrustPage = () => {
   const [wishlist, setWishlist] = useSharedCollection('ceylon-wishlist');
@@ -52,33 +53,19 @@ const TrustPage = () => {
             <small>ROYAL GEMSTONES</small>
           </div>
         </a>
+        <MobileSiteMenu />
         <div className="about-nav-links">
           <a href="/">Home</a>
-          <a href="/gemstones">Gemstones</a>
+          <a href="/gemstones">Shop</a>
           <a href="/About">Heritage</a>
           <a href="/trust" className="active">Certification</a>
           <a href="/reviews">Reviews</a>
           <a href="/contact">Contact</a>
           <a href="/blog">Blog</a>
-          <a href="/login">Login</a>
           <InternationalNavEntry />
         </div>
         <div className="about-nav-actions">
           <InternationalNavEntry mobile />
-          <button
-            type="button"
-            className="about-nav-icon"
-            title="Search"
-            aria-label="Search gemstones"
-            onClick={() => {
-              const query = prompt("Search gemstones:");
-              if (query) {
-                window.location.href = `/?search=${encodeURIComponent(query)}`;
-              }
-            }}
-          >
-            <FaSearch />
-          </button>
           <button
             type="button"
             className="about-nav-icon"
@@ -106,6 +93,21 @@ const TrustPage = () => {
           >
             INQUIRE NOW
           </button>
+          <a
+            href="/join-us"
+            className="navbar-joinus-btn"
+            title="Join With Us"
+          >
+            <span>JOIN US</span>
+          </a>
+          <a
+            href="/login"
+            className="navbar-login-btn"
+            title="Login / Register"
+          >
+            <FaUser />
+            <span>LOGIN</span>
+          </a>
         </div>
       </nav>
 
@@ -133,7 +135,7 @@ const TrustPage = () => {
           <div>
             <h4>EXPLORE</h4>
             <a href="/">Home</a>
-            <a href="/#gemstones">Gemstones</a>
+            <a href="/#gemstones">Shop</a>
             <a href="/About">Our Heritage</a>
             <a href="/trust">Trust &amp; Certification</a>
             <a href="/reviews">Reviews</a>
@@ -209,28 +211,8 @@ const TrustPage = () => {
                     <div className="gem-drawer-item-info">
                       <h4>{item.name}</h4>
                       <p>{item.carat} Ct</p>
-                      <strong>${(item.price * item.quantity).toLocaleString()}</strong>
-                      <div className="gem-quantity-control">
-                        <button
-                          type="button"
-                          aria-label={`Decrease ${item.name} quantity`}
-                          onClick={() => updateQuantity(
-                            activeDrawer === 'wishlist' ? setWishlist : setCart,
-                            getCollectionItemKey(item),
-                            -1
-                          )}
-                        >−</button>
-                        <span>{item.quantity}</span>
-                        <button
-                          type="button"
-                          aria-label={`Increase ${item.name} quantity`}
-                          onClick={() => updateQuantity(
-                            activeDrawer === 'wishlist' ? setWishlist : setCart,
-                            getCollectionItemKey(item),
-                            1
-                          )}
-                        >+</button>
-                      </div>
+                      <strong>${Number(item.price).toLocaleString()}</strong>
+                      <p>Qty 1</p>
                     </div>
                     <button
                       type="button"

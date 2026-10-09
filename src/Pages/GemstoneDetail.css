@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap');
 
 .luxury-detail-wrapper {
   --gold-primary: #d4af37;
@@ -100,12 +99,36 @@
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  transition: aspect-ratio 0.3s ease;
+}
+
+/* Video active: switch to 16:9 aspect ratio so video fills frame naturally */
+.main-display-frame.video-active {
+  aspect-ratio: 16 / 9;
 }
 
 .display-media {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* Video element — use contain so no cropping, black bars are fine */
+.main-display-frame.video-active .display-media {
+  object-fit: contain;
+  background: #000;
+}
+
+/* Mobile: ensure video frame doesn't overflow small screens */
+@media (max-width: 600px) {
+  .main-display-frame.video-active {
+    aspect-ratio: 16 / 9;
+    border-radius: 10px;
+  }
+
+  .main-display-frame.video-active .display-media {
+    object-fit: contain;
+  }
 }
 
 .glow-effect {
@@ -917,6 +940,24 @@
   border-color: #e5e1d7;
 }
 
+.luxury-detail-wrapper .reviews-section {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.65fr) minmax(0, 2.2fr) minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(12px, 1.5vw, 22px);
+}
+
+.luxury-detail-wrapper .reviews-header,
+.luxury-detail-wrapper .luxury-review-form,
+.luxury-detail-wrapper .reviews-feed {
+  min-width: 0;
+  width: 100%;
+}
+
+.luxury-detail-wrapper .luxury-review-form {
+  margin: 0;
+}
+
 .luxury-detail-wrapper .chip-val,
 .luxury-detail-wrapper .reviews-header h2,
 .luxury-detail-wrapper .spec-value,
@@ -977,6 +1018,24 @@
     padding: 18px 16px 48px;
   }
 
+  .luxury-detail-wrapper .luxury-review-form .form-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .luxury-detail-wrapper .luxury-review-form .input-group,
+  .luxury-detail-wrapper .luxury-review-form input,
+  .luxury-detail-wrapper .luxury-review-form select,
+  .luxury-detail-wrapper .luxury-review-form textarea {
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .luxury-detail-wrapper .luxury-review-form input,
+  .luxury-detail-wrapper .luxury-review-form select,
+  .luxury-detail-wrapper .luxury-review-form textarea {
+    width: 100%;
+  }
+
   .luxury-detail-wrapper .main-display-frame {
     aspect-ratio: 1 / 1;
   }
@@ -1018,7 +1077,12 @@
   }
 
   .luxury-detail-wrapper .reviews-section {
+    grid-template-columns: minmax(0, 1fr);
     padding: 22px 16px;
+  }
+
+  .luxury-detail-wrapper .reviews-feed {
+    gap: 14px;
   }
 
   .cta-button-group {
@@ -1046,10 +1110,6 @@
   .purchase-quantity-row > strong {
     min-width: 74px;
     font-size: 13px;
-  }
-
-  .detail-quantity-control button {
-    width: 27px;
   }
 
   .payment-notice-dialog {
@@ -1343,6 +1403,10 @@
     display: none;
   }
 
+  .luxury-detail-wrapper .reviews-section {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .gem-detail-footer-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 40px;
@@ -1356,12 +1420,17 @@
     padding: 0 18px;
   }
 
+  .gem-detail-navbar .gem-detail-brand {
+    flex: 0 0 auto;
+  }
+
   .gem-detail-brand img {
     width: 48px;
     height: 48px;
   }
 
   .gem-detail-nav-actions {
+    min-width: 0;
     gap: 4px;
   }
 
@@ -1396,6 +1465,24 @@
   }
 }
 
+@media (max-width: 600px) {
+  .luxury-detail-wrapper .showcase-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .luxury-detail-wrapper .media-stage,
+  .luxury-detail-wrapper .luxury-info {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .luxury-detail-wrapper .thumbnail-strip {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+}
+
 .outline-btn.wishlisted {
   border-color: #b43d4b;
   color: #a52f40;
@@ -1426,51 +1513,6 @@
   font-family: "Cinzel", serif;
   font-size: 16px;
   text-align: right;
-}
-
-.detail-quantity-control {
-  height: 38px;
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 3px;
-  border: 1px solid #061c2b;
-  border-radius: 4px;
-  background: #ffffff;
-}
-
-.detail-quantity-control button {
-  width: 32px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  border-radius: 3px;
-  background: #f4f2ed;
-  color: #152923;
-  font-size: 16px;
-  cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease;
-}
-
-.detail-quantity-control button:hover:not(:disabled) {
-  background: #c9a24b;
-  color: #061c2b;
-}
-
-.detail-quantity-control button:disabled {
-  color: #b9bfbb;
-  background: #f4f4f4;
-  cursor: not-allowed;
-}
-
-.detail-quantity-control span {
-  min-width: 28px;
-  color: #152923;
-  font-size: 12px;
-  font-weight: 700;
-  text-align: center;
 }
 
 .pay-now-btn {
@@ -1801,23 +1843,6 @@
 .detail-cart-add:hover {
   color: #061c2b;
   text-decoration: underline;
-}
-
-.detail-cart-quantity {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  color: #52635b;
-  font-size: 12px;
-}
-
-.detail-cart-quantity button {
-  width: 24px;
-  height: 24px;
-  border: 1px solid #c9a24b;
-  background: transparent;
-  color: #152923;
-  cursor: pointer;
 }
 
 .detail-cart-remove {

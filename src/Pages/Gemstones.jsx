@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FaSearch,
   FaHeart,
@@ -10,16 +10,19 @@ import {
   FaShippingFast,
   FaLock,
   FaChevronDown,
+  FaUser,
   FaWhatsapp,
   FaEnvelope,
   FaPhoneAlt,
   FaMapMarkerAlt,
   FaInstagram,
-  FaFacebookF
+  FaFacebookF,
+  FaArrowLeft
 } from "react-icons/fa";
 
 import "./Gemstones.css";
 import "./About.css";
+import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
 import CollectionDrawerActions from "../components/CollectionDrawerActions.jsx";
 import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
 import {
@@ -27,7 +30,11 @@ import {
   normalizeCollectionItem,
   useSharedCollection
 } from "../useSharedCollection.js";
+import { formatCurrencyPrice, getCurrentCurrency } from "../currency.js";
+import { useGemInventory } from "../useGemInventory.js";
+import { useGemSubmissions } from "../useGemSubmissions.js";
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const products = [
   {
     id: 1,
@@ -44,7 +51,9 @@ export const products = [
     image: "/blueGem.jpg",
     galleryViews: [
       { label: "Front", url: "/blueGem.jpg" },
-      { label: "Right", url: "/blueGemRight.jpg" }
+      { label: "Back", url: "/blueGemBack.jpg" },
+      { label: "Right", url: "/blueGemRight.jpg" },
+      { label: "Left", url: "/blueGemLeft.jpg" }
     ],
     videoUrl: "/vedio%20blue%20gem.mp4"
   },
@@ -61,7 +70,7 @@ export const products = [
     price: 9800,
     image: "/blueGem1.jpg",
     galleryViews: [
-      { label: "Front", url: "/blueGem2Front.jpg" },
+      { label: "Front", url: "/blueGem1.jpg" },
       { label: "Back", url: "/blueGem2Back.jpg" },
       { label: "Right", url: "/blueGem2Right.jpg" },
       { label: "Left", url: "/blueGem2Left.jpg" }
@@ -133,7 +142,8 @@ export const products = [
       { label: "Back", url: "/RubyBack.jpeg" },
       { label: "Right", url: "/RubyRight.jpeg" },
       { label: "Left", url: "/RubyLeft.jpeg" }
-    ]
+    ],
+    videoUrl: "/rubyVideo.mp4"
   },
 
   {
@@ -189,13 +199,12 @@ export const products = [
     treatment: "Untreated",
     price: 22000,
     image: "/Alexandrite1.jpg",
-     galleryViews: [
-      { label: "Front", url: "/PadparadschaFront.jpg" },
-      { label: "Back", url: "/Alexandrite2Back.jpg" },
-      { label: "Right", url: "/Alexandrite2Right.jpg" },
-      { label: "Left", url: "/Alexandrite2Back.jpg" }
-    ],
-    videoUrl: "/pinckV4.mp4" 
+    galleryViews: [
+      { label: "Front", url: "/Alexandrite1.jpg" },
+      { label: "Back", url: "/alexandrite1back.jpg" },
+      { label: "Right", url: "/alexandrite1right.jpg" },
+      { label: "Left", url: "/alexandrite1left.jpg" }
+    ]
   },
 
     {
@@ -255,15 +264,411 @@ export const products = [
     image: "/ALEXANDRITEgem.jpg",
     galleryViews: [
       { label: "Front", url: "/ALEXANDRITEgem.jpg" },
-      { label: "Left", url: "/GreenBack.jpg" },
+      { label: "Back", url: "/GreenBack.jpg" },
       { label: "Right", url: "/GreenRight.jpg" },
-      { label: "Left", url: "/GreenLeft.jpg" },
+      { label: "Left", url: "/GreenLeft.jpg" }
     ],
     videoUrl: "/greenV11.mp4"            
+  },
+
+  // ── YELLOW SAPPHIRE ──────────────────────────────────────
+  {
+    id: 12,
+    productKey: "yellow-gurugala-sapphire",
+    certificateNumber: "CRG-1012",
+    name: "Yellow Gurugala Sapphire",
+    category: "Yellow Sapphire",
+    origin: "Ratnapura, Sri Lanka",
+    color: "Yellow",
+    carat: 4.20,
+    shape: "Oval",
+    cut: "Mixed Cut",
+    treatment: "Untreated",
+    price: 11800,
+    image: "/YellowGurugala.jpg",
+    galleryViews: [
+      { label: "Front", url: "/YellowGurugala.jpg" },
+      { label: "Back", url: "/yellowgurugalaback.jpg" },
+      { label: "Right", url: "/yellowgurugalaright.jpg" },
+      { label: "Left", url: "/yellowgurugalaleft.jpg" }
+    ]
+  },
+  {
+    id: 13,
+    productKey: "yellow-king-sapphire",
+    certificateNumber: "CRG-1013",
+    name: "Yellow King Sapphire",
+    category: "Yellow Sapphire",
+    origin: "Ratnapura, Sri Lanka",
+    color: "Canary Yellow",
+    carat: 5.80,
+    shape: "Cushion",
+    cut: "Brilliant Cut",
+    treatment: "Untreated",
+    price: 16500,
+    image: "/Yellowking.jpg",
+    galleryViews: [
+      { label: "Front", url: "/Yellowking.jpg" },
+      { label: "Back", url: "/yellowkingback.jpg" },
+      { label: "Right", url: "/yellowkingright.jpg" },
+      { label: "Left", url: "/yellowkingleft.jpg" }
+    ]
+  },
+  {
+    id: 14,
+    productKey: "yellow-pushparaga-sapphire",
+    certificateNumber: "CRG-1014",
+    name: "Yellow Pushparaga Sapphire",
+    category: "Yellow Sapphire",
+    origin: "Ratnapura, Sri Lanka",
+    color: "Golden Yellow",
+    carat: 3.75,
+    shape: "Oval",
+    cut: "Mixed Cut",
+    treatment: "Untreated",
+    price: 9500,
+    image: "/yellowPushparaga.jpg",
+    galleryViews: [
+      { label: "Front", url: "/yellowPushparaga.jpg" }
+    ]
+  },
+
+  // ── STAR SAPPHIRE ─────────────────────────────────────────
+  {
+    id: 15,
+    productKey: "ceylon-star-sapphire-1",
+    certificateNumber: "CRG-1015",
+    name: "Ceylon Star Sapphire I",
+    category: "Star Sapphire",
+    color: "Blue",
+    carat: 7.40,
+    shape: "Cabochon",
+    cut: "Cabochon",
+    treatment: "Natural",
+    price: 8900,
+    image: "/Star1.jpg",
+    galleryViews: [
+      { label: "Front", url: "/Star1.jpg" }
+    ]
+  },
+  {
+    id: 16,
+    productKey: "ceylon-star-sapphire-3",
+    certificateNumber: "CRG-1016",
+    name: "Ceylon Star Sapphire III",
+    category: "Star Sapphire",
+    color: "Blue Grey",
+    carat: 5.95,
+    shape: "Cabochon",
+    cut: "Cabochon",
+    treatment: "Natural",
+    price: 6800,
+    image: "/Star3.jpg",
+    galleryViews: [
+      { label: "Front", url: "/Star3.jpg" }
+    ]
+  },
+  {
+    id: 17,
+    productKey: "ceylon-star-sapphire-2",
+    certificateNumber: "CRG-1017",
+    name: "Ceylon Star Sapphire II",
+    category: "Star Sapphire",
+    color: "Powder Blue",
+    carat: 8.10,
+    shape: "Cabochon",
+    cut: "Cabochon",
+    treatment: "Natural",
+    price: 11200,
+    image: "/star2.jpg",
+    galleryViews: [
+      { label: "Front", url: "/star2.jpg" }
+    ]
+  },
+
+  // ── RUBY ──────────────────────────────────────────────────
+  {
+    id: 18,
+    productKey: "ceylon-ruby-1",
+    certificateNumber: "CRG-1018",
+    name: "Ceylon Ruby I",
+    category: "Ruby",
+    color: "Vivid Red",
+    carat: 3.10,
+    shape: "Oval",
+    cut: "Mixed Cut",
+    treatment: "Heated",
+    price: 14500,
+    image: "/Ruby1.jpg",
+    galleryViews: [
+      { label: "Front", url: "/Ruby1.jpg" }
+    ]
+  },
+  {
+    id: 19,
+    productKey: "ceylon-ruby-2",
+    certificateNumber: "CRG-1019",
+    name: "Ceylon Ruby II",
+    category: "Ruby",
+    color: "Pigeon Blood Red",
+    carat: 2.45,
+    shape: "Cushion",
+    cut: "Mixed Cut",
+    treatment: "Untreated",
+    price: 18000,
+    image: "/Ruby2.jpg",
+    galleryViews: [
+      { label: "Front", url: "/Ruby2.jpg" }
+    ]
+  },
+  {
+    id: 20,
+    productKey: "ceylon-ruby-3",
+    certificateNumber: "CRG-1020",
+    name: "Ceylon Ruby III",
+    category: "Ruby",
+    color: "Deep Red",
+    carat: 1.85,
+    shape: "Oval",
+    cut: "Mixed Cut",
+    treatment: "Heated",
+    price: 9200,
+    image: "/Ruby3.jpg",
+    galleryViews: [
+      { label: "Front", url: "/Ruby3.jpg" }
+    ]
+  },
+
+  // ── PADPARADSCHA SAPPHIRE ─────────────────────────────────
+  {
+    id: 21,
+    productKey: "ceylon-padparadscha-3",
+    certificateNumber: "CRG-1021",
+    name: "Ceylon Padparadscha III",
+    category: "Padparadscha Sapphire",
+    color: "Salmon Pink Orange",
+    carat: 2.60,
+    shape: "Oval",
+    cut: "Mixed Cut",
+    treatment: "Untreated",
+    price: 21500,
+    image: "/Padparadscha3.jpeg",
+    galleryViews: [
+      { label: "Front", url: "/Padparadscha3.jpeg" }
+    ]
+  },
+  {
+    id: 22,
+    productKey: "ceylon-padparadscha-2",
+    certificateNumber: "CRG-1022",
+    name: "Ceylon Padparadscha II",
+    category: "Padparadscha Sapphire",
+    color: "Pink Orange",
+    carat: 3.40,
+    shape: "Cushion",
+    cut: "Mixed Cut",
+    treatment: "Untreated",
+    price: 27000,
+    image: "/Padparadscha2.jpeg",
+    galleryViews: [
+      { label: "Front", url: "/Padparadscha2.jpeg" },
+      { label: "Back", url: "/padparadscha2back.jpg" },
+      { label: "Right", url: "/padparadscha2right.jpg" },
+      { label: "Left", url: "/padparadscha2left.jpg" }
+    ]
+  },
+  {
+    id: 23,
+    productKey: "ceylon-padparadscha-1",
+    certificateNumber: "CRG-1023",
+    name: "Ceylon Padparadscha I",
+    category: "Padparadscha Sapphire",
+    color: "Pure Padparadscha",
+    carat: 4.05,
+    shape: "Oval",
+    cut: "Brilliant Cut",
+    treatment: "Untreated",
+    price: 34000,
+    image: "/Padparadscha1.jpeg",
+    galleryViews: [
+      { label: "Front", url: "/Padparadscha1.jpeg" }
+    ]
+  },
+
+  // ── GREEN GEMSTONE ────────────────────────────────────────
+  {
+    id: 24,
+    productKey: "ceylon-green-gem-2",
+    certificateNumber: "CRG-1024",
+    name: "Ceylon Green Gem II",
+    category: "Green Gemstone",
+    color: "Vivid Green",
+    carat: 2.90,
+    shape: "Oval",
+    cut: "Mixed Cut",
+    treatment: "Natural",
+    price: 19500,
+    image: "/greengem2.jpg",
+    galleryViews: [
+      { label: "Front", url: "/greengem2.jpg" }
+    ]
+  },
+  {
+    id: 25,
+    productKey: "ceylon-green-gem-1",
+    certificateNumber: "CRG-1025",
+    name: "Ceylon Green Gem I",
+    category: "Green Gemstone",
+    color: "Deep Green",
+    carat: 3.55,
+    shape: "Cushion",
+    cut: "Mixed Cut",
+    treatment: "Natural",
+    price: 24000,
+    image: "/greengem1.jpg",
+    galleryViews: [
+      { label: "Front", url: "/greengem1.jpg" },
+      { label: "Back", url: "/greengem1back.jpg" },
+      { label: "Right", url: "/greengem1right.jpg" },
+      { label: "Left", url: "/greengem1left.jpg" }
+    ]
+  },
+  {
+    id: 26,
+    productKey: "ceylon-green-gem-3",
+    certificateNumber: "CRG-1026",
+    name: "Ceylon Green Gem III",
+    category: "Green Gemstone",
+    color: "Forest Green",
+    carat: 1.75,
+    shape: "Oval",
+    cut: "Mixed Cut",
+    treatment: "Natural",
+    price: 14800,
+    image: "/greengem3.jpg",
+    galleryViews: [
+      { label: "Front", url: "/greengem3.jpg" }
+    ]
+  },
+
+  // ── CAT'S EYE ─────────────────────────────────────────────
+  {
+    id: 27,
+    productKey: "ceylon-cats-eye-3",
+    certificateNumber: "CRG-1027",
+    name: "Ceylon Cat's Eye III",
+    category: "Cat's Eye",
+    color: "Honey Golden",
+    carat: 5.20,
+    shape: "Oval",
+    cut: "Cabochon",
+    treatment: "Natural",
+    price: 9800,
+    image: "/Cat’sEye3.jpg",
+    galleryViews: [
+      { label: "Front", url: "/Cat’sEye3.jpg" }
+    ]
+  },
+  {
+    id: 28,
+    productKey: "ceylon-cats-eye-2",
+    certificateNumber: "CRG-1028",
+    name: "Ceylon Cat's Eye II",
+    category: "Cat's Eye",
+    color: "Greenish Gold",
+    carat: 3.80,
+    shape: "Oval",
+    cut: "Cabochon",
+    treatment: "Natural",
+    price: 7500,
+    image: "/Cat’sEye2.jpg",
+    galleryViews: [
+      { label: "Front", url: "/Cat’sEye2.jpg" }
+    ]
+  },
+  {
+    id: 29,
+    productKey: "ceylon-cats-eye-1",
+    certificateNumber: "CRG-1029",
+    name: "Ceylon Cat's Eye I",
+    category: "Cat's Eye",
+    color: "Chrysoberyl Golden",
+    carat: 6.40,
+    shape: "Oval",
+    cut: "Cabochon",
+    treatment: "Natural",
+    price: 13500,
+    image: "/Cat’sEye1.jpg",
+    galleryViews: [
+      { label: "Front", url: "/Cat’sEye1.jpg" }
+    ]
+  },
+
+  // ── BLUE SAPPHIRE ─────────────────────────────────────────
+  {
+    id: 30,
+    productKey: "ceylon-blue-gem-5",
+    certificateNumber: "CRG-1030",
+    name: "Ceylon Blue Sapphire V",
+    category: "Blue Sapphire",
+    color: "Royal Blue",
+    carat: 4.85,
+    shape: "Oval",
+    cut: "Mixed Cut",
+    treatment: "Heated",
+    price: 13800,
+    image: "/bluegem5.jpg",
+    galleryViews: [
+      { label: "Front", url: "/bluegem5.jpg" },
+      { label: "Back", url: "/bluegem5back.jpg" },
+      { label: "Right", url: "/bluegem5Right.jpg" },
+      { label: "Left", url: "/bluegem5left.jpg" }
+    ],
+    videoUrl: "/bluegem5V.mp4"
+  },
+
+  // ── ALEXANDRITE ───────────────────────────────────────────
+  {
+    id: 31,
+    productKey: "ceylon-alexandrite-5",
+    certificateNumber: "CRG-1031",
+    name: "Ceylon Alexandrite V",
+    category: "Alexandrite",
+    color: "Green / Purple",
+    carat: 1.45,
+    shape: "Oval",
+    cut: "Mixed Cut",
+    treatment: "Untreated",
+    price: 19800,
+    image: "/Alexandrite5.jpg",
+    galleryViews: [
+      { label: "Front", url: "/Alexandrite5.jpg" },
+      { label: "Back", url: "/alexandrite5back.jpg" },
+      { label: "Right", url: "/alexandrite5right.jpg" },
+      { label: "Left", url: "/alexandrite5left.jpg" }
+    ]
+  },
+  {
+    id: 32,
+    productKey: "ceylon-alexandrite-3",
+    certificateNumber: "CRG-1032",
+    name: "Ceylon Alexandrite III",
+    category: "Alexandrite",
+    color: "Teal / Violet",
+    carat: 2.30,
+    shape: "Cushion",
+    cut: "Mixed Cut",
+    treatment: "Untreated",
+    price: 28500,
+    image: "/Alexandrite3.jpg",
+    galleryViews: [
+      { label: "Front", url: "/Alexandrite3.jpg" }
+    ]
   }
 ];
 
-const categories = [
+// eslint-disable-next-line react-refresh/only-export-components
+export const categories = [
   "All Gemstones",
   "Blue Sapphire",
   "Yellow Sapphire",
@@ -324,17 +729,58 @@ const treatments = [
 ];
 
 function Gemstones() {
-  const [selectedCategory, setSelectedCategory] =
-    useState("All Gemstones");
+  const [currency] = useState(getCurrentCurrency);
+  const [gemSubmissions] = useGemSubmissions();
+  const shopProducts = useMemo(
+    () => [
+      ...products,
+      ...gemSubmissions
+        .filter((submission) => submission.status === "approved")
+        .map((submission) => submission.gem)
+    ],
+    [gemSubmissions]
+  );
+  const shopMaxCaratValue = Math.max(
+    maxCaratValue,
+    ...shopProducts.map((product) => Number(product.carat) || 0)
+  );
+  const shopMaxPriceValue = Math.ceil(
+    Math.max(maxPriceValue, ...shopProducts.map((product) => Number(product.price) || 0)) /
+      5000
+  ) * 5000;
 
-  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const cat = params.get("category");
+      if (cat) {
+        const found = categories.find(
+          (c) => c.toLowerCase() === cat.toLowerCase().trim()
+        );
+        if (found) return found;
+      }
+    } catch { /* URL parsing unsupported */ }
+    return "All Gemstones";
+  });
+
+  const [searchTerm, setSearchTerm] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("search") || "";
+    } catch {
+      return "";
+    }
+  });
+  const [isSearchOpen, setIsSearchOpen] = useState(() => Boolean(
+    new URLSearchParams(window.location.search).get("search")?.trim()
+  ));
+  const searchInputRef = useRef(null);
 
   const [selectedColor, setSelectedColor] =
     useState("All Colors");
 
   const [minCarat, setMinCarat] = useState(0);
-  const [maxCarat, setMaxCarat] = useState(maxCaratValue);
-  const [minRating, setMinRating] = useState("");
+  const [userMaxCarat, setUserMaxCarat] = useState(null);
 
   const [selectedShape, setSelectedShape] =
     useState("All Shapes");
@@ -346,15 +792,83 @@ function Gemstones() {
     useState("All Treatments");
 
   const [minPrice, setMinPrice] = useState(0);
-  const [maxPrice, setMaxPrice] = useState(maxPriceValue);
+  const [userMaxPrice, setUserMaxPrice] = useState(null);
 
   const [wishlist, setWishlist] = useSharedCollection("ceylon-wishlist");
   const [cart, setCart] = useSharedCollection("ceylon-cart");
-  const [cardQuantities, setCardQuantities] = useState({});
-
+  const [inventory] = useGemInventory(shopProducts);
   const [activeDrawer, setActiveDrawer] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [inquiryProduct, setInquiryProduct] = useState(null);
+
+  const maxCarat = userMaxCarat !== null ? userMaxCarat : shopMaxCaratValue;
+  const maxPrice = userMaxPrice !== null ? userMaxPrice : shopMaxPriceValue;
+  const setMaxCarat = setUserMaxCarat;
+  const setMaxPrice = setUserMaxPrice;
+
+  useEffect(() => {
+    if (isSearchOpen) {
+      document.getElementById("shop-gem-search")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+      searchInputRef.current?.focus({ preventScroll: true });
+    }
+  }, [isSearchOpen]);
+
+  const handleSelectCategory = (cat) => {
+    setSelectedCategory(cat);
+    try {
+      const url = new URL(window.location.href);
+      if (cat === "All Gemstones") {
+        url.searchParams.delete("category");
+      } else {
+        url.searchParams.set("category", cat);
+      }
+      window.history.pushState({}, "", url.toString());
+    } catch { /* ignored */ }
+  };
+
+  const handleBackToMainCategories = () => {
+    window.location.assign("/#main-categories");
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const cat = params.get("category");
+        if (cat) {
+          const found = categories.find(
+            (c) => c.toLowerCase() === cat.toLowerCase().trim()
+          );
+          if (found) setSelectedCategory(found);
+        } else {
+          setSelectedCategory("All Gemstones");
+        }
+        setSearchTerm(params.get("search") || "");
+      } catch { /* ignored */ }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const shouldScrollToCollection =
+        params.get("category") || window.location.hash === "#collection";
+      const collectionSection =
+        document.getElementById("collection") || document.querySelector(".gem-category-section");
+
+      if (shouldScrollToCollection && collectionSection) {
+        setTimeout(() => {
+          collectionSection.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 100);
+      }
+    } catch { /* ignored */ }
+  }, []);
 
   useEffect(() => {
     const syncDrawerFromHash = () => {
@@ -376,7 +890,7 @@ function Gemstones() {
   }, []);
 
   const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
+    return shopProducts.filter((product) => {
       const categoryMatch =
         selectedCategory === "All Gemstones" ||
         product.category === selectedCategory;
@@ -408,10 +922,6 @@ function Gemstones() {
       const maxCaratMatch =
         product.carat <= maxCarat;
 
-      const ratingMatch =
-        minRating === "" ||
-        (Number.isFinite(product.rating) && product.rating >= Number(minRating));
-
       const shapeMatch =
         selectedShape === "All Shapes" ||
         product.shape === selectedShape;
@@ -436,7 +946,6 @@ function Gemstones() {
         colorMatch &&
         minCaratMatch &&
         maxCaratMatch &&
-        ratingMatch &&
         shapeMatch &&
         cutMatch &&
         treatmentMatch &&
@@ -450,12 +959,12 @@ function Gemstones() {
     selectedColor,
     minCarat,
     maxCarat,
-    minRating,
     selectedShape,
     selectedCut,
     selectedTreatment,
     minPrice,
-    maxPrice
+    maxPrice,
+    shopProducts
   ]);
 
   const toggleWishlist = (product) => {
@@ -477,49 +986,27 @@ function Gemstones() {
         normalizeCollectionItem({ ...product, quantity: 1 })
       ];
     });
+    setActiveDrawer("wishlist");
   };
 
-  const addToCart = (product, quantity = 1) => {
+  const addToCart = (product) => {
     const productKey = getCollectionItemKey(product);
+    const stockQuantity = inventory[productKey] ?? 0;
+    if (stockQuantity < 1) return;
 
     setCart((current) => {
       const exists = current.some(
         (item) => getCollectionItemKey(item) === productKey
       );
 
-      if (exists) {
-        return current.map((item) =>
-          getCollectionItemKey(item) === productKey
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
-        );
-      }
+      if (exists) return current;
 
       return [
         ...current,
-        normalizeCollectionItem({ ...product, quantity })
+        normalizeCollectionItem({ ...product, quantity: 1 })
       ];
     });
     setActiveDrawer("cart");
-  };
-
-  const changeCardQuantity = (id, amount) => {
-    setCardQuantities((current) => ({
-      ...current,
-      [id]: Math.max(1, (current[id] ?? 1) + amount)
-    }));
-  };
-
-  const changeQuantity = (setItems, productKey, amount) => {
-    setItems((current) =>
-      current
-        .map((item) =>
-          getCollectionItemKey(item) === productKey
-            ? { ...item, quantity: item.quantity + amount }
-            : item
-        )
-        .filter((item) => item.quantity > 0)
-    );
   };
 
   const wishlistCount = wishlist.reduce(
@@ -547,13 +1034,12 @@ function Gemstones() {
     setSearchTerm("");
     setSelectedColor("All Colors");
     setMinCarat(0);
-    setMaxCarat(maxCaratValue);
-    setMinRating("");
+    setMaxCarat(shopMaxCaratValue);
     setSelectedShape("All Shapes");
     setSelectedCut("All Cuts");
     setSelectedTreatment("All Treatments");
     setMinPrice(0);
-    setMaxPrice(maxPriceValue);
+    setMaxPrice(shopMaxPriceValue);
   };
 
   return (
@@ -580,17 +1066,17 @@ function Gemstones() {
           </div>
         </a>
 
+        <MobileSiteMenu onInquire={() => setInquiryProduct(products[0])} />
         <div className="about-nav-links">
           <a href="/">Home</a>
           <a href="/gemstones" className="active">
-            Gemstones
+            Shop
           </a>
           <a href="/About">Heritage</a>
           <a href="/trust">Certification</a>
           <a href="/reviews">Reviews</a>
           <a href="/contact">Contact</a>
           <a href="/blog">Blog</a>
-          <a href="/login">Login</a>
           <InternationalNavEntry />
         </div>
 
@@ -599,15 +1085,13 @@ function Gemstones() {
           <InternationalNavEntry mobile />
 
           <button
+            type="button"
             className="about-nav-icon"
             title="Search"
-            aria-label="Search gemstones"
-            onClick={() => {
-              const query = prompt("Search gemstones:");
-              if (query) {
-                window.location.href = `/?search=${encodeURIComponent(query)}`;
-              }
-            }}
+            aria-label={isSearchOpen ? "Close gemstone search" : "Open gemstone search"}
+            aria-expanded={isSearchOpen}
+            aria-controls="shop-gem-search"
+            onClick={() => setIsSearchOpen((open) => !open)}
           >
             <FaSearch />
           </button>
@@ -646,6 +1130,23 @@ function Gemstones() {
           >
             INQUIRE NOW
           </button>
+
+          <a
+            href="/join-us"
+            className="navbar-joinus-btn"
+            title="Join With Us"
+          >
+            <span>JOIN US</span>
+          </a>
+
+          <a
+            href="/login"
+            className="navbar-login-btn"
+            title="Login / Register"
+          >
+            <FaUser />
+            <span>LOGIN</span>
+          </a>
 
         </div>
       </nav>
@@ -716,7 +1217,7 @@ function Gemstones() {
                   isActive ? "selected" : ""
                 }`}
                 onClick={() =>
-                  setSelectedCategory(category)
+                  handleSelectCategory(category)
                 }
               >
 
@@ -740,7 +1241,7 @@ function Gemstones() {
 
       {/* ================= COLLECTION ================= */}
 
-      <section className="gem-collection-section">
+      <section id="collection" className="gem-collection-section">
 
         <div className="gem-collection-heading">
 
@@ -760,39 +1261,72 @@ function Gemstones() {
             </p>
           </div>
 
-          <button
-            className="clear-filter-btn"
-            onClick={clearFilters}
-          >
-            CLEAR FILTERS
-          </button>
+          <div className="gem-collection-heading-actions">
+            {selectedCategory !== "All Gemstones" && (
+              <button
+                type="button"
+                className="back-to-main-categories-btn"
+                onClick={handleBackToMainCategories}
+              >
+                <FaArrowLeft />
+                <span>BACK TO MAIN CATEGORIES</span>
+              </button>
+            )}
+
+            <button
+              className="clear-filter-btn"
+              onClick={clearFilters}
+            >
+              CLEAR FILTERS
+            </button>
+          </div>
 
         </div>
 
         {/* SEARCH */}
 
-        <div className="gem-search-box">
-
-          <FaSearch />
-
-          <input
-            type="text"
-            placeholder="Search gemstones..."
-            value={searchTerm}
-            onChange={(e) =>
-              setSearchTerm(e.target.value)
-            }
-          />
-
-          {searchTerm && (
+        {isSearchOpen && (
+          <div className="gem-search-box" id="shop-gem-search" role="search">
+            <div className="gem-search-heading">
+              <span className="gem-search-heading-icon"><FaSearch /></span>
+              <div>
+                <strong>Find your gemstone</strong>
+                <span>Search by name, color, cut or category</span>
+              </div>
+            </div>
+            <div className="gem-search-input-wrap">
+              <FaSearch aria-hidden="true" />
+              <input
+                ref={searchInputRef}
+                type="search"
+                aria-label="Search gemstones"
+                placeholder="Try “Blue Sapphire” or “Ruby”"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  className="gem-search-clear"
+                  onClick={() => {
+                    setSearchTerm("");
+                    searchInputRef.current?.focus();
+                  }}
+                  aria-label="Clear gemstone search"
+                >
+                  <FaTimes />
+                </button>
+              )}
+            </div>
             <button
-              onClick={() => setSearchTerm("")}
+              type="button"
+              className="gem-search-close"
+              onClick={() => setIsSearchOpen(false)}
             >
-              <FaTimes />
+              Close
             </button>
-          )}
-
-        </div>
+          </div>
+        )}
 
         <div className="gem-products-layout">
 
@@ -860,14 +1394,14 @@ function Gemstones() {
               <div
                 className="range-slider"
                 style={{
-                  "--range-start": `${(minCarat / maxCaratValue) * 100}%`,
-                  "--range-end": `${(maxCarat / maxCaratValue) * 100}%`
+                  "--range-start": `${(minCarat / shopMaxCaratValue) * 100}%`,
+                  "--range-end": `${(maxCarat / shopMaxCaratValue) * 100}%`
                 }}
               >
                 <input
                   type="range"
                   min="0"
-                  max={maxCaratValue}
+                  max={shopMaxCaratValue}
                   step="0.1"
                   aria-label="Minimum carat weight"
                   value={minCarat}
@@ -876,32 +1410,13 @@ function Gemstones() {
                 <input
                   type="range"
                   min="0"
-                  max={maxCaratValue}
+                  max={shopMaxCaratValue}
                   step="0.1"
                   aria-label="Maximum carat weight"
                   value={maxCarat}
                   onChange={(e) => setMaxCarat(Math.max(Number(e.target.value), minCarat))}
                 />
               </div>
-            </div>
-
-            <div className="filter-group filter-group-box">
-              <label htmlFor="gem-rating-filter">RATING</label>
-              <select
-                id="gem-rating-filter"
-                value={minRating}
-                disabled={!products.some((product) => Number.isFinite(product.rating))}
-                onChange={(e) => setMinRating(e.target.value)}
-              >
-                <option value="">All ratings</option>
-                <option value="4">4 stars &amp; up</option>
-                <option value="3">3 stars &amp; up</option>
-                <option value="2">2 stars &amp; up</option>
-              </select>
-              <FaChevronDown />
-              {!products.some((product) => Number.isFinite(product.rating)) && (
-                <small className="filter-unavailable-note">Ratings not available</small>
-              )}
             </div>
 
             <div className="filter-group">
@@ -974,14 +1489,14 @@ function Gemstones() {
               <div
                 className="range-slider"
                 style={{
-                  "--range-start": `${(minPrice / maxPriceValue) * 100}%`,
-                  "--range-end": `${(maxPrice / maxPriceValue) * 100}%`
+                  "--range-start": `${(minPrice / shopMaxPriceValue) * 100}%`,
+                  "--range-end": `${(maxPrice / shopMaxPriceValue) * 100}%`
                 }}
               >
                 <input
                   type="range"
                   min="0"
-                  max={maxPriceValue}
+                  max={shopMaxPriceValue}
                   step="500"
                   aria-label="Minimum price in USD"
                   value={minPrice}
@@ -990,7 +1505,7 @@ function Gemstones() {
                 <input
                   type="range"
                   min="0"
-                  max={maxPriceValue}
+                  max={shopMaxPriceValue}
                   step="500"
                   aria-label="Maximum price in USD"
                   value={maxPrice}
@@ -1027,10 +1542,13 @@ function Gemstones() {
 
                 {filteredProducts.map((product) => {
 
+                  const productKey = getCollectionItemKey(product);
+                  const stockQuantity = inventory[productKey] ?? 0;
+                  const inStock = stockQuantity > 0;
                   const liked = wishlist.some(
                     (item) =>
                       getCollectionItemKey(item) ===
-                      getCollectionItemKey(product)
+                      productKey
                   );
 
                   return (
@@ -1109,56 +1627,42 @@ function Gemstones() {
 
                         </div>
 
+                        <button
+                          type="button"
+                          className={`product-stock-status ${
+                            inStock ? "in-stock" : "out-of-stock"
+                          }`}
+                          disabled
+                          aria-label={`${product.name} ${
+                            inStock ? "available" : "out of stock"
+                          }`}
+                        >
+                          {inStock ? "AVAILABLE" : "OUT OF STOCK"}
+                        </button>
+
                         <div className="product-bottom">
 
                           <strong>
-                            $
-                            {(
-                              product.price *
-                              (cardQuantities[product.id] ?? 1)
-                            ).toLocaleString()}
+                            {formatCurrencyPrice(product.price, currency)}
                           </strong>
-
-                          <div
-                            className="card-quantity-control"
-                            aria-label={`Quantity for ${product.name}`}
-                          >
-                            <button
-                              type="button"
-                              aria-label={`Decrease ${product.name} quantity`}
-                              onClick={() =>
-                                changeCardQuantity(product.id, -1)
-                              }
-                            >
-                              −
-                            </button>
-                            <span aria-live="polite">
-                              {cardQuantities[product.id] ?? 1}
-                            </span>
-                            <button
-                              type="button"
-                              aria-label={`Increase ${product.name} quantity`}
-                              onClick={() =>
-                                changeCardQuantity(product.id, 1)
-                              }
-                            >
-                              +
-                            </button>
-                          </div>
 
                           <button
                             type="button"
-                            className="add-to-cart-btn"
-                            aria-label={`Add ${product.name} to cart`}
+                            className={`add-to-cart-btn ${
+                              inStock ? "" : "out-of-stock"
+                            }`}
+                            aria-label={
+                              inStock
+                                ? `Add ${product.name} to cart`
+                                : `${product.name} is out of stock`
+                            }
+                            disabled={!inStock}
                             onClick={() =>
-                              addToCart(
-                                product,
-                                cardQuantities[product.id] ?? 1
-                              )
+                              addToCart(product)
                             }
                           >
                             <FaShoppingBag />
-                            <span>ADD TO CART</span>
+                            <span>{inStock ? "ADD TO CART" : "OUT OF STOCK"}</span>
                           </button>
 
                         </div>
@@ -1294,7 +1798,7 @@ function Gemstones() {
           <div>
             <h4>EXPLORE</h4>
             <a href="/">Home</a>
-            <a href="/gemstones">Gemstones</a>
+            <a href="/gemstones">Shop</a>
             <a href="/About">Our Heritage</a>
             <a href="/trust">Trust & Certification</a>
             <a href="/reviews">Reviews</a>
@@ -1434,43 +1938,8 @@ function Gemstones() {
                         {String(item.carat).replace(/\s*ct$/i, "")} Ct
                       </p>
 
-                      <strong>
-                        ${(item.price * item.quantity).toLocaleString()}
-                      </strong>
-
-                      <div className="gem-quantity-control">
-                        <button
-                          type="button"
-                          aria-label={`Decrease ${item.name} quantity`}
-                          onClick={() =>
-                            changeQuantity(
-                              activeDrawer === "wishlist"
-                                ? setWishlist
-                                : setCart,
-                              getCollectionItemKey(item),
-                              -1
-                            )
-                          }
-                        >
-                          -
-                        </button>
-                        <span>{item.quantity}</span>
-                        <button
-                          type="button"
-                          aria-label={`Increase ${item.name} quantity`}
-                          onClick={() =>
-                            changeQuantity(
-                              activeDrawer === "wishlist"
-                                ? setWishlist
-                                : setCart,
-                              getCollectionItemKey(item),
-                              1
-                            )
-                          }
-                        >
-                          +
-                        </button>
-                      </div>
+                      <strong>{formatCurrencyPrice(item.price, currency)}</strong>
+                      <p className="drawer-item-quantity">Qty 1</p>
 
                     </div>
 
@@ -1643,8 +2112,7 @@ function Gemstones() {
               </div>
 
               <div className="modal-price">
-                $
-                {selectedProduct.price.toLocaleString()}
+                {formatCurrencyPrice(selectedProduct.price, currency)}
               </div>
 
               <button

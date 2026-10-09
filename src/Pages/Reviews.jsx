@@ -7,8 +7,8 @@ import {
   FaMapMarkerAlt,
   FaPhoneAlt,
   FaShoppingBag,
-  FaSearch,
   FaStar,
+  FaUser,
   FaWhatsapp
 } from "react-icons/fa";
 import CollectionDrawerPanel from "../components/CollectionDrawerPanel.jsx";
@@ -18,6 +18,7 @@ import { useCustomerReviews } from "../useCustomerReviews.js";
 import { useSharedCollection } from "../useSharedCollection.js";
 import "./About.css";
 import "./Reviews.css";
+import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
 
 const Reviews = () => {
   const [wishlist, setWishlist] = useSharedCollection("ceylon-wishlist");
@@ -35,33 +36,19 @@ const Reviews = () => {
           <img src="/logo.png" alt="Ceylon Royal Gemstones" />
           <div className="about-logo-text"><span>CEYLON</span><small>ROYAL GEMSTONES</small></div>
         </a>
+        <MobileSiteMenu />
         <div className="about-nav-links">
           <a href="/">Home</a>
-          <a href="/gemstones">Gemstones</a>
+          <a href="/gemstones">Shop</a>
           <a href="/About">Heritage</a>
           <a href="/trust">Certification</a>
           <a href="/reviews" className="active">Reviews</a>
           <a href="/contact">Contact</a>
           <a href="/blog">Blog</a>
-          <a href="/login">Login</a>
           <InternationalNavEntry />
         </div>
         <div className="about-nav-actions">
           <InternationalNavEntry mobile />
-          <button
-            type="button"
-            className="about-nav-icon"
-            title="Search"
-            aria-label="Search gemstones"
-            onClick={() => {
-              const query = prompt("Search gemstones:");
-              if (query) {
-                window.location.href = `/?search=${encodeURIComponent(query)}`;
-              }
-            }}
-          >
-            <FaSearch />
-          </button>
           <button
             type="button"
             className="about-nav-icon"
@@ -85,6 +72,21 @@ const Reviews = () => {
           <button type="button" className="about-inquire-btn" onClick={() => setIsInquiryOpen(true)}>
             INQUIRE NOW
           </button>
+          <a
+            href="/join-us"
+            className="navbar-joinus-btn"
+            title="Join With Us"
+          >
+            <span>JOIN US</span>
+          </a>
+          <a
+            href="/login"
+            className="navbar-login-btn"
+            title="Login / Register"
+          >
+            <FaUser />
+            <span>LOGIN</span>
+          </a>
         </div>
       </nav>
 
@@ -156,104 +158,123 @@ const Reviews = () => {
 
         {/* REVIEW FORM */}
         <section className="review-form-section" aria-label="Submit a review">
-          <div className="review-form-container">
-            <div className="review-form-header">
-              <span className="review-form-subtitle">SHARE YOUR EXPERIENCE</span>
-              <h2>Write a Review</h2>
-              <div className="review-form-divider"></div>
-            </div>
+          <div className="review-experience-layout">
+            <figure className="review-experience-video">
+              <video
+                src="/revV.mp4"
+                controls
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="metadata"
+                aria-label="Ceylon gemstones and craftsmanship"
+              />
+              <figcaption>
+                <span>CEYLON ROYAL GEMSTONES</span>
+                <strong>A story shaped by nature</strong>
+              </figcaption>
+            </figure>
 
-            {reviewSubmitted ? (
-              <div className="review-success-message">
-                <FaStar />
-                <h3>Thank You!</h3>
-                <p>Your review has been submitted successfully.</p>
-                <button
-                  type="button"
-                  className="review-submit-btn"
-                  onClick={() => {
-                    setReviewSubmitted(false);
-                    setReviewForm({ name: "", email: "", rating: 5, comment: "" });
+            <div className="review-form-container">
+              <div className="review-form-header">
+                <span className="review-form-subtitle">SHARE YOUR EXPERIENCE</span>
+                <h2>Write a Review</h2>
+                <div className="review-form-divider"></div>
+              </div>
+
+              {reviewSubmitted ? (
+                <div className="review-success-message">
+                  <FaStar />
+                  <h3>Thank You!</h3>
+                  <p>Your review has been submitted successfully.</p>
+                  <button
+                    type="button"
+                    className="review-submit-btn"
+                    onClick={() => {
+                      setReviewSubmitted(false);
+                      setReviewForm({ name: "", email: "", rating: 5, comment: "" });
+                    }}
+                  >
+                    Write Another Review
+                  </button>
+                </div>
+              ) : (
+                <form
+                  className="review-form"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    setCustomerReviews((previous) => [{
+                      ...reviewForm,
+                      id: `review-${Date.now()}`,
+                      name: reviewForm.name.trim(),
+                      email: reviewForm.email.trim(),
+                      location: "Collector submission",
+                      avatar: "",
+                      createdAt: new Date().toISOString()
+                    }, ...previous]);
+                    setReviewSubmitted(true);
                   }}
                 >
-                  Write Another Review
-                </button>
-              </div>
-            ) : (
-              <form
-                className="review-form"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  setCustomerReviews((previous) => [{
-                    ...reviewForm,
-                    id: `review-${Date.now()}`,
-                    name: reviewForm.name.trim(),
-                    email: reviewForm.email.trim(),
-                    location: "Collector submission",
-                    avatar: "",
-                    createdAt: new Date().toISOString()
-                  }, ...previous]);
-                  setReviewSubmitted(true);
-                }}
-              >
-                <div className="review-form-group">
-                  <label htmlFor="review-name">Your Name</label>
-                  <input
-                    id="review-name"
-                    type="text"
-                    placeholder="Enter your full name"
-                    value={reviewForm.name}
-                    onChange={(e) => setReviewForm({ ...reviewForm, name: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="review-form-group">
-                  <label htmlFor="review-email">Email Address</label>
-                  <input
-                    id="review-email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={reviewForm.email}
-                    onChange={(e) => setReviewForm({ ...reviewForm, email: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="review-form-group">
-                  <label>Rating</label>
-                  <div className="review-rating-input">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button
-                        key={star}
-                        type="button"
-                        className={`review-star-btn ${reviewForm.rating >= star ? "active" : ""}`}
-                        onClick={() => setReviewForm({ ...reviewForm, rating: star })}
-                        aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
-                      >
-                        <FaStar />
-                      </button>
-                    ))}
+                  <div className="review-form-group">
+                    <label htmlFor="review-name">Your Name</label>
+                    <input
+                      id="review-name"
+                      type="text"
+                      placeholder="Enter your full name"
+                      value={reviewForm.name}
+                      onChange={(e) => setReviewForm({ ...reviewForm, name: e.target.value })}
+                      required
+                    />
                   </div>
-                </div>
 
-                <div className="review-form-group">
-                  <label htmlFor="review-comment">Your Review</label>
-                  <textarea
-                    id="review-comment"
-                    placeholder="Share your experience with our gemstones..."
-                    rows="5"
-                    value={reviewForm.comment}
-                    onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
-                    required
-                  ></textarea>
-                </div>
+                  <div className="review-form-group">
+                    <label htmlFor="review-email">Email Address</label>
+                    <input
+                      id="review-email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={reviewForm.email}
+                      onChange={(e) => setReviewForm({ ...reviewForm, email: e.target.value })}
+                      required
+                    />
+                  </div>
 
-                <button type="submit" className="review-submit-btn">
-                  SUBMIT REVIEW
-                </button>
-              </form>
-            )}
+                  <div className="review-form-group">
+                    <label>Rating</label>
+                    <div className="review-rating-input">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          className={`review-star-btn ${reviewForm.rating >= star ? "active" : ""}`}
+                          onClick={() => setReviewForm({ ...reviewForm, rating: star })}
+                          aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
+                        >
+                          <FaStar />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="review-form-group">
+                    <label htmlFor="review-comment">Your Review</label>
+                    <textarea
+                      id="review-comment"
+                      placeholder="Share your experience with our gemstones..."
+                      rows="5"
+                      value={reviewForm.comment}
+                      onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
+                      required
+                    ></textarea>
+                  </div>
+
+                  <button type="submit" className="review-submit-btn">
+                    SUBMIT REVIEW
+                  </button>
+                </form>
+              )}
+            </div>
           </div>
         </section>
       </main>
@@ -270,7 +291,7 @@ const Reviews = () => {
           <div>
             <h4>EXPLORE</h4>
             <a href="/">Home</a>
-            <a href="/gemstones">Gemstones</a>
+            <a href="/gemstones">Shop</a>
             <a href="/About">Our Heritage</a>
             <a href="/trust">Trust &amp; Certification</a>
             <a href="/reviews">Reviews</a>

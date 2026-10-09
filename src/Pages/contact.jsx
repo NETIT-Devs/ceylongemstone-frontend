@@ -2,13 +2,13 @@ import { useState } from "react";
 
 import {
   FaHeart,
-  FaSearch,
   FaShoppingBag,
   FaTimes,
   FaTrash,
   FaShieldAlt,
   FaGem,
   FaLock,
+  FaUser,
   FaShippingFast,
   FaWhatsapp,
   FaEnvelope,
@@ -19,6 +19,7 @@ import {
 } from "react-icons/fa";
 
 import "./contact.css";
+import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
 import CollectionDrawerActions from "../components/CollectionDrawerActions.jsx";
 import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
 import {
@@ -185,6 +186,7 @@ const Contact = () => {
         </a>
 
 
+        <MobileSiteMenu />
         <div className="about-nav-links">
 
           <a href="/">
@@ -192,7 +194,7 @@ const Contact = () => {
           </a>
 
           <a href="/#gemstones">
-            Gemstones
+            Shop
           </a>
 
           <a href="/About">
@@ -215,8 +217,6 @@ const Contact = () => {
 
           <a href="/blog">Blog</a>
 
-          <a href="/login">Login</a>
-
           <InternationalNavEntry />
 
         </div>
@@ -225,23 +225,6 @@ const Contact = () => {
         <div className="about-nav-actions">
 
           <InternationalNavEntry mobile />
-
-          <button
-            className="about-nav-icon"
-            title="Search"
-            type="button"
-            aria-label="Search gemstones"
-            onClick={() => {
-              const query = prompt("Search gemstones:");
-              if (query) {
-                window.location.href = `/?search=${encodeURIComponent(query)}`;
-              }
-            }}
-          >
-
-            <FaSearch />
-
-          </button>
 
           <button
             className="about-nav-icon about-badge-btn"
@@ -298,6 +281,23 @@ const Contact = () => {
             INQUIRE NOW
 
           </button>
+
+          <a
+            href="/join-us"
+            className="navbar-joinus-btn"
+            title="Join With Us"
+          >
+            <span>JOIN US</span>
+          </a>
+
+          <a
+            href="/login"
+            className="navbar-login-btn"
+            title="Login / Register"
+          >
+            <FaUser />
+            <span>LOGIN</span>
+          </a>
 
         </div>
 
@@ -967,7 +967,7 @@ const Contact = () => {
             </a>
 
             <a href="/#gemstones">
-              Gemstones
+              Shop
             </a>
 
             <a href="/About">

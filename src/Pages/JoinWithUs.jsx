@@ -1,9 +1,8 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import {
   FaArrowLeft,
   FaBuilding,
   FaCheck,
-  FaCheckCircle,
   FaCloudUploadAlt,
   FaEnvelope,
   FaFacebookF,
@@ -15,7 +14,6 @@ import {
   FaInstagram,
   FaMapMarkerAlt,
   FaPhoneAlt,
-  FaSearch,
   FaShoppingBag,
   FaTimes,
   FaTrash,
@@ -28,13 +26,17 @@ import SiteInquiryModal from '../components/SiteInquiryModal.jsx';
 import { getCollectionItemKey, useSharedCollection } from '../useSharedCollection.js';
 import './About.css';
 import './JoinWithUs.css';
+import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
 
 const GEMSTONE_OPTIONS = [
-  'Sapphire',
+  'Blue Sapphire',
+  'Yellow Sapphire',
+  'Green Gemstone',
+  'Padparadscha Sapphire',
   'Ruby',
-  'Emerald',
-  'Amethyst',
-  'Spinel',
+  'Star Sapphire',
+  "Cat's Eye",
+  'Alexandrite',
   'Other'
 ];
 
@@ -77,15 +79,13 @@ export default function JoinWithUs() {
   // Form Fields
   const [businessName, setBusinessName] = useState('');
   const [email, setEmail] = useState('');
+  const [location, setLocation] = useState('');
   const [phone, setPhone] = useState('');
-  const [selectedGemstones, setSelectedGemstones] = useState(['Sapphire']);
+  const [selectedGemstones, setSelectedGemstones] = useState([]);
   const [otherGemstone, setOtherGemstone] = useState('');
   const [certificateFile, setCertificateFile] = useState(null);
   const [certificatePreview, setCertificatePreview] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [refId, setRefId] = useState('');
 
   const fileInputRef = useRef(null);
 
@@ -101,8 +101,14 @@ export default function JoinWithUs() {
 
   const handleFileChange = (file) => {
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      alert('Please upload a valid image file (JPG, PNG).');
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      alert('Please upload a JPG, PNG, or WEBP image.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Please upload an image smaller than 10 MB.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
     setCertificateFile(file);
@@ -141,29 +147,44 @@ export default function JoinWithUs() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!businessName.trim() || !email.trim() || !phone.trim()) {
-      alert('Please fill in all required fields (Business Name, Email Address, Contact Number).');
+    if (!businessName.trim() || !email.trim() || !location.trim() || !phone.trim()) {
+      alert('Please fill in all required fields (Business Name, Email, Location, and Contact Number).');
+      return;
+    }
+    if (selectedGemstones.length === 0) {
+      alert('Please select at least one gemstone type.');
+      return;
+    }
+    if (selectedGemstones.includes('Other') && !otherGemstone.trim()) {
+      alert('Please specify the other gemstone type.');
       return;
     }
 
-    setIsSubmitting(true);
-    setTimeout(() => {
-      const generatedRef = 'CRG-PARTNER-' + Math.floor(100000 + Math.random() * 900000);
-      setRefId(generatedRef);
-      setIsSubmitting(false);
-      setIsSubmitted(true);
-    }, 800);
-  };
+    const gemstoneTypes = selectedGemstones
+      .map((gemstone) => (
+        gemstone === 'Other' ? `Other: ${otherGemstone.trim()}` : gemstone
+      ))
+      .join(', ');
+    const message = [
+      'Hello, I would like to submit a partnership application.',
+      '',
+      `Business name: ${businessName.trim()}`,
+      `Email: ${email.trim()}`,
+      `Location: ${location.trim()}`,
+      `Phone number: ${phone.trim()}`,
+      `Gemstone types: ${gemstoneTypes}`,
+      certificateFile
+        ? `Certificate image: ${certificateFile.name} (I will attach it in this WhatsApp chat.)`
+        : 'Certificate image: I can provide it in this WhatsApp chat if needed.'
+    ].join('\n');
+    const whatsappUrl = `https://wa.me/94712345678?text=${encodeURIComponent(message)}`;
+    const whatsappWindow = window.open(whatsappUrl, '_blank');
 
-  const resetForm = () => {
-    setBusinessName('');
-    setEmail('');
-    setPhone('');
-    setSelectedGemstones(['Sapphire']);
-    setOtherGemstone('');
-    setCertificateFile(null);
-    setCertificatePreview(null);
-    setIsSubmitted(false);
+    if (whatsappWindow) {
+      whatsappWindow.opener = null;
+    } else {
+      window.location.assign(whatsappUrl);
+    }
   };
 
   const updateQuantity = (setCollection, productKey, change) => {
@@ -201,6 +222,7 @@ export default function JoinWithUs() {
           </div>
         </a>
 
+        <MobileSiteMenu />
         <div className="about-nav-links">
           <a href="/">Home</a>
           <a href="/gemstones">Shop</a>
@@ -214,21 +236,6 @@ export default function JoinWithUs() {
 
         <div className="about-nav-actions">
           <InternationalNavEntry mobile />
-          <button
-            type="button"
-            className="about-nav-icon"
-            title="Search"
-            aria-label="Search gemstones"
-            onClick={() => {
-              const query = prompt('Search gemstones:');
-              if (query) {
-                window.location.href = `/?search=${encodeURIComponent(query)}`;
-              }
-            }}
-          >
-            <FaSearch />
-          </button>
-
           <button
             type="button"
             className="about-nav-icon"
@@ -274,7 +281,7 @@ export default function JoinWithUs() {
       <div className="joinus-top-bar">
         <a href="/" className="joinus-back-btn">
           <FaArrowLeft />
-          <span>← Back to Home</span>
+          <span>Back to Home</span>
         </a>
       </div>
 
@@ -292,22 +299,22 @@ export default function JoinWithUs() {
           </h1>
 
           <p className="joinus-hero-tagline">
-            Join our growing network and build a trusted partnership with Ceylon Royal Gemstones.
+            Grow with us as a trusted Ceylon gemstone partner.
           </p>
 
           <p className="joinus-hero-desc">
-            Partner with Ceylon Royal Gemstones — direct, ethical sourcing of certified Ceylon sapphires and rare gems.
+            Ethical sourcing, certified gems and global support.
           </p>
 
           <ul className="joinus-hero-highlights">
             <li>
-              <FaCheck /> Direct ethical sourcing from Sri Lanka’s legendary Ratnapura mines
+              <FaCheck /> Ethically sourced Ceylon gemstones
             </li>
             <li>
-              <FaCheck /> Internationally recognized certification (GIA, GRS, GIC, Gubelin standard)
+              <FaCheck /> Internationally recognized certification
             </li>
             <li>
-              <FaCheck /> Preferential wholesale pricing and dedicated global account management
+              <FaCheck /> Wholesale pricing and dedicated support
             </li>
           </ul>
 
@@ -420,46 +427,18 @@ export default function JoinWithUs() {
             </button>
 
             <div className="joinus-form-header">
-              <span className="joinus-form-tag">PARTNERSHIP PROGRAM</span>
               <h2 className="joinus-form-title">PARTNERSHIP APPLICATION</h2>
               <p className="joinus-form-subtitle">
-                Submit your business credentials below to apply for our verified global gemstone network.
+                Tell us about your business and gemstone interests.
               </p>
             </div>
 
-            {isSubmitted ? (
-              <div className="joinus-success-card">
-                <div className="joinus-success-icon">
-                  <FaCheckCircle />
-                </div>
-                <h3 className="joinus-success-title">APPLICATION RECEIVED</h3>
-                <p className="joinus-success-message">
-                  Thank you for applying to partner with Ceylon Royal Gemstones. Our executive partnership
-                  team will review your business credentials and contact you within 24 to 48 business hours.
-                </p>
-                <div className="joinus-success-ref">
-                  REFERENCE: <span>{refId}</span>
-                </div>
-                <div className="joinus-success-actions">
-                  <button type="button" className="joinus-primary-btn" onClick={resetForm}>
-                    SUBMIT ANOTHER APPLICATION
-                  </button>
-                  <button
-                    type="button"
-                    className="joinus-secondary-btn"
-                    onClick={() => setIsFormOpen(false)}
-                  >
-                    CLOSE
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit}>
                 <div className="joinus-form-grid">
                   {/* Business Name */}
                   <div className="joinus-form-group">
                     <label className="joinus-label" htmlFor="modal-business-name">
-                      Business Name *
+                      Business Name <span aria-hidden="true">*</span>
                     </label>
                     <div className="joinus-input-wrap">
                       <FaBuilding className="joinus-input-icon" />
@@ -478,7 +457,7 @@ export default function JoinWithUs() {
                   {/* Email Address */}
                   <div className="joinus-form-group">
                     <label className="joinus-label" htmlFor="modal-business-email">
-                      Email Address *
+                      Email Address <span aria-hidden="true">*</span>
                     </label>
                     <div className="joinus-input-wrap">
                       <FaEnvelope className="joinus-input-icon" />
@@ -494,10 +473,30 @@ export default function JoinWithUs() {
                     </div>
                   </div>
 
+                  {/* Business Location */}
+                  <div className="joinus-form-group">
+                    <label className="joinus-label" htmlFor="modal-business-location">
+                      Location <span aria-hidden="true">*</span>
+                    </label>
+                    <div className="joinus-input-wrap">
+                      <FaMapMarkerAlt className="joinus-input-icon" />
+                      <input
+                        id="modal-business-location"
+                        type="text"
+                        className="joinus-input"
+                        placeholder="City, country"
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                        autoComplete="country-name"
+                        required
+                      />
+                    </div>
+                  </div>
+
                   {/* Contact Number */}
-                  <div className="joinus-form-group full-width">
+                  <div className="joinus-form-group">
                     <label className="joinus-label" htmlFor="modal-business-phone">
-                      Contact Number *
+                      Phone Number <span aria-hidden="true">*</span>
                     </label>
                     <div className="joinus-input-wrap">
                       <FaPhoneAlt className="joinus-input-icon" />
@@ -508,6 +507,7 @@ export default function JoinWithUs() {
                         placeholder="e.g. +94 77 123 4567 / +1 (555) 000-1234"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
+                        autoComplete="tel"
                         required
                       />
                     </div>
@@ -515,11 +515,11 @@ export default function JoinWithUs() {
 
                   {/* Type of Gemstones (Multi-select) */}
                   <div className="joinus-form-group full-width">
-                    <label className="joinus-label">
-                      Type of Gemstones *
+                    <div className="joinus-label" id="gemstone-types-label">
+                      Types of Gemstones <span aria-hidden="true">*</span>
                       <span className="joinus-label-optional">(select all that apply)</span>
-                    </label>
-                    <div className="joinus-gem-pills">
+                    </div>
+                    <div className="joinus-gem-pills" role="group" aria-labelledby="gemstone-types-label">
                       {GEMSTONE_OPTIONS.map((gem) => {
                         const isSelected = selectedGemstones.includes(gem);
                         return (
@@ -528,6 +528,7 @@ export default function JoinWithUs() {
                             type="button"
                             className={`joinus-gem-pill ${isSelected ? 'selected' : ''}`}
                             onClick={() => toggleGemstone(gem)}
+                            aria-pressed={isSelected}
                           >
                             {isSelected && <FaCheck className="joinus-gem-pill-icon" />}
                             <span>{gem}</span>
@@ -536,14 +537,16 @@ export default function JoinWithUs() {
                       })}
                     </div>
                     {selectedGemstones.includes('Other') && (
-                      <div className="joinus-input-wrap" style={{ marginTop: '8px' }}>
+                      <div className="joinus-input-wrap joinus-other-gemstone">
                         <FaGem className="joinus-input-icon" />
                         <input
+                          aria-label="Specify other gemstone types"
                           type="text"
                           className="joinus-input"
                           placeholder="Please specify other gemstone types..."
                           value={otherGemstone}
                           onChange={(e) => setOtherGemstone(e.target.value)}
+                          required
                         />
                       </div>
                     )}
@@ -551,11 +554,12 @@ export default function JoinWithUs() {
 
                   {/* Certificate Upload (Image) */}
                   <div className="joinus-form-group full-width">
-                    <label className="joinus-label">
+                    <div className="joinus-label">
                       Certificate Upload (Image)
                       <span className="joinus-label-optional">(business license or gemology certificate)</span>
-                    </label>
+                    </div>
                     <input
+                      id="modal-certificate-upload"
                       type="file"
                       ref={fileInputRef}
                       accept="image/png, image/jpeg, image/jpg, image/webp"
@@ -592,6 +596,15 @@ export default function JoinWithUs() {
                       <div
                         className={`joinus-upload-area ${isDragging ? 'is-dragging' : ''}`}
                         onClick={() => fileInputRef.current?.click()}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            fileInputRef.current?.click();
+                          }
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        aria-label="Upload business license or gemology certificate image"
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
                         onDrop={handleDrop}
@@ -602,7 +615,7 @@ export default function JoinWithUs() {
                             Drag and drop certificate image here, or <span>browse file</span>
                           </div>
                           <div className="joinus-upload-hint">
-                            Accepts JPG, PNG, WEBP (Max 10MB)
+                            Accepts JPG, PNG, WEBP (Max 10MB). Attach the image in WhatsApp after it opens.
                           </div>
                         </div>
                       </div>
@@ -611,13 +624,12 @@ export default function JoinWithUs() {
 
                   {/* Submit Application Button */}
                   <div className="joinus-submit-wrap">
-                    <button type="submit" className="joinus-submit-btn" disabled={isSubmitting}>
-                      {isSubmitting ? 'PROCESSING APPLICATION...' : 'SUBMIT APPLICATION'}
+                    <button type="submit" className="joinus-submit-btn">
+                      SUBMIT APPLICATION
                     </button>
                   </div>
                 </div>
-              </form>
-            )}
+            </form>
           </div>
         </div>
       )}
@@ -634,49 +646,71 @@ export default function JoinWithUs() {
               </div>
             </div>
             <p>
-              Direct purveyors of authentic Ceylon sapphires, rubies, and precious natural gems.
-              Ethically sourced from Sri Lanka’s legendary mines with world-class international certifications.
+              Discover the timeless beauty of authentic Sri Lankan gemstones,
+              carefully sourced, crafted and presented with royal elegance.
             </p>
           </div>
 
-          <div className="footer-links">
-            <h4>Quick Links</h4>
-            <ul>
-              <li><a href="/">Home</a></li>
-              <li><a href="/gemstones">Shop Gemstones</a></li>
-              <li><a href="/About">Heritage & Craft</a></li>
-              <li><a href="/trust">Certification</a></li>
-              <li><a href="/join-us">Join With Us</a></li>
-              <li><a href="/contact">Contact Us</a></li>
-            </ul>
+          <div>
+            <h4>EXPLORE</h4>
+            <a href="/">Home</a>
+            <a href="/gemstones">Shop</a>
+            <a href="/About">Our Heritage</a>
+            <a href="/trust">Trust &amp; Certification</a>
+            <a href="/reviews">Reviews</a>
+            <a href="/contact">Contact</a>
           </div>
 
-          <div className="footer-links">
-            <h4>Gemstone Specialties</h4>
-            <ul>
-              <li><a href="/gemstones">Royal Blue Sapphires</a></li>
-              <li><a href="/gemstones">Padparadscha Sapphires</a></li>
-              <li><a href="/gemstones">Pigeon Blood Rubies</a></li>
-              <li><a href="/gemstones">Rare Alexandrites</a></li>
-              <li><a href="/gemstones">Star Sapphires</a></li>
-            </ul>
+          <div>
+            <h4>CONTACT</h4>
+            <a href="tel:+94712345678">
+              <FaPhoneAlt /> &nbsp; +94 71 234 5678
+            </a>
+            <a href="mailto:info@ceylonroyalgemstones.com">
+              <FaEnvelope /> &nbsp; info@ceylonroyalgemstones.com
+            </a>
+            <a
+              href="https://wa.me/94712345678"
+              target="_blank"
+              rel="noreferrer"
+              className="footer-whatsapp"
+            >
+              <FaWhatsapp /> &nbsp; WhatsApp
+            </a>
+            <a href="#">
+              <FaMapMarkerAlt /> &nbsp; Ratnapura, Sri Lanka
+            </a>
           </div>
 
-          <div className="footer-contact">
-            <h4>Global Headquarters</h4>
-            <p><FaMapMarkerAlt /> Colombo & Ratnapura, Sri Lanka</p>
-            <p><FaPhoneAlt /> +94 11 234 5678</p>
-            <p><FaEnvelope /> partners@ceylonroyalgemstones.com</p>
-            <div className="footer-socials">
-              <a href="#" aria-label="Facebook"><FaFacebookF /></a>
-              <a href="#" aria-label="Instagram"><FaInstagram /></a>
-              <a href="#" aria-label="WhatsApp"><FaWhatsapp /></a>
+          <div>
+            <h4>FOLLOW US</h4>
+            <p>
+              Follow our journey and discover the world
+              of Ceylon gemstones.
+            </p>
+            <div className="footer-social-icons">
+              <a href="#" aria-label="Instagram">
+                <FaInstagram />
+              </a>
+              <a href="#" aria-label="Facebook">
+                <FaFacebookF />
+              </a>
+              <a
+                href="https://wa.me/94712345678"
+                target="_blank"
+                rel="noreferrer"
+                className="footer-whatsapp-icon"
+                aria-label="WhatsApp"
+              >
+                <FaWhatsapp />
+              </a>
             </div>
           </div>
         </div>
 
-        <div className="footer-bottom" style={{ textAlign: 'center', padding: '20px 0', borderTop: '1px solid rgba(201,162,75,0.2)', fontSize: '12px', color: 'rgba(247,243,232,0.6)' }}>
-          <p>© {new Date().getFullYear()} Ceylon Royal Gemstones. All Rights Reserved. Luxury Gemstone B2B Network.</p>
+        <div className="about-footer-bottom">
+          <p>© 2026 Ceylon Royal Gemstones. All Rights Reserved.</p>
+          <span>NATURAL • AUTHENTIC • CEYLON</span>
         </div>
       </footer>
 
@@ -728,36 +762,8 @@ export default function JoinWithUs() {
                     <div className="gem-drawer-item-info">
                       <h4>{item.name}</h4>
                       <p>{item.carat} Ct</p>
-                      <strong>${(item.price * item.quantity).toLocaleString()}</strong>
-                      <div className="gem-quantity-control">
-                        <button
-                          type="button"
-                          aria-label={`Decrease ${item.name} quantity`}
-                          onClick={() =>
-                            updateQuantity(
-                              activeDrawer === 'wishlist' ? setWishlist : setCart,
-                              getCollectionItemKey(item),
-                              -1
-                            )
-                          }
-                        >
-                          −
-                        </button>
-                        <span>{item.quantity}</span>
-                        <button
-                          type="button"
-                          aria-label={`Increase ${item.name} quantity`}
-                          onClick={() =>
-                            updateQuantity(
-                              activeDrawer === 'wishlist' ? setWishlist : setCart,
-                              getCollectionItemKey(item),
-                              1
-                            )
-                          }
-                        >
-                          +
-                        </button>
-                      </div>
+                      <strong>${Number(item.price).toLocaleString()}</strong>
+                      <p>Qty 1</p>
                     </div>
                     <button
                       type="button"

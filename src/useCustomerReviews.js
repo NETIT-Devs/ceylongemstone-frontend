@@ -9,7 +9,11 @@ const readReviews = () => {
     if (storedReviews === null) return customerReviews;
 
     const parsedReviews = JSON.parse(storedReviews);
-    return Array.isArray(parsedReviews) ? parsedReviews : customerReviews;
+    if (!Array.isArray(parsedReviews)) return customerReviews;
+    return parsedReviews.map(r => ({
+      ...r,
+      avatar: r.avatar && r.avatar.includes("unsplash.com") ? null : r.avatar
+    }));
   } catch {
     return customerReviews;
   }

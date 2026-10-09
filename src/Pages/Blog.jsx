@@ -6,14 +6,11 @@ import {
   FaInstagram,
   FaMapMarkerAlt,
   FaPhoneAlt,
-  FaSearch,
   FaShoppingBag,
-  FaStar,
+  FaUser,
   FaWhatsapp,
   FaClock,
-  FaArrowRight,
-  FaBookOpen,
-  FaGem,
+  FaArrowRight
 } from "react-icons/fa";
 import CollectionDrawerPanel from "../components/CollectionDrawerPanel.jsx";
 import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
@@ -21,6 +18,7 @@ import SiteInquiryModal from "../components/SiteInquiryModal.jsx";
 import { useSharedCollection } from "../useSharedCollection.js";
 import "./About.css";
 import "./Blog.css";
+import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
 
 const blogPosts = [
   {
@@ -29,7 +27,7 @@ const blogPosts = [
     category: "Gemstone Guide",
     date: "September 15, 2026",
     readTime: "8 min read",
-    image: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&q=80&w=800",
+    image: "/blog1new.jpg",
     excerpt: "Discover the fascinating world of Ceylon gemstones — from royal blue sapphires to rare padparadschas. Learn how to identify, evaluate, and care for these precious treasures.",
     content: [
       "Ceylon, now known as Sri Lanka, has been celebrated for millennia as the 'Island of Gems.' The island's rich geological history has produced some of the world's most sought-after gemstones, including the legendary Ceylon blue sapphire, the rare padparadscha sapphire, and the elusive alexandrite.",
@@ -44,7 +42,7 @@ const blogPosts = [
     category: "Gemstone Article",
     date: "September 10, 2026",
     readTime: "6 min read",
-    image: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&q=80&w=800",
+    image: "/blog2new.jpg",
     excerpt: "Explore the traditional art of gemstone cutting in Sri Lanka, where master lapidaries transform rough stones into dazzling works of art using techniques passed down through generations.",
     content: [
       "The art of gemstone cutting, or lapidary, has been practiced in Sri Lanka for over 2,500 years. The island's master cutters have perfected techniques that maximize each stone's natural beauty, fire, and brilliance.",
@@ -59,7 +57,7 @@ const blogPosts = [
     category: "Gemstone Guide",
     date: "September 5, 2026",
     readTime: "10 min read",
-    image: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&q=80&w=800",
+    image: "/blog3new.jpg",
     excerpt: "Why Ceylon sapphires continue to appreciate in value and what every collector should know before investing in these magnificent gemstones.",
     content: [
       "Ceylon sapphires have long been considered among the finest investments in the gemstone world. Their rarity, exceptional color, and historical significance have driven consistent appreciation in value over decades.",
@@ -74,7 +72,7 @@ const blogPosts = [
     category: "Gemstone Article",
     date: "August 28, 2026",
     readTime: "7 min read",
-    image: "https://images.unsplash.com/photo-1615655406736-b37c4fabf923?auto=format&fit=crop&q=80&w=800",
+    image: "/blog4new.jpg",
     excerpt: "Delve into the geological processes that create the extraordinary colors found in Ceylon gemstones, from trace elements to crystal structure.",
     content: [
       "The mesmerizing colors of Ceylon gemstones are the result of complex geological processes that span millions of years. Trace elements within the crystal lattice interact with light to produce the brilliant hues that make these gems so desirable.",
@@ -99,33 +97,19 @@ const Blog = () => {
           <img src="/logo.png" alt="Ceylon Royal Gemstones" />
           <div className="about-logo-text"><span>CEYLON</span><small>ROYAL GEMSTONES</small></div>
         </a>
+        <MobileSiteMenu />
         <div className="about-nav-links">
           <a href="/">Home</a>
-          <a href="/gemstones">Gemstones</a>
+          <a href="/gemstones">Shop</a>
           <a href="/About">Heritage</a>
           <a href="/trust">Certification</a>
           <a href="/reviews">Reviews</a>
           <a href="/contact">Contact</a>
           <a href="/blog" className="active">Blog</a>
-          <a href="/login">Login</a>
           <InternationalNavEntry />
         </div>
         <div className="about-nav-actions">
           <InternationalNavEntry mobile />
-          <button
-            type="button"
-            className="about-nav-icon"
-            title="Search"
-            aria-label="Search gemstones"
-            onClick={() => {
-              const query = prompt("Search gemstones:");
-              if (query) {
-                window.location.href = `/?search=${encodeURIComponent(query)}`;
-              }
-            }}
-          >
-            <FaSearch />
-          </button>
           <button
             type="button"
             className="about-nav-icon"
@@ -149,6 +133,21 @@ const Blog = () => {
           <button type="button" className="about-inquire-btn" onClick={() => setIsInquiryOpen(true)}>
             INQUIRE NOW
           </button>
+          <a
+            href="/join-us"
+            className="navbar-joinus-btn"
+            title="Join With Us"
+          >
+            <span>JOIN US</span>
+          </a>
+          <a
+            href="/login"
+            className="navbar-login-btn"
+            title="Login / Register"
+          >
+            <FaUser />
+            <span>LOGIN</span>
+          </a>
         </div>
       </nav>
 
@@ -253,7 +252,7 @@ const Blog = () => {
           <div>
             <h4>EXPLORE</h4>
             <a href="/">Home</a>
-            <a href="/gemstones">Gemstones</a>
+            <a href="/gemstones">Shop</a>
             <a href="/About">Our Heritage</a>
             <a href="/trust">Trust &amp; Certification</a>
             <a href="/reviews">Reviews</a>

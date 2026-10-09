@@ -81,31 +81,80 @@
 
 .about-navbar .currency-current,
 .international-navbar .currency-current {
-  height: 36px;
-  padding: 0 10px;
-  font-size: 12px;
-  gap: 6px;
+  height: 32px !important;
+  padding: 0 8px !important;
+  font-size: 11px !important;
+  gap: 5px !important;
 }
 
 .about-navbar .about-nav-icon,
 .international-navbar .about-nav-icon {
-  width: 36px;
-  height: 36px;
-  padding: 0;
+  width: 32px !important;
+  height: 32px !important;
+  padding: 0 !important;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  font-size: 14px !important;
+}
+
+.about-navbar .about-nav-icon svg,
+.international-navbar .about-nav-icon svg {
+  font-size: 14px !important;
+}
+
+.about-navbar .about-badge,
+.about-badge {
+  width: 15px !important;
+  height: 15px !important;
+  font-size: 9px !important;
+  top: -2px !important;
+  right: -2px !important;
 }
 
 .about-inquire-btn {
-  height: 38px;
-  padding: 0 14px;
-  font-size: 11px;
-  font-weight: 700;
+  height: 32px !important;
+  padding: 0 11px !important;
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
   white-space: nowrap;
   flex-shrink: 0;
   border-radius: 4px;
+  letter-spacing: 0.6px !important;
+}
+
+/* =========================================================
+   NAVBAR JOIN US BUTTON
+========================================================= */
+.navbar-joinus-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 32px !important;
+  padding: 0 11px !important;
+  border: 1.5px solid #c9a24b;
+  border-radius: 4px;
+  background: transparent;
+  color: #c9a24b;
+  font-size: 10.5px !important;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: background 0.22s ease, color 0.22s ease, border-color 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+.navbar-joinus-btn:hover,
+.navbar-joinus-btn.active {
+  background: #c9a24b;
+  color: #061c2b;
+  border-color: #c9a24b;
+  box-shadow: 0 0 12px rgba(201, 162, 75, 0.4);
 }
 
 @media (max-width: 1280px) {
@@ -232,4 +281,355 @@
 .consultation-navbar .currency-current {
   color: #ffffff !important;
   border-color: rgba(201, 162, 75, 0.5) !important;
+}
+
+/* =========================================================
+   NAVBAR LOGIN BUTTON (right-corner, all pages)
+========================================================= */
+.navbar-login-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px !important;
+  padding: 0 10px !important;
+  border: 1.5px solid rgba(201, 162, 75, 0.75);
+  border-radius: 4px;
+  background: transparent;
+  color: #c9a24b;
+  font-size: 10.5px !important;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: background 0.22s ease, color 0.22s ease, border-color 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+.navbar-login-btn svg {
+  font-size: 12px !important;
+  flex-shrink: 0;
+}
+
+.navbar-login-btn:hover {
+  background: #c9a24b;
+  color: #0a1628;
+  border-color: #c9a24b;
+  box-shadow: 0 0 14px rgba(201, 162, 75, 0.4);
+}
+
+/* Keep the primary navbar actions visually consistent across pages. */
+.about-nav-actions > .about-inquire-btn,
+.about-nav-actions > .navbar-joinus-btn,
+.about-nav-actions > .navbar-login-btn {
+  height: 34px !important;
+  margin-left: 5px !important;
+  padding: 0 12px !important;
+  border: 1px solid #c9a24b !important;
+  border-radius: 5px !important;
+  font-family: "Montserrat", sans-serif !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.07em !important;
+  line-height: 1 !important;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease,
+    box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.about-nav-actions > .about-inquire-btn {
+  background: linear-gradient(135deg, #e2bf69, #c9a24b) !important;
+  color: #061c2b !important;
+}
+
+.about-nav-actions > .navbar-joinus-btn {
+  background: rgba(201, 162, 75, 0.08) !important;
+  color: #e2bf69 !important;
+  text-decoration: none;
+}
+
+.about-nav-actions > .navbar-login-btn {
+  background: rgba(247, 243, 232, 0.04);
+  color: #f7f3e8 !important;
+  text-decoration: none;
+}
+
+.about-nav-actions > .about-inquire-btn:hover,
+.about-nav-actions > .navbar-joinus-btn:hover,
+.about-nav-actions > .navbar-login-btn:hover,
+.about-nav-actions > .navbar-joinus-btn.active {
+  transform: translateY(-1px);
+  background: #c9a24b !important;
+  color: #061c2b !important;
+  border-color: #e2bf69 !important;
+  box-shadow: 0 4px 14px rgba(201, 162, 75, 0.28);
+}
+
+/* hide text on very narrow viewports, keep icon only */
+@media (max-width: 420px) {
+  .about-nav-actions > .about-inquire-btn,
+  .about-nav-actions > .navbar-joinus-btn,
+  .about-nav-actions > .navbar-login-btn {
+    height: 32px !important;
+    margin-left: 3px !important;
+    padding: 0 8px !important;
+    font-size: 9px !important;
+  }
+
+  .navbar-login-btn span {
+    display: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .about-navbar .about-nav-actions,
+  .international-navbar .about-nav-actions,
+  .login-page-navbar .about-nav-actions,
+  .gem-detail-nav-actions {
+    gap: 1px !important;
+  }
+
+  .about-navbar .about-nav-icon,
+  .international-navbar .about-nav-icon,
+  .gem-detail-nav-icon {
+    width: 27px !important;
+    height: 30px !important;
+  }
+
+  .about-navbar .currency-current,
+  .international-navbar .currency-current {
+    padding: 0 5px !important;
+  }
+
+  .international-nav-entry-mobile {
+    width: 28px;
+    height: 30px;
+  }
+
+  .about-nav-actions > .about-inquire-btn,
+  .about-nav-actions > .navbar-joinus-btn,
+  .about-nav-actions > .navbar-login-btn {
+    margin-left: 1px !important;
+    padding: 0 5px !important;
+    font-size: 8px !important;
+  }
+}
+
+/* Mobile navigation drawer shared by every page header */
+.mobile-site-menu-toggle,
+.mobile-site-menu-layer {
+  display: none;
+}
+
+.mobile-site-menu-layer[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .about-navbar,
+  .gem-detail-navbar {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 64px;
+    height: auto !important;
+    padding: 8px 16px !important;
+    box-sizing: border-box;
+  }
+
+  .about-navbar .about-navbar-logo,
+  .gem-detail-navbar .gem-detail-brand {
+    flex: 0 1 auto !important;
+    min-width: 0;
+    margin: 0 !important;
+    order: 1;
+  }
+
+  .about-navbar .about-navbar-logo img,
+  .gem-detail-navbar .gem-detail-brand img {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+  }
+
+  .about-navbar .about-nav-links,
+  .gem-detail-navbar .gem-detail-nav-links {
+    display: none !important;
+  }
+
+  .about-navbar .about-nav-actions,
+  .gem-detail-navbar .gem-detail-nav-actions {
+    display: flex !important;
+    align-items: center;
+    flex: 0 1 auto;
+    min-width: 0;
+    gap: 8px !important;
+    margin: 0 0 0 auto !important;
+    order: 2;
+  }
+
+  .about-navbar .about-nav-actions > .about-inquire-btn,
+  .about-navbar .about-nav-actions > .navbar-joinus-btn,
+  .about-navbar .about-nav-actions > .navbar-login-btn,
+  .gem-detail-navbar .gem-detail-nav-actions > .about-inquire-btn,
+  .gem-detail-navbar .gem-detail-nav-actions > .gem-detail-inquire-link,
+  .gem-detail-navbar .gem-detail-nav-actions > .navbar-joinus-btn,
+  .gem-detail-navbar .gem-detail-nav-actions > .navbar-login-btn {
+    display: none !important;
+  }
+
+  .about-navbar .about-nav-actions .about-nav-icon,
+  .gem-detail-navbar .gem-detail-nav-actions .gem-detail-nav-icon,
+  .gem-detail-navbar .gem-detail-nav-actions .about-nav-icon {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    width: 32px !important;
+    height: 32px !important;
+    padding: 0 !important;
+    flex: 0 0 32px !important;
+  }
+
+  .about-navbar .about-nav-actions .currency-selector,
+  .gem-detail-navbar .gem-detail-nav-actions .currency-selector {
+    display: flex !important;
+    flex: 0 0 auto;
+    margin: 0 !important;
+  }
+
+  .about-navbar .mobile-site-menu-toggle,
+  .gem-detail-navbar .mobile-site-menu-toggle {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    margin-left: 0;
+    padding: 0;
+    border: 1px solid rgba(201, 162, 75, 0.78);
+    border-radius: 4px;
+    background: rgba(6, 28, 43, 0.96);
+    color: #e2bf69;
+    font-size: 19px;
+    cursor: pointer;
+    order: 0;
+  }
+
+  .mobile-site-menu-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    display: block;
+  }
+
+  .mobile-site-menu-backdrop {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: rgba(0, 0, 0, 0.58);
+  }
+
+  .mobile-site-menu-drawer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    width: min(88vw, 380px);
+    height: 100%;
+    padding: 22px 22px max(22px, env(safe-area-inset-bottom));
+    overflow-y: auto;
+    background: linear-gradient(155deg, #061c2b 0%, #063b32 100%);
+    border-right: 1px solid rgba(201, 162, 75, 0.48);
+    box-shadow: 16px 0 42px rgba(0, 0, 0, 0.28);
+    box-sizing: border-box;
+  }
+
+  .mobile-site-menu-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid rgba(201, 162, 75, 0.35);
+    color: #e2bf69;
+    font: 600 12px "Cinzel", serif;
+    letter-spacing: 1.2px;
+  }
+
+  .mobile-site-menu-heading button {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 38px;
+    width: 38px;
+    height: 38px;
+    border: 1px solid rgba(201, 162, 75, 0.55);
+    background: transparent;
+    color: #f7f3e8;
+    font-size: 16px;
+  }
+
+  .mobile-site-menu-links,
+  .mobile-site-menu-actions {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mobile-site-menu-links {
+    padding: 10px 0;
+  }
+
+  .mobile-site-menu-links a,
+  .mobile-site-menu-actions a,
+  .mobile-site-menu-actions button {
+    display: flex;
+    align-items: center;
+    min-height: 48px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    color: #f7f3e8;
+    font: 500 14px "Montserrat", sans-serif;
+    text-decoration: none;
+  }
+
+  .mobile-site-menu-links a:hover,
+  .mobile-site-menu-actions a:hover,
+  .mobile-site-menu-actions button:hover {
+    color: #e2bf69;
+  }
+
+  .mobile-site-menu-actions {
+    gap: 10px;
+    margin-top: auto;
+    padding-top: 18px;
+  }
+
+  .mobile-site-menu-actions a,
+  .mobile-site-menu-actions button {
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px solid rgba(201, 162, 75, 0.68);
+    border-radius: 4px;
+    box-sizing: border-box;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+    font-family: inherit;
+    cursor: pointer;
+    width: 100%;
+  }
+
+  .mobile-site-menu-actions .mobile-site-menu-inquire {
+    border-color: #c9a24b;
+    background: #c9a24b;
+    color: #061c2b;
+    font-weight: 700;
+  }
 }

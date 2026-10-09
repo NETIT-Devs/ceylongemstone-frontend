@@ -15,11 +15,14 @@ import {
   FaSearchPlus,
   FaShoppingBag,
   FaSyncAlt,
+  FaUser,
   FaWhatsapp
 } from 'react-icons/fa';
 import './GemstoneDetail.css';
+import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
 import CollectionDrawerActions from '../components/CollectionDrawerActions.jsx';
 import InternationalNavEntry from '../components/InternationalNavEntry.jsx';
+import { formatCurrencyPrice, getCurrentCurrency } from '../currency.js';
 import {
   getCollectionItemKey,
   normalizeCollectionItem,
@@ -27,6 +30,7 @@ import {
 } from '../useSharedCollection.js';
 
 const GemstoneDetail = ({ gem }) => {
+  const [currency] = useState(getCurrentCurrency);
   const viewLabels = ['Front', 'Back', 'Right', 'Left'];
   const rawGalleryViews = Array.isArray(gem?.galleryViews) && gem.galleryViews.length > 0
     ? gem.galleryViews
@@ -103,7 +107,6 @@ const GemstoneDetail = ({ gem }) => {
   const [newPhoto, setNewPhoto] = useState(null);
   const [wishlist, setWishlist] = useSharedCollection('ceylon-wishlist');
   const [cart, setCart] = useSharedCollection('ceylon-cart');
-  const [purchaseQuantity, setPurchaseQuantity] = useState(1);
   const [addedToCart, setAddedToCart] = useState(false);
   const [activeDrawer, setActiveDrawer] = useState(null);
   const [showPaymentNotice, setShowPaymentNotice] = useState(false);
@@ -117,7 +120,7 @@ const GemstoneDetail = ({ gem }) => {
     (item) => getCollectionItemKey(item) === gemProductKey
   );
 
-  const addProductToCart = (product, quantity = 1) => {
+  const addProductToCart = (product) => {
     const productKey = getCollectionItemKey(product);
 
     setCart((current) => {
@@ -125,33 +128,19 @@ const GemstoneDetail = ({ gem }) => {
         (item) => getCollectionItemKey(item) === productKey
       );
 
-      if (alreadyInCart) {
-        return current.map((item) =>
-          getCollectionItemKey(item) === productKey
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
-        );
-      }
+      if (alreadyInCart) return current;
 
       return [
         ...current,
-        normalizeCollectionItem({ ...product, quantity })
+        normalizeCollectionItem({ ...product, quantity: 1 })
       ];
     });
   };
 
   const addGemToCart = () => {
-    addProductToCart(gem, purchaseQuantity);
+    addProductToCart(gem);
     setAddedToCart(true);
     setActiveDrawer('cart');
-  };
-
-  const updateCollectionQuantity = (setCollection, productKey, change) => {
-    setCollection((current) => current
-      .map((item) => getCollectionItemKey(item) === productKey
-        ? { ...item, quantity: Math.max(0, item.quantity + change) }
-        : item)
-      .filter((item) => item.quantity > 0));
   };
 
   const toggleGemWishlist = () => {
@@ -229,58 +218,75 @@ const GemstoneDetail = ({ gem }) => {
 
   return (
     <div className="luxury-detail-wrapper">
-      <header className="gem-detail-navbar">
-        <a href="/" className="gem-detail-brand">
+      <header className="gem-detail-navbar about-navbar">
+        <a href="/" className="gem-detail-brand about-navbar-logo">
           <img src="/logo.png" alt="Ceylon Royal Gemstones" />
-          <span>
+          <span className="about-logo-text">
             <strong>CEYLON</strong>
             <small>ROYAL GEMSTONES</small>
           </span>
         </a>
 
-        <nav className="gem-detail-nav-links" aria-label="Main navigation">
+        <MobileSiteMenu />
+        <nav className="gem-detail-nav-links about-nav-links" aria-label="Main navigation">
           <a href="/">Home</a>
-          <a href="/gemstones" className="active">Gemstones</a>
-          <a href="/About">Our Heritage</a>
-          <a href="/trust">Trust & Certification</a>
+          <a href="/gemstones" className="active">Shop</a>
+          <a href="/About">Heritage</a>
+          <a href="/trust">Certification</a>
           <a href="/reviews">Reviews</a>
           <a href="/contact">Contact</a>
+          <a href="/blog">Blog</a>
           <InternationalNavEntry />
         </nav>
 
-        <div className="gem-detail-nav-actions">
+        <div className="gem-detail-nav-actions about-nav-actions">
           <InternationalNavEntry mobile />
           <button
             type="button"
-            className="gem-detail-nav-icon"
+            className="gem-detail-nav-icon about-nav-icon"
             aria-label={`Wishlist, ${wishlistCount} items`}
             title="Wishlist"
             onClick={() => setActiveDrawer('wishlist')}
           >
             <FaHeart />
-            {wishlistCount > 0 && <span className="gem-detail-badge">{wishlistCount}</span>}
+            {wishlistCount > 0 && <span className="gem-detail-badge about-badge">{wishlistCount}</span>}
           </button>
           <button
             type="button"
-            className="gem-detail-nav-icon"
+            className="gem-detail-nav-icon about-nav-icon"
             aria-label={`Cart, ${cartCount} items`}
             title="Shopping Cart"
             onClick={() => setActiveDrawer('cart')}
           >
             <FaShoppingBag />
-            {cartCount > 0 && <span className="gem-detail-badge">{cartCount}</span>}
+            {cartCount > 0 && <span className="gem-detail-badge about-badge">{cartCount}</span>}
           </button>
           <button
             type="button"
-            className="gem-detail-inquire-link"
+            className="gem-detail-inquire-link about-inquire-btn"
             onClick={() => setShowInquiryForm(true)}
           >
             INQUIRE NOW
           </button>
+          <a
+            href="/join-us"
+            className="navbar-joinus-btn"
+            title="Join With Us"
+          >
+            <span>JOIN US</span>
+          </a>
+          <a
+            href="/login"
+            className="navbar-login-btn"
+            title="Login / Register"
+          >
+            <FaUser />
+            <span>LOGIN</span>
+          </a>
         </div>
       </header>
 
-      <a href="/gemstones" className="detail-back-collection">
+      <a href="/gemstones#collection" className="detail-back-collection">
         <FaArrowLeft aria-hidden="true" />
         <span>BACK TO COLLECTION</span>
       </a>
@@ -290,7 +296,7 @@ const GemstoneDetail = ({ gem }) => {
         {/* Media Gallery */}
         <div className="media-stage">
           <div
-            className={`main-display-frame ${is360Mode && hasRotationFrames ? 'is-rotatable' : ''}`}
+            className={`main-display-frame ${is360Mode && hasRotationFrames ? 'is-rotatable' : ''} ${!is360Mode && activeMedia.type === 'video' ? 'video-active' : ''}`}
             onPointerDown={handleRotationPointerDown}
             onPointerMove={handleRotationPointerMove}
             onPointerUp={() => { dragStartX.current = null; }}
@@ -450,11 +456,8 @@ const GemstoneDetail = ({ gem }) => {
 
           <div className="price-container">
             <div className="price-usd">
-              {gem.priceUSD || (gem.priceLKR
-                ? ''
-                : `$${Number(gem.price || 0).toLocaleString()}`)}
+              {formatCurrencyPrice(gem.basePriceUSD ?? gem.price ?? gem.priceUSD ?? 0, currency)}
             </div>
-            {gem.priceLKR && <div className="price-lkr">{gem.priceLKR}</div>}
           </div>
 
           <h2 className="gem-about-heading">ABOUT THE GEM</h2>
@@ -524,28 +527,9 @@ const GemstoneDetail = ({ gem }) => {
 
           <div className="purchase-quantity-row">
             <span>QUANTITY</span>
-            <div className="detail-quantity-control" aria-label="Purchase quantity">
-              <button
-                type="button"
-                aria-label="Decrease quantity"
-                disabled={purchaseQuantity <= 1}
-                onClick={() => {
-                  setPurchaseQuantity((quantity) => Math.max(1, quantity - 1));
-                  setAddedToCart(false);
-                }}
-              >−</button>
-              <span aria-live="polite">{purchaseQuantity}</span>
-              <button
-                type="button"
-                aria-label="Increase quantity"
-                onClick={() => {
-                  setPurchaseQuantity((quantity) => quantity + 1);
-                  setAddedToCart(false);
-                }}
-              >+</button>
-            </div>
+            <strong className="purchase-single-quantity">1</strong>
             <strong>
-              ${(Number(gem.price || 0) * purchaseQuantity).toLocaleString()}
+              {formatCurrencyPrice(gem.basePriceUSD ?? gem.price ?? gem.priceUSD ?? 0, currency)}
             </strong>
           </div>
 
@@ -724,7 +708,7 @@ const GemstoneDetail = ({ gem }) => {
           <div className="gem-detail-footer-links">
             <h2>EXPLORE</h2>
             <a href="/">Home</a>
-            <a href="/gemstones">Gemstones</a>
+            <a href="/gemstones">Shop</a>
             <a href="/About">Our Heritage</a>
             <a href="/trust">Trust & Certification</a>
             <a href="/reviews">Reviews</a>
@@ -866,20 +850,8 @@ const GemstoneDetail = ({ gem }) => {
                       <img src={item.image || item.images?.[0]} alt={itemName} />
                       <div className="detail-cart-item-info">
                         <strong>{itemName}</strong>
-                        <span>${Number(item.price || 0).toLocaleString()}</span>
-                        <div className="detail-cart-quantity">
-                          <button
-                            type="button"
-                            onClick={() => updateCollectionQuantity(activeDrawer === 'wishlist' ? setWishlist : setCart, productKey, -1)}
-                            aria-label={`Decrease ${itemName} quantity`}
-                          >−</button>
-                          <span>{item.quantity}</span>
-                          <button
-                            type="button"
-                            onClick={() => updateCollectionQuantity(activeDrawer === 'wishlist' ? setWishlist : setCart, productKey, 1)}
-                            aria-label={`Increase ${itemName} quantity`}
-                          >+</button>
-                        </div>
+                        <span>{formatCurrencyPrice(item.price, currency)}</span>
+                        <span>Qty 1</span>
                       </div>
                       <button
                         type="button"

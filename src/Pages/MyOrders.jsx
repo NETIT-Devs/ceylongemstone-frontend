@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   FaBoxOpen,
   FaTruck,
@@ -9,7 +9,6 @@ import {
   FaShieldAlt,
   FaUserCheck,
   FaSignOutAlt,
-  FaSearch,
   FaHeart,
   FaShoppingBag,
   FaPhoneAlt,
@@ -18,8 +17,7 @@ import {
   FaMapMarkerAlt,
   FaInstagram,
   FaFacebookF,
-  FaChevronRight,
-  FaSync
+  FaUser
 } from "react-icons/fa";
 import CollectionDrawerPanel from "../components/CollectionDrawerPanel.jsx";
 import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
@@ -27,6 +25,7 @@ import SiteInquiryModal from "../components/SiteInquiryModal.jsx";
 import { useSharedCollection } from "../useSharedCollection.js";
 import "./MyOrders.css";
 import "./About.css";
+import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
 
 // Sample luxury gemstone orders for initial view / fallback
 const sampleOrders = [
@@ -96,43 +95,32 @@ const MyOrders = () => {
   const [activeDrawer, setActiveDrawer] = useState(null);
   const [isInquiryOpen, setIsInquiryOpen] = useState(false);
 
-  const [user, setUser] = useState(null);
-  const [orders, setOrders] = useState(sampleOrders);
+  const [user] = useState(() => {
+    try {
+      return JSON.parse(window.localStorage.getItem("ceylon-user") || "null");
+    } catch {
+      return null;
+    }
+  });
+  const [orders] = useState(() => {
+    try {
+      const savedOrders = window.localStorage.getItem("ceylon-orders");
+      if (savedOrders) {
+        const parsed = JSON.parse(savedOrders);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return [...parsed, ...sampleOrders];
+        }
+      }
+    } catch {
+      // Fallback to sample orders
+    }
+    return sampleOrders;
+  });
   const [activeTab, setActiveTab] = useState("ALL");
   const [selectedOrderTracking, setSelectedOrderTracking] = useState(null);
 
-  useEffect(() => {
-    // Read logged-in user from localStorage or set default active session
-    const savedUser = window.localStorage.getItem("ceylon-user");
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (e) {
-        setUser({ name: "Royal Collector", email: "info@ceylonroyalgemstones.com", loggedIn: true });
-      }
-    } else {
-      const defaultUser = { name: "Royal Collector", email: "info@ceylonroyalgemstones.com", loggedIn: true };
-      setUser(defaultUser);
-      window.localStorage.setItem("ceylon-user", JSON.stringify(defaultUser));
-    }
-
-    // Read stored user orders if any placed during checkout session
-    const savedOrders = window.localStorage.getItem("ceylon-orders");
-    if (savedOrders) {
-      try {
-        const parsed = JSON.parse(savedOrders);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setOrders([...parsed, ...sampleOrders]);
-        }
-      } catch (e) {
-        // Fallback to sample orders
-      }
-    }
-  }, []);
-
   const handleLogout = () => {
     window.localStorage.removeItem("ceylon-user");
-    setUser(null);
     window.location.href = "/login";
   };
 
@@ -166,9 +154,10 @@ const MyOrders = () => {
           </div>
         </a>
 
+        <MobileSiteMenu />
         <div className="about-nav-links">
           <a href="/">Home</a>
-          <a href="/gemstones">Gemstones</a>
+          <a href="/gemstones">Shop</a>
           <a href="/About">Heritage</a>
           <a href="/trust">Certification</a>
           <a href="/reviews">Reviews</a>
@@ -180,20 +169,6 @@ const MyOrders = () => {
 
         <div className="about-nav-actions">
           <InternationalNavEntry mobile />
-          <button
-            type="button"
-            className="about-nav-icon"
-            title="Search"
-            aria-label="Search gemstones"
-            onClick={() => {
-              const query = prompt("Search gemstones:");
-              if (query) {
-                window.location.href = `/?search=${encodeURIComponent(query)}`;
-              }
-            }}
-          >
-            <FaSearch />
-          </button>
           <button
             type="button"
             className="about-nav-icon"
@@ -219,6 +194,21 @@ const MyOrders = () => {
           >
             INQUIRE NOW
           </button>
+          <a
+            href="/join-us"
+            className="navbar-joinus-btn"
+            title="Join With Us"
+          >
+            <span>JOIN US</span>
+          </a>
+          <a
+            href="/login"
+            className="navbar-login-btn"
+            title="Login / Register"
+          >
+            <FaUser />
+            <span>LOGIN</span>
+          </a>
         </div>
       </nav>
 
@@ -507,7 +497,7 @@ const MyOrders = () => {
           <div>
             <h4>EXPLORE</h4>
             <a href="/">Home</a>
-            <a href="/gemstones">Gemstones</a>
+            <a href="/gemstones">Shop</a>
             <a href="/About">Our Heritage</a>
             <a href="/trust">Trust &amp; Certification</a>
             <a href="/reviews">Reviews</a>

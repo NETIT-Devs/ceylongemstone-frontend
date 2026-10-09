@@ -13,7 +13,7 @@ export const normalizeCollectionItem = (item) => {
     productKey: getCollectionItemKey(item),
     price,
     basePriceUSD: Number(item.basePriceUSD ?? price),
-    quantity: Math.max(1, Number(item.quantity) || 1)
+    quantity: 1
   };
 };
 

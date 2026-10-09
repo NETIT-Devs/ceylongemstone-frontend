@@ -11,10 +11,16 @@
   overflow-x: hidden;
 }
 
+.joinus-page-shell > .about-navbar {
+  position: relative;
+  background: #061c2b;
+  border-bottom: 1px solid rgba(201, 162, 75, 0.45);
+}
+
 /* TOP BAR / BACK TO HOME LINK */
 .joinus-top-bar {
   width: min(1280px, 92%);
-  margin: 18px auto 0;
+  margin: 8px auto 0;
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -51,11 +57,11 @@
 ========================================================= */
 .joinus-hero-section {
   width: min(1280px, 92%);
-  margin: 24px auto 60px;
-  padding: 44px clamp(20px, 4vw, 52px);
+  margin: 12px auto 44px;
+  padding: 30px clamp(20px, 4vw, 52px);
   background: radial-gradient(circle at top right, rgba(201, 162, 75, 0.16), transparent 55%),
               linear-gradient(145deg, #092336 0%, #061c2b 100%);
-  border: 1px solid rgba(201, 162, 75, 0.4);
+  border: 1px solid rgba(201, 162, 75, 0.72);
   border-radius: 8px;
   box-shadow: 0 16px 40px rgba(6, 28, 43, 0.2);
   display: grid;
@@ -68,7 +74,7 @@
 .joinus-hero-content {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 12px;
 }
 
 .joinus-luxury-tag {
@@ -125,10 +131,10 @@
 .joinus-hero-highlights {
   list-style: none;
   padding: 0;
-  margin: 6px 0 12px;
+  margin: 0 0 2px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 7px;
 }
 
 .joinus-hero-highlights li {
@@ -150,7 +156,7 @@
   align-items: center;
   gap: 14px;
   flex-wrap: wrap;
-  margin-top: 6px;
+  margin-top: 0;
 }
 
 .joinus-primary-btn {
@@ -438,23 +444,25 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 24px;
   overflow-y: auto;
   animation: joinusFadeIn 0.25s ease-out;
 }
 
 .joinus-modal-container {
-  width: min(760px, 100%);
-  max-height: 90vh;
+  width: min(820px, 100%);
+  max-height: min(88vh, 820px);
+  max-height: min(88dvh, 820px);
   overflow-y: auto;
   background: #F7F3E8;
   border: 1px solid #C9A24B;
-  border-radius: 4px;
-  padding: clamp(28px, 4.5vw, 44px);
+  border-radius: 8px;
+  padding: clamp(24px, 3.5vw, 36px);
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
   position: relative;
   color: #061C2B;
   animation: joinusSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  scrollbar-gutter: stable;
 }
 
 .joinus-modal-close-btn {
@@ -501,17 +509,9 @@
 /* MODAL FORM INNER CONTENT */
 .joinus-form-header {
   text-align: center;
-  margin-bottom: 28px;
-}
-
-.joinus-form-tag {
-  color: #806522;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  display: block;
-  margin-bottom: 6px;
+  margin: 0 auto 22px;
+  max-width: 580px;
+  padding: 0 28px;
 }
 
 .joinus-form-title {
@@ -527,18 +527,20 @@
   font-size: 13px;
   color: #78828a;
   margin: 0;
+  line-height: 1.5;
 }
 
 .joinus-form-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 20px;
 }
 
 .joinus-form-group {
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .joinus-form-group.full-width {
@@ -546,7 +548,8 @@
 }
 
 .joinus-label {
-  font-size: 11.5px;
+  min-height: 16px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.05em;
   color: #061C2B;
@@ -561,6 +564,7 @@
   color: #78828a;
   text-transform: lowercase;
   font-weight: 400;
+  letter-spacing: 0;
 }
 
 .joinus-input-wrap {
@@ -579,7 +583,7 @@
 
 .joinus-input {
   width: 100%;
-  height: 42px;
+  height: 46px;
   padding: 0 14px 0 40px;
   background: #ffffff;
   border: 1px solid #ddd8cb;
@@ -606,13 +610,14 @@
 .joinus-gem-pills {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 4px;
+  gap: 9px;
+  margin-top: 2px;
 }
 
 .joinus-gem-pill {
-  padding: 7px 14px;
-  border-radius: 3px;
+  min-height: 36px;
+  padding: 8px 13px;
+  border-radius: 4px;
   border: 1px solid #ddd8cb;
   background: #ffffff;
   color: #061C2B;
@@ -641,12 +646,24 @@
   font-size: 10px;
 }
 
+.joinus-gem-pill:focus-visible,
+.joinus-upload-area:focus-visible,
+.joinus-preview-remove:focus-visible {
+  outline: 2px solid #806522;
+  outline-offset: 2px;
+}
+
+.joinus-other-gemstone {
+  margin-top: 2px;
+}
+
 /* CERTIFICATE UPLOAD AREA */
 .joinus-upload-area {
   border: 1.5px dashed rgba(201, 162, 75, 0.65);
   border-radius: 4px;
   background: #ffffff;
-  padding: 24px 20px;
+  min-height: 112px;
+  padding: 18px 20px;
   text-align: center;
   cursor: pointer;
   transition: all 0.22s ease;
@@ -660,7 +677,16 @@
 }
 
 .joinus-file-input {
-  display: none;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+  border: 0;
 }
 
 .joinus-upload-prompt {
@@ -761,12 +787,12 @@
 /* SUBMIT BUTTON */
 .joinus-submit-wrap {
   grid-column: 1 / -1;
-  margin-top: 8px;
+  margin-top: 2px;
 }
 
 .joinus-submit-btn {
   width: 100%;
-  height: 46px;
+  min-height: 48px;
   background: #C9A24B;
   color: #061C2B;
   border: 1px solid #C9A24B;
@@ -871,8 +897,31 @@
 }
 
 @media (max-width: 768px) {
+  .joinus-modal-backdrop {
+    align-items: flex-start;
+    padding: 12px;
+  }
+
+  .joinus-modal-container {
+    width: 100%;
+    max-height: 94vh;
+    max-height: 94dvh;
+    padding: 24px 18px;
+    border-radius: 6px;
+  }
+
+  .joinus-form-header {
+    margin-bottom: 20px;
+    padding: 0 24px;
+  }
+
+  .joinus-form-title {
+    font-size: clamp(20px, 5vw, 25px);
+  }
+
   .joinus-form-grid {
     grid-template-columns: 1fr;
+    gap: 14px;
   }
 
   .joinus-benefits-grid {
@@ -880,12 +929,40 @@
   }
 
   .joinus-hero-section {
-    padding: 24px 18px;
-    margin: 16px auto 40px;
+    padding: 20px 16px;
+    margin: 8px auto 32px;
+    gap: 24px;
+  }
+
+  .joinus-hero-content {
+    gap: 10px;
+  }
+
+  .joinus-hero-title {
+    font-size: clamp(28px, 8vw, 36px);
+  }
+
+  .joinus-hero-tagline {
+    font-size: 16px;
+  }
+
+  .joinus-hero-desc {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .joinus-hero-highlights li {
+    font-size: 12px;
+  }
+
+  .joinus-primary-btn,
+  .joinus-secondary-btn {
+    padding: 12px 16px;
+    font-size: 12px;
   }
 
   .joinus-modal-container {
-    padding: 24px 16px;
+    padding: 22px 16px;
   }
 
   .joinus-preview-name {

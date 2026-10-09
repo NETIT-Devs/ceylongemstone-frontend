@@ -1,17 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   FaGem,
   FaShoppingBag,
   FaUsers,
   FaChartLine,
   FaPlus,
-  FaEdit,
   FaTrash,
   FaCheckCircle,
   FaClock,
   FaTruck,
   FaShieldAlt,
-  FaSearch,
   FaSignOutAlt,
   FaHeart,
   FaPhoneAlt,
@@ -21,20 +19,27 @@ import {
   FaInstagram,
   FaFacebookF,
   FaFileInvoice,
-  FaBox,
   FaCreditCard,
-  FaClipboardList,
   FaStar,
   FaTimes,
   FaCopy,
   FaPrint,
+  FaUser,
   FaExclamationTriangle
 } from "react-icons/fa";
 import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
 import CollectionDrawerPanel from "../components/CollectionDrawerPanel.jsx";
 import SiteInquiryModal from "../components/SiteInquiryModal.jsx";
 import { products } from "./Gemstones.jsx";
-import { useSharedCollection } from "../useSharedCollection.js";
+import {
+  getCollectionItemKey,
+  useSharedCollection
+} from "../useSharedCollection.js";
+import {
+  LOW_STOCK_THRESHOLD,
+  useGemInventory
+} from "../useGemInventory.js";
+import { useGemSubmissions } from "../useGemSubmissions.js";
 import { useCustomerReviews } from "../useCustomerReviews.js";
 import {
   endAdminSession,
@@ -45,6 +50,7 @@ import {
 } from "../adminAccess.js";
 import "./AdminDashboard.css";
 import "./About.css";
+import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
 
 const initialAdminOrders = [
   {
@@ -118,41 +124,6 @@ const initialAdminPayments = [
   }
 ];
 
-const initialAdminTasks = [
-  {
-    id: "TASK-204",
-    title: "Verify GIC certificate for green gemstone",
-    owner: "Certification",
-    priority: "HIGH",
-    dueDate: "2026-10-02",
-    completed: false
-  },
-  {
-    id: "TASK-205",
-    title: "Confirm wire transfer for CRG-77102",
-    owner: "Finance",
-    priority: "HIGH",
-    dueDate: "2026-10-01",
-    completed: false
-  },
-  {
-    id: "TASK-206",
-    title: "Prepare international courier handover",
-    owner: "Fulfilment",
-    priority: "NORMAL",
-    dueDate: "2026-10-03",
-    completed: false
-  },
-  {
-    id: "TASK-207",
-    title: "Review September inventory records",
-    owner: "Operations",
-    priority: "NORMAL",
-    dueDate: "2026-10-04",
-    completed: true
-  }
-];
-
 const AdminDashboard = ({ isSuperAdmin = false }) => {
   const [wishlist, setWishlist] = useSharedCollection("ceylon-wishlist");
   const [cart, setCart] = useSharedCollection("ceylon-cart");
@@ -161,11 +132,16 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
 
   const [activeTab, setActiveTab] = useState("ORDERS");
   const [adminOrders, setAdminOrders] = useState(initialAdminOrders);
-  const [gemsList, setGemsList] = useState(products);
+  const [gemSubmissions, setGemSubmissions] = useGemSubmissions();
+  const [deletedGemIds, setDeletedGemIds] = useState([]);
+  const gemsList = [
+    ...products,
+    ...gemSubmissions.map((submission) => submission.gem)
+  ].filter((gem) => !deletedGemIds.includes(gem.id));
+  const [inventory, setInventory] = useGemInventory(products);
+  const [stockAdditions, setStockAdditions] = useState({});
   const [payments, setPayments] = useState(initialAdminPayments);
   const [paymentFilter, setPaymentFilter] = useState("ALL");
-  const [adminTasks, setAdminTasks] = useState(initialAdminTasks);
-  const [taskFilter, setTaskFilter] = useState("OPEN");
   const [customerReviews, setCustomerReviews] = useCustomerReviews();
   const [adminAccounts, setAdminAccounts] = useState(readAdminAccounts);
   const [newAdminAccount, setNewAdminAccount] = useState({
@@ -206,13 +182,6 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     });
   };
 
-  const [taskDraft, setTaskDraft] = useState({
-    title: "",
-    owner: "Operations",
-    priority: "NORMAL",
-    dueDate: "2026-10-02"
-  });
-
   // New Gem Form State
   const [newGem, setNewGem] = useState({
     name: "",
@@ -242,27 +211,6 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
         : order
       )
     );
-  };
-
-  const handleAddTask = (event) => {
-    event.preventDefault();
-    const title = taskDraft.title.trim();
-    if (!title) return;
-
-    setAdminTasks((prev) => [{
-      ...taskDraft,
-      id: `TASK-${Date.now()}`,
-      title,
-      completed: false
-    }, ...prev]);
-    setTaskDraft((prev) => ({ ...prev, title: "" }));
-    setTaskFilter("OPEN");
-  };
-
-  const handleTaskToggle = (taskId) => {
-    setAdminTasks((prev) => prev.map((task) =>
-      task.id === taskId ? { ...task, completed: !task.completed } : task
-    ));
   };
 
   const handleAddAdminAccount = async (event) => {
@@ -355,20 +303,34 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     e.preventDefault();
     if (!newGem.name || !newGem.price) return;
 
+    const gemId = Date.now();
     const createdGem = {
-      id: Date.now(),
-      detailId: Date.now(),
-      productKey: newGem.name.toLowerCase().replace(/\s+/g, "-"),
+      id: gemId,
+      detailId: gemId,
+      productKey: `${newGem.name.toLowerCase().replace(/\s+/g, "-")}-${gemId}`,
       name: newGem.name.toUpperCase(),
+      category: "Other Gemstone",
       origin: newGem.origin,
-      carat: newGem.carat ? `${newGem.carat} Ct` : "3.00 Ct",
+      carat: newGem.carat ? Number.parseFloat(newGem.carat) : 3,
       basePriceUSD: Number(newGem.price),
       price: Number(newGem.price),
       image: newGem.image || "/blueGem.jpg",
       tag: newGem.tag || "CERTIFIED NATURAL"
     };
 
-    setGemsList([createdGem, ...gemsList]);
+    setGemSubmissions((current) => [
+      ...current,
+      {
+        id: gemId,
+        gem: createdGem,
+        status: "pending",
+        submittedAt: new Date().toISOString()
+      }
+    ]);
+    setInventory((current) => ({
+      ...current,
+      [getCollectionItemKey(createdGem)]: current[getCollectionItemKey(createdGem)] ?? 1
+    }));
     setNewGem({
       name: "",
       carat: "",
@@ -377,14 +339,42 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       tag: "CERTIFIED NATURAL",
       image: "/blueGem.jpg"
     });
-    showCustomAlert(`"${createdGem.name}" has been successfully added to active inventory!`, "Gemstone Added", "success");
+    showCustomAlert(
+      `"${createdGem.name}" has been submitted for Super Admin approval.`,
+      "Gemstone Submitted",
+      "success"
+    );
+  };
+
+  const handleGemApproval = (submissionId, status) => {
+    setGemSubmissions((current) =>
+      current.map((submission) =>
+        submission.id === submissionId
+          ? { ...submission, status, reviewedAt: new Date().toISOString() }
+          : submission
+      )
+    );
+  };
+
+  const handleRestockGem = (productKey) => {
+    const quantity = Number(stockAdditions[productKey]);
+    if (!Number.isSafeInteger(quantity) || quantity < 1) return;
+
+    setInventory((current) => ({
+      ...current,
+      [productKey]: (current[productKey] ?? 0) + quantity
+    }));
+    setStockAdditions((current) => ({ ...current, [productKey]: 1 }));
   };
 
   const handleDeleteGem = (gemId) => {
     showCustomConfirm(
       "Are you sure you want to remove this certified gemstone from active inventory?",
       () => {
-        setGemsList((prev) => prev.filter((g) => g.id !== gemId));
+        setDeletedGemIds((current) => [...current, gemId]);
+        setGemSubmissions((current) =>
+          current.filter((submission) => submission.gem.id !== gemId)
+        );
       },
       "Remove Gemstone",
       "danger"
@@ -405,10 +395,12 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
   const filteredPayments = payments.filter((payment) =>
     paymentFilter === "ALL" || payment.status === paymentFilter
   );
-  const filteredTasks = adminTasks.filter((task) =>
-    taskFilter === "ALL" || (taskFilter === "OPEN" ? !task.completed : task.completed)
+  const lowStockCount = gemsList.filter((gem) =>
+    (inventory[getCollectionItemKey(gem)] ?? 0) <= LOW_STOCK_THRESHOLD
+  ).length;
+  const pendingGemApprovals = gemSubmissions.filter(
+    (submission) => submission.status === "pending"
   );
-  const managedAdminAccounts = adminAccounts.filter((account) => account.role === "admin");
   const currentAdmin = readAdminSession() || (isSuperAdmin ? {
     accountId: "admin-super-root",
     name: "Super Administrator",
@@ -422,7 +414,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
   });
 
   return (
-    <div className="admin-page">
+    <div className={`admin-page${isSuperAdmin ? " super-admin-page" : ""}`}>
       {/* NAVBAR */}
       <nav className="about-navbar admin-navbar">
         <a href="/" className="about-navbar-logo">
@@ -441,36 +433,21 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
           </div>
         </a>
 
+        <MobileSiteMenu />
         <div className="about-nav-links">
           <a href="/">Home</a>
-          <a href="/gemstones">Gemstones</a>
+          <a href="/gemstones">Shop</a>
           <a href="/About">Heritage</a>
           <a href="/trust">Certification</a>
           <a href="/reviews">Reviews</a>
           <a href="/contact">Contact</a>
           <a href="/blog">Blog</a>
-          <a href="/my-orders">My Orders</a>
-          <a href={isSuperAdmin ? "/admin" : "/super-admin"}>
-            {isSuperAdmin ? "Admin Portal" : "Super Admin Portal"}
-          </a>
+          {isSuperAdmin && <a href="/admin">Admin Portal</a>}
           <InternationalNavEntry />
         </div>
 
         <div className="about-nav-actions">
           <InternationalNavEntry mobile />
-          <button
-            type="button"
-            className="about-nav-icon"
-            title="Search"
-            onClick={() => {
-              const query = prompt("Search gemstones:");
-              if (query) {
-                window.location.href = `/?search=${encodeURIComponent(query)}`;
-              }
-            }}
-          >
-            <FaSearch />
-          </button>
           <button
             type="button"
             className="about-nav-icon"
@@ -496,6 +473,14 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
           >
             INQUIRE NOW
           </button>
+          <a
+            href="/login"
+            className="navbar-login-btn"
+            title="Login / Register"
+          >
+            <FaUser />
+            <span>LOGIN</span>
+          </a>
         </div>
       </nav>
 
@@ -608,14 +593,14 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
             >
               <FaCreditCard /> Payments ({payments.length})
             </button>}
-            {isSuperAdmin && <button
+            <button
               type="button"
               className={`admin-tab-btn ${activeTab === "REVIEWS" ? "active" : ""}`}
               aria-pressed={activeTab === "REVIEWS"}
               onClick={() => setActiveTab("REVIEWS")}
             >
               <FaStar /> Customer Reviews ({customerReviews.length})
-            </button>}
+            </button>
             {isSuperAdmin && (
               <button
                 type="button"
@@ -634,14 +619,24 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
             >
               <FaGem /> Gems Management ({gemsList.length})
             </button>
-            {isSuperAdmin && <button
+            {isSuperAdmin && (
+              <button
+                type="button"
+                className={`admin-tab-btn ${activeTab === "GEM_APPROVAL" ? "active" : ""}`}
+                aria-pressed={activeTab === "GEM_APPROVAL"}
+                onClick={() => setActiveTab("GEM_APPROVAL")}
+              >
+                <FaCheckCircle /> Gem Approval ({pendingGemApprovals.length})
+              </button>
+            )}
+            <button
               type="button"
-              className={`admin-tab-btn ${activeTab === "TASKS" ? "active" : ""}`}
-              aria-pressed={activeTab === "TASKS"}
-              onClick={() => setActiveTab("TASKS")}
+              className={`admin-tab-btn ${activeTab === "STOCK" ? "active" : ""}`}
+              aria-pressed={activeTab === "STOCK"}
+              onClick={() => setActiveTab("STOCK")}
             >
-              <FaClipboardList /> Operations Tasks ({adminTasks.filter((task) => !task.completed).length})
-            </button>}
+              <FaExclamationTriangle /> Stock Alert ({lowStockCount})
+            </button>
           </div>
 
           {/* TAB 1: ORDERS MANAGEMENT */}
@@ -774,7 +769,6 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                           >
                             <option value="PENDING">PENDING</option>
                             <option value="SETTLED">SETTLED</option>
-                            <option value="REFUNDED">REFUNDED</option>
                           </select>
                         </td>
                       </tr>
@@ -788,7 +782,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
             </section>
           )}
 
-          {isSuperAdmin && activeTab === "REVIEWS" && (
+          {activeTab === "REVIEWS" && (
             <section className="admin-section">
               <div className="admin-section-heading">
                 <div>
@@ -977,82 +971,142 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
             </section>
           )}
 
-          {isSuperAdmin && activeTab === "TASKS" && (
+          {activeTab === "STOCK" && (
+            <section className="admin-section">
+              <div className="admin-section-heading stock-alert-heading">
+                <div>
+                  <h2><FaExclamationTriangle /> Stock Alerts</h2>
+                  <p>Review current quantities. Items with {LOW_STOCK_THRESHOLD} or fewer units are marked low stock.</p>
+                </div>
+                <span className="admin-live-note">{lowStockCount} LOW STOCK ITEMS</span>
+              </div>
+
+              <div className="stock-alert-list">
+                {gemsList.map((gem) => {
+                  const productKey = getCollectionItemKey(gem);
+                  const quantity = inventory[productKey] ?? 0;
+                  const stockStatus = quantity === 0
+                    ? "out"
+                    : quantity <= LOW_STOCK_THRESHOLD
+                      ? "low"
+                      : "available";
+
+                  return (
+                    <article className="stock-alert-row" key={productKey}>
+                      <img src={gem.image} alt="" />
+                      <div className="stock-alert-gem">
+                        <strong>{gem.name}</strong>
+                        <span>{gem.productKey || gem.certificateNumber || `Gem #${gem.id}`}</span>
+                      </div>
+                      <span className={`stock-alert-status ${stockStatus}`}>
+                        {stockStatus === "out" ? "OUT OF STOCK" : stockStatus === "low" ? "LOW STOCK" : "IN STOCK"}
+                      </span>
+                      <strong className="stock-alert-quantity">{quantity} available</strong>
+                      <form
+                        className="stock-restock-form"
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          handleRestockGem(productKey);
+                        }}
+                      >
+                        <label className="sr-only" htmlFor={`restock-${productKey}`}>
+                          Quantity to add for {gem.name}
+                        </label>
+                        <input
+                          id={`restock-${productKey}`}
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={stockAdditions[productKey] ?? 1}
+                          onChange={(event) => setStockAdditions((current) => ({
+                            ...current,
+                            [productKey]: event.target.value
+                          }))}
+                        />
+                        <button type="submit"><FaPlus /> Add stock</button>
+                      </form>
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {isSuperAdmin && activeTab === "GEM_APPROVAL" && (
             <section className="admin-section">
               <div className="admin-section-heading">
                 <div>
-                  <h2><FaClipboardList /> Operations Task Queue</h2>
-                  <p>Coordinate certification, finance, and fulfilment follow-ups.</p>
+                  <h2><FaCheckCircle /> Gem Approval</h2>
+                  <p>Review gemstones submitted by Admins before they appear in the shop.</p>
                 </div>
-                <div className="task-filters" aria-label="Filter tasks">
-                  {["OPEN", "COMPLETED", "ALL"].map((filter) => (
-                    <button
-                      type="button"
-                      key={filter}
-                      className={taskFilter === filter ? "active" : ""}
-                      aria-pressed={taskFilter === filter}
-                      onClick={() => setTaskFilter(filter)}
-                    >
-                      {filter === "OPEN" ? "Open" : filter === "COMPLETED" ? "Completed" : "All"}
-                    </button>
-                  ))}
-                </div>
+                <span className="admin-live-note">
+                  {pendingGemApprovals.length} PENDING APPROVALS
+                </span>
               </div>
 
-              <form className="task-create-form" onSubmit={handleAddTask}>
-                <label className="task-title-field">
-                  <span>Task</span>
-                  <input
-                    type="text"
-                    placeholder="Add an operational follow-up"
-                    value={taskDraft.title}
-                    onChange={(event) => setTaskDraft((prev) => ({ ...prev, title: event.target.value }))}
-                    required
-                  />
-                </label>
-                <label>
-                  <span>Owner</span>
-                  <select value={taskDraft.owner} onChange={(event) => setTaskDraft((prev) => ({ ...prev, owner: event.target.value }))}>
-                    <option>Operations</option>
-                    <option>Finance</option>
-                    <option>Certification</option>
-                    <option>Fulfilment</option>
-                  </select>
-                </label>
-                <label>
-                  <span>Priority</span>
-                  <select value={taskDraft.priority} onChange={(event) => setTaskDraft((prev) => ({ ...prev, priority: event.target.value }))}>
-                    <option value="NORMAL">Normal</option>
-                    <option value="HIGH">High</option>
-                    <option value="URGENT">Urgent</option>
-                  </select>
-                </label>
-                <label>
-                  <span>Due date</span>
-                  <input type="date" value={taskDraft.dueDate} onChange={(event) => setTaskDraft((prev) => ({ ...prev, dueDate: event.target.value }))} required />
-                </label>
-                <button type="submit" className="task-add-btn"><FaPlus /> Add task</button>
-              </form>
-
-              <div className="task-list">
-                {filteredTasks.map((task) => (
-                  <article className={`task-row ${task.completed ? "is-complete" : ""}`} key={task.id}>
-                    <button
-                      type="button"
-                      className="task-complete-toggle"
-                      aria-label={`${task.completed ? "Reopen" : "Complete"} task: ${task.title}`}
-                      aria-pressed={task.completed}
-                      onClick={() => handleTaskToggle(task.id)}
-                    >
-                      {task.completed ? <FaCheckCircle /> : <FaClock />}
-                    </button>
-                    <div className="task-description"><strong>{task.title}</strong><span>{task.id} · {task.owner}</span></div>
-                    <span className={`task-priority priority-${task.priority.toLowerCase()}`}>{task.priority}</span>
-                    <time dateTime={task.dueDate}>Due {task.dueDate}</time>
-                    <span className={`task-state ${task.completed ? "complete" : "open"}`}>{task.completed ? "Completed" : "Open"}</span>
-                  </article>
-                ))}
-                {filteredTasks.length === 0 && <p className="admin-empty-state">No tasks in this view.</p>}
+              <div className="admin-table-wrapper">
+                <table className="admin-table gem-approval-table">
+                  <thead>
+                    <tr>
+                      <th>Gemstone</th>
+                      <th>Details</th>
+                      <th>Price</th>
+                      <th>Submitted</th>
+                      <th>Decision</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pendingGemApprovals.map((submission) => (
+                      <tr key={submission.id}>
+                        <td>
+                          <strong>{submission.gem.name}</strong>
+                          <div className="table-subtext">
+                            {submission.gem.category || "Other Gemstone"}
+                          </div>
+                        </td>
+                        <td>
+                          {submission.gem.carat} Ct
+                          <div className="table-subtext">{submission.gem.origin}</div>
+                        </td>
+                        <td>
+                          <strong className="gold-text">
+                            ${Number(submission.gem.price || 0).toLocaleString()} USD
+                          </strong>
+                        </td>
+                        <td>
+                          {submission.submittedAt
+                            ? new Date(submission.submittedAt).toLocaleDateString()
+                            : "Just now"}
+                        </td>
+                        <td>
+                          <div className="gem-approval-actions">
+                            <button
+                              type="button"
+                              className="gem-approval-approve"
+                              onClick={() => handleGemApproval(submission.id, "approved")}
+                            >
+                              <FaCheckCircle /> Approve
+                            </button>
+                            <button
+                              type="button"
+                              className="gem-approval-reject"
+                              onClick={() => handleGemApproval(submission.id, "rejected")}
+                            >
+                              <FaTimes /> Reject
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {pendingGemApprovals.length === 0 && (
+                      <tr>
+                        <td className="admin-empty-state" colSpan="5">
+                          There are no gemstones waiting for approval.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </section>
           )}
@@ -1129,8 +1183,13 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
               {/* GEMS INVENTORY LIST */}
               <h2><FaGem /> Current Gemstones Inventory ({gemsList.length})</h2>
               <div className="admin-gems-grid">
-                {gemsList.map((gem) => (
-                  <div className="admin-gem-card" key={gem.id}>
+                {gemsList.map((gem) => {
+                  const reviewStatus = gemSubmissions.find(
+                    (submission) => submission.gem.id === gem.id
+                  )?.status;
+
+                  return (
+                    <div className="admin-gem-card" key={gem.id}>
                     <img
                       src={gem.image}
                       alt={gem.name}
@@ -1141,8 +1200,13 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                     />
                     <div className="admin-gem-body">
                       <span className="gem-tag">{gem.tag || "NATURAL CEYLON"}</span>
+                      {reviewStatus && (
+                        <span className={`gem-review-status status-${reviewStatus}`}>
+                          {reviewStatus}
+                        </span>
+                      )}
                       <h3>{gem.name}</h3>
-                      <p>{gem.carat || "3.50 Ct"} • {gem.origin}</p>
+                      <p>{gem.carat ? `${gem.carat} Ct` : "3.50 Ct"} • {gem.origin}</p>
                       <strong className="gem-price">${Number(gem.basePriceUSD || gem.price || 0).toLocaleString()} USD</strong>
                       <div className="admin-gem-actions">
                         <button
@@ -1155,7 +1219,8 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
           )}
@@ -1175,15 +1240,13 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
           <div>
             <h4>EXPLORE</h4>
             <a href="/">Home</a>
-            <a href="/gemstones">Gemstones</a>
+            <a href="/gemstones">Shop</a>
             <a href="/About">Our Heritage</a>
             <a href="/trust">Trust &amp; Certification</a>
             <a href="/reviews">Reviews</a>
             <a href="/contact">Contact</a>
             <a href="/blog">Blog</a>
-            <a href={isSuperAdmin ? "/admin" : "/super-admin"}>
-              {isSuperAdmin ? "Admin Portal" : "Super Admin Portal"}
-            </a>
+            {isSuperAdmin && <a href="/admin">Admin Portal</a>}
           </div>
           <div>
             <h4>CONTACT</h4>

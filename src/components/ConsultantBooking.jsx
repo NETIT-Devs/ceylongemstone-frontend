@@ -8,7 +8,7 @@ const specialists = [
     title: "Sapphire selection advisor",
     focus: "Experience focus: comparing Ceylon sapphire color, clarity, cut and carat for collector requirements.",
     specialty: "Sapphires, color and selection",
-    portrait: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=240&q=80"
+    portrait: "/guide1.jpg"
   },
   {
     id: "certification",
@@ -16,7 +16,7 @@ const specialists = [
     title: "Certification guide",
     focus: "Experience focus: explaining gemstone reports, treatment descriptions and available certification documents.",
     specialty: "Certificates and treatments",
-    portrait: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=240&q=80"
+    portrait: "/guide2.jpg"
   },
   {
     id: "craftsmanship",
@@ -24,7 +24,7 @@ const specialists = [
     title: "Cut & craftsmanship advisor",
     focus: "Experience focus: discussing gemstone cuts, proportions, light return and presentation details.",
     specialty: "Cut, clarity and craftsmanship",
-    portrait: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=240&q=80"
+    portrait: "/guide3.jpg"
   },
   {
     id: "international",
@@ -32,7 +32,7 @@ const specialists = [
     title: "International order advisor",
     focus: "Experience focus: reviewing destination-specific shipping questions, documentation and import considerations.",
     specialty: "International orders and delivery",
-    portrait: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=240&q=80"
+    portrait: "/guide4.jpg"
   }
 ];
 

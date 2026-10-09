@@ -1,8 +1,18 @@
 import { useEffect, useState } from "react";
 import { FaGlobeAmericas } from "react-icons/fa";
 
-const readInternationalMode = () =>
-  window.localStorage.getItem("ceylon-international-enabled") === "true";
+const readInternationalMode = () => {
+  if (typeof window === "undefined") return true;
+  const currentCurrency = window.localStorage.getItem("ceylon-currency") || "USD";
+  if (currentCurrency === "LKR") {
+    return false;
+  }
+  const flag = window.localStorage.getItem("ceylon-international-enabled");
+  if (flag !== null) {
+    return flag === "true";
+  }
+  return true;
+};
 
 const InternationalNavEntry = ({ mobile = false, active = false }) => {
   const [enabled, setEnabled] = useState(readInternationalMode);

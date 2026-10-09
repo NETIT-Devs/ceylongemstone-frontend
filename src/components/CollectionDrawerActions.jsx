@@ -1,7 +1,9 @@
+import { useEffect, useState } from "react";
 import {
   getCollectionItemKey,
   normalizeCollectionItem
 } from "../useSharedCollection.js";
+import { formatCurrencyPrice, getCurrentCurrency } from "../currency.js";
 import "./CollectionDrawerActions.css";
 
 const CollectionDrawerActions = ({
@@ -12,7 +14,19 @@ const CollectionDrawerActions = ({
   setCart,
   setActiveDrawer
 }) => {
+  const [currency, setCurrency] = useState(getCurrentCurrency);
   const items = activeDrawer === "wishlist" ? wishlist : cart;
+
+  useEffect(() => {
+    const updateCurrency = () => setCurrency(getCurrentCurrency());
+
+    window.addEventListener("ceylon-currency-change", updateCurrency);
+    window.addEventListener("storage", updateCurrency);
+    return () => {
+      window.removeEventListener("ceylon-currency-change", updateCurrency);
+      window.removeEventListener("storage", updateCurrency);
+    };
+  }, []);
 
   if (!items.length) return null;
 
@@ -34,10 +48,10 @@ const CollectionDrawerActions = ({
         if (existingIndex >= 0) {
           nextCart[existingIndex] = {
             ...nextCart[existingIndex],
-            quantity: (Number(nextCart[existingIndex].quantity) || 1) + (Number(item.quantity) || 1)
+            quantity: 1
           };
         } else {
-          nextCart.push(normalizeCollectionItem(item));
+          nextCart.push(normalizeCollectionItem({ ...item, quantity: 1 }));
         }
       });
 
@@ -51,7 +65,7 @@ const CollectionDrawerActions = ({
     <div className="collection-drawer-actions">
       <div className="collection-drawer-total">
         <span>{activeDrawer === "wishlist" ? "Wishlist total" : "Cart total"}</span>
-        <strong>${total.toLocaleString("en-US")}</strong>
+        <strong>{formatCurrencyPrice(total, currency)} {currency}</strong>
       </div>
       {activeDrawer === "wishlist" ? (
         <button type="button" onClick={addWishlistToCart}>
@@ -59,7 +73,7 @@ const CollectionDrawerActions = ({
         </button>
       ) : (
         <button type="button" onClick={() => window.location.assign("/checkout")}>
-          PAY
+          CHECKOUT
         </button>
       )}
     </div>

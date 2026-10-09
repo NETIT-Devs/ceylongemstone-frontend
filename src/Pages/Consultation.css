@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&display=swap');
 
 .consultation-page {
   min-height: 100vh;
@@ -342,5 +341,100 @@
   .consultation-submit,
   .consultation-status {
     grid-column: auto;
+  }
+}
+
+@media (max-width: 700px) {
+  .consultation-video-section {
+    width: calc(100% - 32px);
+    max-width: 560px;
+    padding-top: 88px;
+    gap: 20px;
+  }
+
+  .consultation-video-frame {
+    width: 100%;
+  }
+
+  .consultation-video-copy h1 {
+    font-size: clamp(25px, 7vw, 32px);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .consultation-video-copy > p:not(.consultation-eyebrow) {
+    font-size: 13px;
+    line-height: 1.7;
+  }
+
+  .consultation-specialists {
+    padding: 36px 16px 42px;
+  }
+
+  .consultation-section-heading h2 {
+    font-size: clamp(22px, 6vw, 28px);
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
+  .consultation-section-heading > p:last-child {
+    line-height: 1.65;
+  }
+
+  .consultant-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .consultant-option {
+    width: 100%;
+    min-height: 0;
+    padding: 18px;
+    box-sizing: border-box;
+  }
+
+  .consultant-title,
+  .consultant-specialty,
+  .consultant-experience {
+    overflow-wrap: anywhere;
+  }
+
+  .consultation-booking {
+    width: calc(100% - 32px);
+    max-width: 600px;
+    padding: 38px 0 44px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+    box-sizing: border-box;
+  }
+
+  .consultation-booking-heading h2 {
+    font-size: clamp(20px, 6vw, 25px);
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+
+  .consultation-booking-form {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .consultation-booking-form label,
+  .consultation-booking-form input,
+  .consultation-booking-form select,
+  .consultation-booking-form textarea {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .consultation-field-wide,
+  .consultation-submit,
+  .consultation-status {
+    grid-column: auto;
+  }
+
+  .consultation-submit {
+    padding: 10px 12px;
+    line-height: 1.5;
   }
 }

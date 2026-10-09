@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
 
 import {
-  FaSearch,
   FaHeart,
   FaShoppingBag,
   FaShieldAlt,
@@ -12,6 +11,7 @@ import {
   FaTimes,
   FaTrash,
   FaStar,
+  FaUser,
   FaWhatsapp,
   FaEnvelope,
   FaPhoneAlt,
@@ -21,136 +21,123 @@ import {
 } from "react-icons/fa";
 
 import "./Home.css";
+import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
+import hero1Img from "../assets/hero1.jpeg";
+import hero3Img from "/BlueHero.png";
+import hero4Img from "/HeroNew.jpeg";
 import CollectionDrawerActions from "../components/CollectionDrawerActions.jsx";
 import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
 import { useCustomerReviews } from "../useCustomerReviews.js";
+import { hasAdminAccess } from "../adminAccess.js";
 import {
   getCollectionItemKey,
-  normalizeCollectionItem,
   useSharedCollection
 } from "../useSharedCollection.js";
+import {
+  currencyRates,
+  formatCurrencyPrice,
+  getCurrentCurrency
+} from "../currency.js";
+import { products as gemstonesProducts, categories } from "./Gemstones.jsx";
 
 
 // =====================================================
 // GEM DATA
 // =====================================================
 
-const initialGems = [
-  {
-    id: 1,
-    detailId: 1,
-    productKey: "royal-blue-sapphire",
-    name: "ROYAL BLUE SAPPHIRE",
-    origin: "Ratnapura, Sri Lanka",
-    carat: "4.52 Ct",
-    basePriceUSD: 12500,
-    image: "/blueGem.jpg",
-    tag: "CERTIFIED NATURAL",
-  },
-  {
-    id: 2,
-    detailId: 4,
-    productKey: "ceylon-padparadscha",
-    name: "PADPARADSCHA SAPPHIRE",
-    origin: "Elahera, Sri Lanka",
-    carat: "3.18 Ct",
-    basePriceUSD: 18900,
-    image: "/PADPARADSCHAgem2.jpg",
-    tag: "RARE COLLECTOR",
-  },
-  {
-    id: 11,
-    detailId: 11,
-    productKey: "ceylon-green-gemstone",
-    name: "CEYLON GREEN GEMSTONE",
-    origin: "Balangoda, Sri Lanka",
-    carat: "2.05 Ct",
-    basePriceUSD: 22000,
-    image: "/ALEXANDRITEgem.jpg",
-    tag: "NATURAL GREEN GEM",
-  },
-  {
-    id: 4,
-    detailId: 10,
-    productKey: "golden-yellow-sapphire",
-    name: "GOLDEN YELLOW SAPPHIRE",
-    origin: "Ratnapura, Sri Lanka",
-    carat: "5.10 Ct",
-    basePriceUSD: 14200,
-    image: "/yellowGem.jpg",
-    tag: "UNTREATED NATURAL",
-  }
-];
+// Map Gemstones products → Home card format
+const categoryKeyMap = {
+  "Blue Sapphire":        "BLUE SAPPHIRE",
+  "Yellow Sapphire":      "YELLOW SAPPHIRE",
+  "Green Gemstone":       "GREEN GEMSTONE",
+  "Padparadscha Sapphire":"PADPARADSCHA SAPPHIRE",
+  "Ruby":                 "RUBY",
+  "Star Sapphire":        "STAR SAPPHIRE",
+  "Cat's Eye":            "CAT'S EYE",
+  "Alexandrite":          "ALEXANDRITE",
+};
+
+const tagMap = {
+  "Blue Sapphire":        "CERTIFIED NATURAL",
+  "Yellow Sapphire":      "UNTREATED NATURAL",
+  "Green Gemstone":       "NATURAL GREEN GEM",
+  "Padparadscha Sapphire":"RARE COLLECTOR",
+  "Ruby":                 "FINE VIVID RED",
+  "Star Sapphire":        "RARE ASTERISM",
+  "Cat's Eye":            "CHATOYANT BERYL",
+  "Alexandrite":          "COLOR CHANGE RARE",
+};
+
+const initialGems = gemstonesProducts.map((p) => ({
+  id:           p.id,
+  detailId:     p.id,
+  categoryKey:  categoryKeyMap[p.category] || p.category.toUpperCase(),
+  productKey:   p.productKey || `gem-${p.id}`,
+  name:         p.name.toUpperCase(),
+  origin:       p.origin || "Sri Lanka",
+  carat:        `${p.carat} Ct`,
+  basePriceUSD: p.price,
+  image:        p.image,
+  tag:          tagMap[p.category] || "NATURAL GEM",
+}));
 
 
 // =====================================================
-// HERO SLIDES (Image Slideshow - replaces video)
+// =====================================================
+// HERO SLIDES (Image Slideshow)
 // =====================================================
 
 const heroSlides = [
   {
     id: 1,
-    image: "/hero1.jpg",
-    alt: "hero1"
+    image: hero1Img,
+    alt: "Royal Blue Sapphire"
   },
   {
     id: 2,
-    image: "/hero2.jpg",
-    alt: "hero2"
+    image: "/hero2.png",
+    alt: "Ceylon Gemstone"
   },
   {
     id: 3,
-    image: "/Ruby.jpg",
-    alt: "Natural Ceylon Ruby"
+    image: hero3Img,
+    alt: "Ceylon Royal Sapphire Cluster"
   },
   {
     id: 4,
-    image: "/PADPARADSCHAgem2.jpg",
-    alt: "Rare Padparadscha Sapphire"
-  },
-  {
-    id: 5,
-    image: "/ALEXANDRITEgem.jpg",
-    alt: "Ceylon Alexandrite Gemstone"
+    image: hero4Img,
+    alt: "Rare Ceylon Green Gemstones"
   }
 ];
 
 
 // =====================================================
-// HERITAGE SLIDES (Images instead of videos)
+// HERITAGE SLIDES (Videos with poster fallbacks)
 // =====================================================
 
 const heritageSlides = [
   {
     id: 1,
-    image: "/ceti.jpg",
+    video: "/gemV3.mp4",
+    poster: "/ceti.jpg",
     caption: "Authentic Ceylon Gemstone Mining & Heritage"
   },
   {
     id: 2,
-    image: "/gem_view_14.jpg",
+    video: "/gemV2.mp4",
+    poster: "/gem_view_14.jpg",
     caption: "Precision Master Cutting & Certification"
   },
   {
     id: 3,
-    image: "/StarSapphire.jpg",
-    caption: "Ethically Sourced Royal Gems Since 1985"
+    video: "/gemV3.mp4",
+    poster: "/ceti.jpg",
+    caption: "Authentic Ceylon Gemstone Mining & Heritage"
   }
 ];
-
-
 // =====================================================
 // CURRENCY
 // =====================================================
-
-const currencyRates = {
-  USD: { symbol: "$", rate: 1 },
-  GBP: { symbol: "£", rate: 0.79 },
-  EUR: { symbol: "€", rate: 0.92 },
-  LKR: { symbol: "Rs ", rate: 305 },
-  AED: { symbol: "د.إ ", rate: 3.67 }
-};
-
 
 // =====================================================
 // HOME
@@ -165,16 +152,22 @@ const Home = () => {
   const [selectedGem, setSelectedGem] = useState(null);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [heroSlideIndex, setHeroSlideIndex] = useState(0);
+  const [showMyOrdersLink] = useState(() => {
+    try {
+      const customer = JSON.parse(
+        window.localStorage.getItem("ceylon-user") || "null"
+      );
+      return customer?.loggedIn === true && !hasAdminAccess("/admin");
+    } catch {
+      return false;
+    }
+  });
 
-  const [currency, setCurrency] = useState(() =>
-    window.localStorage.getItem("ceylon-currency") || "USD"
-  );
+  const [currency, setCurrency] = useState(getCurrentCurrency);
   const [currencyOpen, setCurrencyOpen] = useState(false);
 
   const currencyRef = useRef(null);
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const [wishlist, setWishlist] = useSharedCollection("ceylon-wishlist");
   const [cart, setCart] = useSharedCollection("ceylon-cart");
@@ -216,22 +209,32 @@ const Home = () => {
 
 
   // =====================================================
-  // HERITAGE SLIDER
+  // HERITAGE SLIDER & VIDEO PLAYBACK
   // =====================================================
 
+  const heritageVideoRefs = useRef([]);
+
   useEffect(() => {
+    heritageVideoRefs.current.forEach((el, idx) => {
+      if (!el) return;
+      el.muted = true;
+      el.defaultMuted = true;
+      if (idx === currentSlide) {
+        el.play().catch(() => {});
+      } else {
+        el.pause();
+      }
+    });
+  }, [currentSlide]);
 
+  useEffect(() => {
     const timer = setInterval(() => {
-
       setCurrentSlide(
-        (prev) =>
-          (prev + 1) % heritageSlides.length
+        (prev) => (prev + 1) % heritageSlides.length
       );
-
-    }, 5000);
+    }, 6000);
 
     return () => clearInterval(timer);
-
   }, []);
 
 
@@ -240,18 +243,29 @@ const Home = () => {
   // =====================================================
 
   useEffect(() => {
-
     const heroTimer = setInterval(() => {
-
       setHeroSlideIndex(
-        (prev) =>
-          (prev + 1) % heroSlides.length
+        (prev) => (prev + 1) % heroSlides.length
       );
-
-    }, 4000);
+    }, 5000);
 
     return () => clearInterval(heroTimer);
+  }, []);
 
+  useEffect(() => {
+    const handleHashScroll = () => {
+      if (window.location.hash === "#main-categories" || window.location.hash === "#categories") {
+        const el = document.getElementById("main-categories");
+        if (el) {
+          setTimeout(() => {
+            el.scrollIntoView({ behavior: "smooth" });
+          }, 150);
+        }
+      }
+    };
+    handleHashScroll();
+    window.addEventListener("hashchange", handleHashScroll);
+    return () => window.removeEventListener("hashchange", handleHashScroll);
   }, []);
 
 
@@ -259,84 +273,10 @@ const Home = () => {
   // FORMAT PRICE
   // =====================================================
 
-  const formatPrice = (basePriceUSD) => {
-
-    const curr =
-      currencyRates[currency] ||
-      currencyRates.USD;
-
-    const converted =
-      Math.round(
-        basePriceUSD * curr.rate
-      );
-
-    return `${curr.symbol}${converted.toLocaleString()}`;
-  };
+  const formatPrice = (basePriceUSD) =>
+    formatCurrencyPrice(basePriceUSD, currency);
 
 
-  // =====================================================
-  // WISHLIST
-  // =====================================================
-
-  const toggleWishlist = (gem) => {
-    const productKey = getCollectionItemKey(gem);
-
-    setWishlist((current) => {
-      const exists = current.some(
-        (item) => getCollectionItemKey(item) === productKey
-      );
-
-      if (exists) {
-        return current.filter(
-          (item) => getCollectionItemKey(item) !== productKey
-        );
-      }
-
-      return [...current, normalizeCollectionItem({ ...gem, quantity: 1 })];
-    });
-  };
-
-
-  // =====================================================
-  // CART
-  // =====================================================
-
-  const addToCart = (gem, amount = 1) => {
-    const productKey = getCollectionItemKey(gem);
-
-    setCart((current) => {
-      const exists = current.some(
-        (item) => getCollectionItemKey(item) === productKey
-      );
-
-      if (exists) {
-        return current.map((item) =>
-          getCollectionItemKey(item) === productKey
-            ? { ...item, quantity: item.quantity + amount }
-            : item
-        );
-      }
-
-      return [
-        ...current,
-        normalizeCollectionItem({ ...gem, quantity: amount })
-      ];
-    });
-
-    setActiveDrawer("cart");
-  };
-
-  const changeCollectionQuantity = (setItems, productKey, amount) => {
-    setItems((current) =>
-      current
-        .map((item) =>
-          getCollectionItemKey(item) === productKey
-            ? { ...item, quantity: item.quantity + amount }
-            : item
-        )
-        .filter((item) => item.quantity > 0)
-    );
-  };
 
   const removeCollectionItem = (setItems, productKey) => {
     setItems((current) =>
@@ -354,24 +294,7 @@ const Home = () => {
   );
 
 
-  // =====================================================
-  // SEARCH
-  // =====================================================
 
-  const filteredGems =
-    initialGems.filter(
-      (gem) =>
-        gem.name
-          .toLowerCase()
-          .includes(
-            searchQuery.toLowerCase()
-          ) ||
-        gem.origin
-          .toLowerCase()
-          .includes(
-            searchQuery.toLowerCase()
-          )
-    );
 
 
   return (
@@ -402,7 +325,7 @@ const Home = () => {
               e.target.onerror = null;
 
               e.target.src =
-                "https://cdn-icons-png.flaticon.com/512/3063/3063822.png";
+                "/logo.png";
 
             }}
           />
@@ -424,6 +347,7 @@ const Home = () => {
 
         {/* NAV LINKS */}
 
+        <MobileSiteMenu />
         <div className="about-nav-links">
 
           <a
@@ -434,7 +358,7 @@ const Home = () => {
           </a>
 
           <a href="/Gemstones">
-            Gemstones
+            Shop
           </a>
 
           <a href="/About">
@@ -457,13 +381,7 @@ const Home = () => {
             Blog
           </a>
 
-          <a href="/login">
-            Login
-          </a>
-
-          <a href="/my-orders">
-            My Orders
-          </a>
+          {showMyOrdersLink && <a href="/my-orders">My Orders</a>}
 
           <InternationalNavEntry />
 
@@ -496,33 +414,15 @@ const Home = () => {
             >
 
               <img
-                src={{
-                  USD:
-                    "https://flagcdn.com/w40/us.png",
-
-                  GBP:
-                    "https://flagcdn.com/w40/gb.png",
-
-                  EUR:
-                    "https://flagcdn.com/w40/eu.png",
-
-                  LKR:
-                    "https://flagcdn.com/w40/lk.png",
-
-                  AED:
-                    "https://flagcdn.com/w40/ae.png"
-
-                }[currency]}
-                alt={currency}
+                src={(currencyRates[currency] || currencyRates.USD).flag}
+                alt={`${currency} flag`}
                 className="currency-flag"
               />
 
+              <span className="home-currency-current-code">{currency}</span>
+
               <span className="currency-symbol">
-
-                {currencyRates[
-                  currency
-                ].symbol.trim()}
-
+                {currencyRates[currency].symbol.trim()}
               </span>
 
               <span className="currency-chevron">
@@ -536,76 +436,38 @@ const Home = () => {
 
               <div className="currency-dropdown">
 
-                {[
-                  {
-                    code: "USD",
-                    flag:
-                      "https://flagcdn.com/w40/us.png"
-                  },
-                  {
-                    code: "GBP",
-                    flag:
-                      "https://flagcdn.com/w40/gb.png"
-                  },
-                  {
-                    code: "EUR",
-                    flag:
-                      "https://flagcdn.com/w40/eu.png"
-                  },
-                  {
-                    code: "LKR",
-                    flag:
-                      "https://flagcdn.com/w40/lk.png"
-                  },
-                  {
-                    code: "AED",
-                    flag:
-                      "https://flagcdn.com/w40/ae.png"
-                  }
-                ].map((item) => (
+                {Object.entries(currencyRates).map(([code, option]) => (
 
                   <button
                     type="button"
-                    key={item.code}
+                    key={code}
                     className={
                       `currency-option ${
-                        currency === item.code
+                        currency === code
                           ? "selected"
                           : ""
                       }`
                     }
                     onClick={() => {
 
-                      setCurrency(
-                        item.code
-                      );
-
-                      window.localStorage.setItem("ceylon-currency", item.code);
-                      const foreignCurrency = item.code !== "LKR";
+                      setCurrency(code);
+                      window.localStorage.setItem("ceylon-currency", code);
+                      window.dispatchEvent(new Event("ceylon-currency-change"));
+                      const foreignCurrency = code !== "LKR";
                       window.localStorage.setItem(
                         "ceylon-international-enabled",
                         String(foreignCurrency)
                       );
                       window.dispatchEvent(new Event("ceylon-international-mode-change"));
 
-                      setCurrencyOpen(
-                        false
-                      );
+                      setCurrencyOpen(false);
 
                     }}
                   >
 
-                    <img
-                      src={item.flag}
-                      alt={item.code}
-                      className="currency-flag"
-                    />
-
-                    <span>
-                      {currencyRates[
-                        item.code
-                      ].symbol.trim()}
-                    </span>
+                    <img src={option.flag} alt={`${code} flag`} className="currency-flag" />
+                    <span className="home-currency-option-code">{code}</span>
+                    <span className="home-currency-option-symbol">{option.symbol.trim()}</span>
 
                   </button>
 
@@ -618,27 +480,6 @@ const Home = () => {
           </div>
 
           <InternationalNavEntry mobile />
-
-
-          {/* =================================================
-              SEARCH
-          ================================================= */}
-
-          <button
-            type="button"
-            className={`about-nav-icon home-search-toggle ${
-              isSearchOpen ? "is-open" : ""
-            }`}
-            title="Search"
-            aria-label={isSearchOpen ? "Close gemstone search" : "Open gemstone search"}
-            aria-expanded={isSearchOpen}
-            aria-controls="home-gemstone-search"
-            onClick={() => setIsSearchOpen(true)}
-          >
-
-            <FaSearch />
-
-          </button>
 
 
           {/* =================================================
@@ -710,308 +551,300 @@ const Home = () => {
 
           </button>
 
+          {/* =================================================
+              JOIN US
+          ================================================= */}
+
+          <a
+            href="/join-us"
+            className="navbar-joinus-btn"
+            title="Join With Us"
+          >
+            <span>JOIN US</span>
+          </a>
+
+          {/* =================================================
+              LOGIN
+          ================================================= */}
+
+          <a
+            href="/login"
+            className="navbar-login-btn"
+            title="Login / Register"
+          >
+            <FaUser />
+            <span>LOGIN</span>
+          </a>
+
         </div>
 
       </nav>
 
 
       {/* =====================================================
-          SEARCH BAR
+          FIRST SCREEN / HERO & TRUST FOLD
       ====================================================== */}
+      <div className="hero-viewport-fold">
 
-      <AnimatePresence>
+        {/* HERO SECTION */}
+        <section
+          className="gem-hero"
+          id="home"
+        >
 
-        {isSearchOpen && (
+          {/* HERO IMAGE SLIDESHOW */}
+          <div className="hero-slides-wrapper">
+            {heroSlides.map((slide, idx) => (
+              <img
+                key={slide.id}
+                src={slide.image}
+                alt={slide.alt}
+                className={`hero-slide-img ${heroSlideIndex === idx ? "active" : ""}`}
+                loading={idx === 0 ? "eager" : "lazy"}
+                decoding="async"
+                onError={(e) => {
+                  if (!e.target.dataset.triedFallback) {
+                    e.target.dataset.triedFallback = "true";
+                    e.target.src = `/hero${idx + 1}.jpg`;
+                  }
+                }}
+              />
+            ))}
+          </div>
 
-          <motion.div
-            className="search-bar-overlay"
-            id="home-gemstone-search"
-            role="search"
-            initial={{
-              opacity: 0,
-              y: -20
-            }}
-            animate={{
-              opacity: 1,
-              y: 0
-            }}
-            exit={{
-              opacity: 0,
-              y: -20
-            }}
+          {/* HERO SLIDE DOTS */}
+          <div className="hero-slide-dots">
+            {heroSlides.map((slide, idx) => (
+              <span
+                key={slide.id}
+                className={`hero-dot ${heroSlideIndex === idx ? "active" : ""}`}
+                onClick={() => setHeroSlideIndex(idx)}
+                title={slide.alt}
+                aria-label={`Slide ${idx + 1}`}
+              />
+            ))}
+          </div>
+
+          {/* HERO NAVIGATION ARROWS */}
+          <button
+            type="button"
+            className="hero-arrow-btn hero-arrow-prev"
+            onClick={() => setHeroSlideIndex((prev) => (prev - 1 + heroSlides.length) % heroSlides.length)}
+            aria-label="Previous slide"
           >
-
-            <input
-              type="text"
-              aria-label="Search gemstones"
-              placeholder="Search by gemstone name, origin, or category..."
-              value={searchQuery}
-              onChange={(e) =>
-                setSearchQuery(
-                  e.target.value
-                )
-              }
-              autoFocus
-            />
-
-            <button
-              type="button"
-              className="close-search-btn"
-              onClick={() => {
-
-                setIsSearchOpen(
-                  false
-                );
-
-                setSearchQuery("");
-
-              }}
-            >
-
-              <FaTimes />
-
-            </button>
-
-          </motion.div>
-
-        )}
-
-      </AnimatePresence>
+            ‹
+          </button>
+          <button
+            type="button"
+            className="hero-arrow-btn hero-arrow-next"
+            onClick={() => setHeroSlideIndex((prev) => (prev + 1 % heroSlides.length))}
+            aria-label="Next slide"
+          >
+            ›
+          </button>
 
 
-      {/* =====================================================
-          HERO SECTION
-      ====================================================== */}
+          <div className="hero-overlay" />
 
-      <section
-        className="gem-hero"
-        id="home"
-      >
+          <div className="hero-glow glow-one" />
 
-        {/* HERO IMAGE SLIDESHOW */}
-        <AnimatePresence mode="wait">
-          <motion.img
-            key={heroSlides[heroSlideIndex].id}
-            src={heroSlides[heroSlideIndex].image}
-            alt={heroSlides[heroSlideIndex].alt}
-            className="hero-background-video"
-            initial={{ opacity: 0, scale: 1.08 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 1.2, ease: "easeInOut" }}
-            loading="eager"
-          />
-        </AnimatePresence>
-
-        {/* HERO SLIDE DOTS */}
-        <div className="hero-slide-dots">
-          {heroSlides.map((slide, idx) => (
-            <span
-              key={slide.id}
-              className={`hero-dot ${heroSlideIndex === idx ? "active" : ""}`}
-              onClick={() => setHeroSlideIndex(idx)}
-            />
-          ))}
-        </div>
+          <div className="hero-glow glow-two" />
 
 
-        <div className="hero-overlay" />
+          <div className="hero-main-container center-layout">
 
-        <div className="hero-glow glow-one" />
-
-        <div className="hero-glow glow-two" />
+            <div className="hero-content home-hero-copy">
 
 
-        <div className="hero-main-container center-layout">
-
-          <div className="hero-content home-hero-copy">
-
-
-            <motion.div
-              className="hero-badge"
-              initial={{
-                opacity: 0,
-                y: 20
-              }}
-              animate={{
-                opacity: 1,
-                y: 0
-              }}
-              transition={{
-                duration: 0.8
-              }}
-            >
-
-              <span className="badge-dot" />
-
-              AUTHENTIC · RARE · TIMELESS
-
-            </motion.div>
-
-
-            <motion.h1
-              initial={{
-                opacity: 0,
-                y: 30
-              }}
-              animate={{
-                opacity: 1,
-                y: 0
-              }}
-              transition={{
-                duration: 1,
-                delay: 0.2
-              }}
-            >
-
-              Discover the
-
-              <br />
-
-              <span className="gold-gradient">
-                Beauty Within
-              </span>
-
-            </motion.h1>
-
-
-            <motion.p
-              initial={{
-                opacity: 0,
-                y: 20
-              }}
-              animate={{
-                opacity: 1,
-                y: 0
-              }}
-              transition={{
-                duration: 1,
-                delay: 0.4
-              }}
-            >
-
-              Discover exceptional gemstones from Sri Lanka and the
-              <br />
-              world's finest origins.
-
-            </motion.p>
-
-
-            <motion.div
-              className="hero-actions"
-              initial={{
-                opacity: 0,
-                y: 20
-              }}
-              animate={{
-                opacity: 1,
-                y: 0
-              }}
-              transition={{
-                duration: 1,
-                delay: 0.6
-              }}
-            >
-
-              <a
-                href="#Gemstones"
-                className="btn-primary"
+              <motion.div
+                className="hero-badge"
+                initial={{
+                  opacity: 0,
+                  y: 20
+                }}
+                animate={{
+                  opacity: 1,
+                  y: 0
+                }}
+                transition={{
+                  duration: 0.8
+                }}
               >
-                Explore Collection &rarr;
-              </a>
 
-              <a
-                href="/consultation"
-                className="btn-secondary"
+                <span className="badge-dot" />
+
+                AUTHENTIC · RARE · TIMELESS
+
+              </motion.div>
+
+
+              <motion.h1
+                initial={{
+                  opacity: 0,
+                  y: 30
+                }}
+                animate={{
+                  opacity: 1,
+                  y: 0
+                }}
+                transition={{
+                  duration: 1,
+                  delay: 0.2
+                }}
               >
-                📹 Book a Video Consultation
-              </a>
 
-            </motion.div>
+                Discover the
+
+                <br />
+
+                <span className="gold-gradient">
+                  Beauty Within
+                </span>
+
+              </motion.h1>
+
+
+              <motion.p
+                initial={{
+                  opacity: 0,
+                  y: 20
+                }}
+                animate={{
+                  opacity: 1,
+                  y: 0
+                }}
+                transition={{
+                  duration: 1,
+                  delay: 0.4
+                }}
+              >
+
+                Discover exceptional gemstones from Sri Lanka and the
+                <br />
+                world's finest origins.
+
+              </motion.p>
+
+
+              <motion.div
+                className="hero-actions"
+                initial={{
+                  opacity: 0,
+                  y: 20
+                }}
+                animate={{
+                  opacity: 1,
+                  y: 0
+                }}
+                transition={{
+                  duration: 1,
+                  delay: 0.6
+                }}
+              >
+
+                <a
+                  href="/Gemstones"
+                  className="btn-primary"
+                >
+                  Explore Collection &rarr;
+                </a>
+
+                <a
+                  href="https://wa.me/94712345678?text=Hi%2C%20I%20would%20like%20to%20book%20a%20video%20consultation."
+                  className="btn-primary"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Book a Video Consultation
+                </a>
+
+              </motion.div>
+
+            </div>
 
           </div>
 
-        </div>
-
-      </section>
+        </section>
 
 
-      {/* =====================================================
-          HERO TRUST BAR
-      ====================================================== */}
+        {/* =====================================================
+            HERO TRUST BAR
+        ====================================================== */}
 
-      <div className="hero-trust-bar">
+        <div className="hero-trust-bar">
 
-        <div className="trust-bar-item">
+          <div className="trust-bar-item">
 
-          <FaShieldAlt className="trust-bar-icon" />
+            <FaShieldAlt className="trust-bar-icon" />
 
-          <div>
+            <div>
 
-            <h4>
-              100% Certified Natural
-            </h4>
+              <h4>
+                100% Certified Natural
+              </h4>
 
-            <p>
-              Authentic Sri Lankan Gemstones
-            </p>
+              <p>
+                Authentic Sri Lankan Gemstones
+              </p>
 
-          </div>
-
-        </div>
-
-
-        <div className="trust-bar-item">
-
-          <FaShippingFast className="trust-bar-icon" />
-
-          <div>
-
-            <h4>
-              Worldwide Express Shipping
-            </h4>
-
-            <p>
-              Safe & Secure Delivery
-            </p>
+            </div>
 
           </div>
 
-        </div>
 
+          <div className="trust-bar-item">
 
-        <div className="trust-bar-item">
+            <FaShippingFast className="trust-bar-icon" />
 
-          <FaGem className="trust-bar-icon" />
+            <div>
 
-          <div>
+              <h4>
+                Worldwide Express Shipping
+              </h4>
 
-            <h4>
-              GIA / GRS Certified
-            </h4>
+              <p>
+                Safe & Secure Delivery
+              </p>
 
-            <p>
-              International Lab Reports
-            </p>
+            </div>
 
           </div>
 
-        </div>
+
+          <div className="trust-bar-item">
+
+            <FaGem className="trust-bar-icon" />
+
+            <div>
+
+              <h4>
+                GIA / GRS Certified
+              </h4>
+
+              <p>
+                International Lab Reports
+              </p>
+
+            </div>
+
+          </div>
 
 
-        <div className="trust-bar-item">
+          <div className="trust-bar-item">
 
-          <FaLock className="trust-bar-icon" />
+            <FaLock className="trust-bar-icon" />
 
-          <div>
+            <div>
 
-            <h4>
-              Secure Payments
-            </h4>
+              <h4>
+                Secure Payments
+              </h4>
 
-            <p>
-              Your Trust, Our Priority
-            </p>
+              <p>
+                Your Trust, Our Priority
+              </p>
+
+            </div>
 
           </div>
 
@@ -1021,168 +854,63 @@ const Home = () => {
 
 
       {/* =====================================================
-          FEATURED GEMSTONES
+          GEMSTONE CATEGORIES
       ====================================================== */}
 
       <section
-        className="featured-section"
-        id="gemstones"
+        className="gem-category-section"
+        id="main-categories"
       >
+        <span id="gemstones" style={{ display: "none" }} />
 
-        <div className="section-header">
+        <div className="gem-section-heading">
 
-          <span className="subtitle">
-            CURATED SELECTION
-          </span>
+          <span>EXPLORE OUR COLLECTION</span>
 
           <h2>
-            EXQUISITE GEMSTONES
+            Gemstone <strong>Categories</strong>
           </h2>
 
-          <div className="gold-line" />
+          <p>
+            Discover exceptional gemstones from the finest gemstone regions of Sri Lanka.
+          </p>
 
         </div>
 
+        <div className="gem-category-grid">
 
-        {filteredGems.length === 0 ? (
+          {categories
+            .filter((category) => category !== "Padparadscha Sapphire")
+            .map((category) => {
 
-          <p className="no-results-msg">
-            No gemstones matched your search criteria.
-          </p>
+            return (
+              <button
+                key={category}
+                type="button"
+                className="gem-category-card"
+                onClick={() => {
+                  const destination = category === "All Gemstones"
+                    ? "/Gemstones"
+                    : `/Gemstones?category=${encodeURIComponent(category)}`;
+                  window.location.assign(destination);
+                }}
+              >
 
-        ) : (
-
-          <div className="gems-grid">
-
-            {filteredGems.map((gem) => {
-
-              const isWishlisted =
-                wishlist.some(
-                  (item) =>
-                    getCollectionItemKey(item) ===
-                    getCollectionItemKey(gem)
-                );
-
-
-              return (
-
-                <div
-                  className="gem-card"
-                  key={gem.productKey}
-                >
-
-
-                  <span className="gem-tag-green">
-                    {gem.tag}
-                  </span>
-
-
-                  {/* WISHLIST */}
-
-                  <button
-                    className={
-                      `card-wishlist-btn ${
-                        isWishlisted
-                          ? "active"
-                          : ""
-                      }`
-                    }
-                    onClick={() =>
-                      toggleWishlist(gem)
-                    }
-                    title="Add to Wishlist"
-                  >
-
-                    <FaHeart />
-
-                  </button>
-
-
-                  {/* IMAGE */}
-
-                  <div className="gem-image-wrapper">
-
-                    <img
-                      src={gem.image}
-                      alt={gem.name}
-                      onError={(e) => {
-
-                        e.target.src =
-                          "https://images.unsplash.com/photo-1615109398623-88346a601842?auto=format&fit=crop&q=80&w=600";
-
-                      }}
-                    />
-
-                  </div>
-
-
-                  {/* INFO */}
-
-                  <div className="gem-info">
-
-                    <span className="gem-origin">
-                      {gem.origin}
-                    </span>
-
-                    <h3>
-                      {gem.name}
-                    </h3>
-
-
-                    <div className="gem-details-row">
-
-                      <span className="weight-text">
-                        Weight: {gem.carat}
-                      </span>
-
-                      <span className="price-text">
-                        {formatPrice(
-                          gem.basePriceUSD
-                        )}
-                      </span>
-
-                    </div>
-
-                  </div>
-
-
-                  {/* ACTION BUTTONS */}
-
-                  <div className="card-action-btns">
-
-                    <button
-                      className="btn-inquire-card"
-                      onClick={() =>
-                        window.location.assign(`/gemstones/${gem.detailId}`)
-                      }
-                    >
-                      VIEW DETAILS
-                    </button>
-
-
-                    <button
-                      className="btn-cart-card"
-                      onClick={() =>
-                        addToCart(gem)
-                      }
-                      title="Add to Cart"
-                    >
-
-                      <FaShoppingBag />
-
-                    </button>
-
-                  </div>
-
+                <div className="category-gem-icon">
+                  <FaGem />
                 </div>
 
-              );
+                <span>{category}</span>
 
-            })}
+                <small>
+                  Explore Collection
+                </small>
 
-          </div>
+              </button>
+            );
+          })}
 
-        )}
+        </div>
 
       </section>
 
@@ -1209,19 +937,38 @@ const Home = () => {
             >
 
               {heritageSlides.map(
-                (slide) => (
+                (slide, index) => (
 
                   <div
                     key={slide.id}
                     className="heritage-slide-full"
                   >
 
-                    <img
-                      src={slide.image}
-                      alt={slide.caption}
-                      className="slide-img-full"
-                      loading="lazy"
-                    />
+                    {slide.video ? (
+                      currentSlide === index ? (
+                        <video
+                          ref={(el) => {
+                            heritageVideoRefs.current[index] = el;
+                          }}
+                          src={slide.video}
+                          poster={slide.poster}
+                          autoPlay
+                          loop
+                          muted
+                          playsInline
+                          className="slide-img-full"
+                        />
+                      ) : (
+                        <div className="slide-img-full" style={{ backgroundColor: "#041d1a" }} />
+                      )
+                    ) : (
+                      <img
+                        src={slide.poster}
+                        alt={slide.caption}
+                        className="slide-img-full"
+                        loading="lazy"
+                      />
+                    )}
 
                     <div className="slide-caption-overlay">
                       {slide.caption}
@@ -1571,7 +1318,7 @@ const Home = () => {
               <h3>
 
                 {activeDrawer === "cart"
-                  ? "Add to Cart"
+                  ? "Your Cart"
                   : "Your Wishlist"}
 
               </h3>
@@ -1646,44 +1393,10 @@ const Home = () => {
                       </p>
 
                       <span>
-                        {formatPrice(
-                          (gem.basePriceUSD ?? gem.price) * gem.quantity
-                        )}
+                        {formatPrice(gem.basePriceUSD ?? gem.price)}
                       </span>
 
-                      <div className="home-collection-quantity">
-                        <button
-                          type="button"
-                          aria-label={`Decrease ${gem.name} quantity`}
-                          onClick={() =>
-                            changeCollectionQuantity(
-                              activeDrawer === "cart"
-                                ? setCart
-                                : setWishlist,
-                              getCollectionItemKey(gem),
-                              -1
-                            )
-                          }
-                        >
-                          −
-                        </button>
-                        <span>{gem.quantity}</span>
-                        <button
-                          type="button"
-                          aria-label={`Increase ${gem.name} quantity`}
-                          onClick={() =>
-                            changeCollectionQuantity(
-                              activeDrawer === "cart"
-                                ? setCart
-                                : setWishlist,
-                              getCollectionItemKey(gem),
-                              1
-                            )
-                          }
-                        >
-                          +
-                        </button>
-                      </div>
+                      <small>Qty 1</small>
 
                     </div>
 
@@ -1733,7 +1446,6 @@ const Home = () => {
               setCart={setCart}
               setActiveDrawer={setActiveDrawer}
             />
-
           </div>
 
         </div>
@@ -1790,7 +1502,7 @@ const Home = () => {
                 e.target.onerror = null;
 
                 e.target.src =
-                  "https://cdn-icons-png.flaticon.com/512/3063/3063822.png";
+                  "/logo.png";
 
               }}
             />
@@ -1908,7 +1620,7 @@ const Home = () => {
                   e.target.onerror = null;
 
                   e.target.src =
-                    "https://cdn-icons-png.flaticon.com/512/3063/3063822.png";
+                    "/logo.png";
 
                 }}
               />
@@ -1952,7 +1664,7 @@ const Home = () => {
             </a>
 
             <a href="/#gemstones">
-              Gemstones
+              Shop
             </a>
 
             <a href="/About">

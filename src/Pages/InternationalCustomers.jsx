@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import {
-  FaArrowRight,
   FaEnvelope,
   FaFacebookF,
   FaGlobeAmericas,
@@ -8,39 +7,29 @@ import {
   FaInstagram,
   FaMapMarkerAlt,
   FaPhoneAlt,
-  FaSearch,
   FaShoppingBag,
   FaShieldAlt,
   FaShippingFast,
-  FaVideo,
+  FaUser,
   FaWhatsapp
 } from "react-icons/fa";
-import ConsultantBooking from "../components/ConsultantBooking.jsx";
 import CollectionDrawerPanel from "../components/CollectionDrawerPanel.jsx";
 import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
 import SiteInquiryModal from "../components/SiteInquiryModal.jsx";
+import { currencyRates, getCurrentCurrency } from "../currency.js";
 import { useSharedCollection } from "../useSharedCollection.js";
 import "./InternationalCustomers.css";
+import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
 
-const currencies = {
-  USD: { symbol: "$", rate: 1, flag: "https://flagcdn.com/w40/us.png" },
-  GBP: { symbol: "£", rate: 0.79, flag: "https://flagcdn.com/w40/gb.png" },
-  EUR: { symbol: "€", rate: 0.92, flag: "https://flagcdn.com/w40/eu.png" },
-  LKR: { symbol: "Rs ", rate: 305, flag: "https://flagcdn.com/w40/lk.png" },
-  AED: { symbol: "د.إ ", rate: 3.67, flag: "https://flagcdn.com/w40/ae.png" }
-};
+const currencies = currencyRates;
 
 const InternationalCustomers = () => {
   const [wishlist, setWishlist] = useSharedCollection("ceylon-wishlist");
   const [cart, setCart] = useSharedCollection("ceylon-cart");
   const [activeDrawer, setActiveDrawer] = useState(null);
   const [isInquiryOpen, setIsInquiryOpen] = useState(false);
-  const [currency, setCurrency] = useState(() =>
-    window.localStorage.getItem("ceylon-currency") || "USD"
-  );
+  const [currency, setCurrency] = useState(getCurrentCurrency);
   const [currencyOpen, setCurrencyOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const currencyRef = useRef(null);
 
@@ -58,10 +47,12 @@ const InternationalCustomers = () => {
 
   const changeCurrency = (nextCurrency) => {
     window.localStorage.setItem("ceylon-currency", nextCurrency);
+    window.dispatchEvent(new Event("ceylon-currency-change"));
     window.localStorage.setItem(
       "ceylon-international-enabled",
       String(nextCurrency !== "LKR")
     );
+    window.dispatchEvent(new Event("ceylon-international-mode-change"));
 
     if (nextCurrency === "LKR") {
       window.location.assign("/");
@@ -97,15 +88,15 @@ const InternationalCustomers = () => {
             <small>ROYAL GEMSTONES</small>
           </div>
         </a>
+        <MobileSiteMenu />
         <div className="about-nav-links">
           <a href="/">Home</a>
-          <a href="/gemstones">Gemstones</a>
+          <a href="/gemstones">Shop</a>
           <a href="/About">Heritage</a>
           <a href="/trust">Certification</a>
           <a href="/reviews">Reviews</a>
           <a href="/contact">Contact</a>
           <a href="/blog">Blog</a>
-          <a href="/login">Login</a>
           <InternationalNavEntry active />
         </div>
         <div className="about-nav-actions international-nav-actions">
@@ -117,7 +108,12 @@ const InternationalCustomers = () => {
               aria-expanded={currencyOpen}
               onClick={() => setCurrencyOpen((open) => !open)}
             >
-              <img src={currencies[currency]?.flag || currencies.USD.flag} alt={currency} className="currency-flag" />
+              <img
+                src={(currencies[currency] || currencies.USD).flag}
+                alt={`${currency} flag`}
+                className="international-currency-flag"
+              />
+              <span className="international-currency-current-code">{currency}</span>
               <span className="currency-symbol">{(currencies[currency] || currencies.USD).symbol.trim()}</span>
               <span className="currency-chevron">▾</span>
             </button>
@@ -133,8 +129,9 @@ const InternationalCustomers = () => {
                       setCurrencyOpen(false);
                     }}
                   >
-                    <img src={option.flag} alt={code} className="currency-flag" />
-                    <span>{option.symbol.trim()}</span>
+                    <img src={option.flag} alt={`${code} flag`} className="international-currency-flag" />
+                    <span className="international-currency-code">{code}</span>
+                    <span className="international-currency-symbol">{option.symbol.trim()}</span>
                   </button>
                 ))}
               </div>
@@ -142,16 +139,6 @@ const InternationalCustomers = () => {
           </div>
 
           <InternationalNavEntry mobile active />
-
-          <button
-            type="button"
-            className={`about-nav-icon home-search-toggle ${isSearchOpen ? "is-open" : ""}`}
-            title="Search"
-            aria-label={isSearchOpen ? "Close gemstone search" : "Open gemstone search"}
-            onClick={() => setIsSearchOpen(!isSearchOpen)}
-          >
-            <FaSearch />
-          </button>
 
           <button
             type="button"
@@ -182,33 +169,23 @@ const InternationalCustomers = () => {
           >
             INQUIRE NOW
           </button>
+          <a
+            href="/join-us"
+            className="navbar-joinus-btn"
+            title="Join With Us"
+          >
+            <span>JOIN US</span>
+          </a>
+          <a
+            href="/login"
+            className="navbar-login-btn"
+            title="Login / Register"
+          >
+            <FaUser />
+            <span>LOGIN</span>
+          </a>
         </div>
       </nav>
-
-      {isSearchOpen && (
-        <div className="search-bar-overlay" id="home-gemstone-search" role="search">
-          <input
-            type="text"
-            placeholder="Search natural sapphires, rubies, emeralds..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && searchQuery.trim()) {
-                window.location.href = `/?search=${encodeURIComponent(searchQuery.trim())}`;
-              }
-            }}
-            autoFocus
-          />
-          <button
-            type="button"
-            className="close-search-btn"
-            onClick={() => setIsSearchOpen(false)}
-            aria-label="Close search overlay"
-          >
-            ✕
-          </button>
-        </div>
-      )}
 
       <main>
         <section className="international-intro">
@@ -218,12 +195,17 @@ const InternationalCustomers = () => {
             <p className="international-lead">
               Get destination-specific delivery, import and gemstone guidance before you decide.
             </p>
-            <a className="international-primary-link" href="#consultation">
-              Request a video consultation <FaArrowRight />
+            <a
+              href="https://wa.me/94712345678?text=Hi%2C%20I%20would%20like%20to%20book%20a%20video%20consultation."
+              className="international-book-consultation"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Book a Video Consultation
             </a>
           </div>
           <figure className="international-gem-image">
-            <video controls autoPlay muted loop playsInline poster="/blueGem.jpg" aria-label="Ceylon gemstone cutting and craftsmanship">
+            <video controls autoPlay muted loop playsInline aria-label="Ceylon gemstone cutting and craftsmanship">
               <source src="/INv1.mp4" type="video/mp4" />
               Your browser does not support video playback.
             </video>
@@ -246,28 +228,50 @@ const InternationalCustomers = () => {
             <FaShippingFast aria-hidden="true" />
             <div>
               <h2>International shipping</h2>
-              <p>Tracked and insured shipping options can be discussed for your destination. We confirm the carrier, cost and estimated delivery window before an order is finalized.</p>
+              <p>Ceylon Royal Gemstones can arrange tracked and insured international shipping using a suitable, trusted carrier, subject to destination and order requirements.</p>
+              <ul>
+                <li>Availability depends on the destination and carrier service.</li>
+                <li>Tracking details can be provided where available; insurance coverage is confirmed for the specific order and destination.</li>
+                <li>We confirm the carrier, shipping cost and estimated delivery window before the order is finalized.</li>
+                <li>Delivery times can vary with destination, carrier, customs clearance and local regulations.</li>
+              </ul>
             </div>
           </article>
           <article className="international-service-row">
             <FaGlobeAmericas aria-hidden="true" />
             <div>
               <h2>Worldwide delivery details</h2>
-              <p>Share your delivery country and postal code so our team can check service availability and provide a destination-specific delivery estimate.</p>
+              <p>Share your delivery country, city and postal / ZIP code so our team can check availability and prepare options for your destination.</p>
+              <ul>
+                <li>We can check suitable shipping options, estimated delivery timeframe and shipping cost.</li>
+                <li>Tracking availability and insurance options depend on the destination and selected service.</li>
+                <li>Final shipping details are confirmed before payment or order finalization, where applicable.</li>
+              </ul>
             </div>
           </article>
           <article className="international-service-row" id="shipping-returns">
             <FaShieldAlt aria-hidden="true" />
             <div>
               <h2>Shipping &amp; return policy</h2>
-              <p>Shipping terms, insurance coverage and return eligibility depend on the order and destination. Request the applicable written terms before payment.</p>
+              <p>Shipping terms may vary by destination and order, and insurance coverage depends on the selected shipping arrangement.</p>
+              <ul>
+                <li>Return eligibility depends on the product, destination and applicable terms.</li>
+                <li>Request and review the applicable written shipping and return terms before making payment.</li>
+                <li>Confirm any special conditions for international returns before purchase.</li>
+              </ul>
             </div>
           </article>
           <article className="international-service-row" id="customs">
             <FaGlobeAmericas aria-hidden="true" />
             <div>
               <h2>Customs &amp; import information</h2>
-              <p>Import duties, taxes and customs procedures vary by country and are set by local authorities. Confirm your local requirements; charges at destination may be payable by the recipient.</p>
+              <p>Import duties and taxes vary by country, and customs procedures are controlled by the destination country's authorities.</p>
+              <ul>
+                <li>The recipient may be responsible for duties, taxes, customs charges or other destination fees.</li>
+                <li>Customs clearance procedures may affect delivery timing.</li>
+                <li>Check your country's gemstone import requirements before placing an order.</li>
+                <li>We can provide relevant shipping or order information where applicable; local customs requirements are determined by the destination country.</li>
+              </ul>
             </div>
           </article>
         </section>
@@ -279,7 +283,6 @@ const InternationalCustomers = () => {
             <p>Ask about a stone, shipping quote, documentation or import requirements.</p>
           </div>
           <div className="international-contact-actions">
-            <a href="#consultation"><FaVideo /> Video consultation</a>
             <a href="https://wa.me/94712345678" target="_blank" rel="noreferrer">
               <FaWhatsapp /> WhatsApp
             </a>
@@ -292,7 +295,6 @@ const InternationalCustomers = () => {
           </div>
         </section>
 
-        <ConsultantBooking sectionId="consultation" />
       </main>
 
       <footer className="about-footer">
@@ -314,7 +316,7 @@ const InternationalCustomers = () => {
           <div className="international-footer-column">
             <h4>EXPLORE</h4>
             <a href="/">Home</a>
-            <a href="/gemstones">Gemstones</a>
+            <a href="/gemstones">Shop</a>
             <a href="/About">Our Heritage</a>
             <a href="/trust">Trust &amp; Certification</a>
             <a href="/reviews">Reviews</a>

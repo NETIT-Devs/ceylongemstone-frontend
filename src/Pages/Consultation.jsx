@@ -5,8 +5,8 @@ import {
   FaInstagram,
   FaMapMarkerAlt,
   FaPhoneAlt,
-  FaSearch,
   FaShoppingBag,
+  FaUser,
   FaWhatsapp
 } from "react-icons/fa";
 import ConsultantBooking from "../components/ConsultantBooking.jsx";
@@ -16,6 +16,7 @@ import SiteInquiryModal from "../components/SiteInquiryModal.jsx";
 import { useSharedCollection } from "../useSharedCollection.js";
 import { useState } from "react";
 import "./Consultation.css";
+import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
 
 const Consultation = () => {
   const [wishlist, setWishlist] = useSharedCollection("ceylon-wishlist");
@@ -30,33 +31,19 @@ const Consultation = () => {
           <img src="/logo.png" alt="Ceylon Royal Gemstones" />
           <div className="about-logo-text"><span>CEYLON</span><small>ROYAL GEMSTONES</small></div>
         </a>
+        <MobileSiteMenu />
         <div className="about-nav-links">
           <a href="/">Home</a>
-          <a href="/gemstones">Gemstones</a>
+          <a href="/gemstones">Shop</a>
           <a href="/About">Heritage</a>
           <a href="/trust">Certification</a>
           <a href="/reviews">Reviews</a>
           <a href="/contact">Contact</a>
           <a href="/blog">Blog</a>
-          <a href="/login">Login</a>
           <InternationalNavEntry />
         </div>
         <div className="about-nav-actions">
           <InternationalNavEntry mobile />
-          <button
-            type="button"
-            className="about-nav-icon"
-            title="Search"
-            aria-label="Search gemstones"
-            onClick={() => {
-              const query = prompt("Search gemstones:");
-              if (query) {
-                window.location.href = `/?search=${encodeURIComponent(query)}`;
-              }
-            }}
-          >
-            <FaSearch />
-          </button>
           <button
             type="button"
             className="about-nav-icon"
@@ -80,6 +67,21 @@ const Consultation = () => {
           <button type="button" onClick={() => setIsInquiryOpen(true)} className="about-inquire-btn">
             INQUIRE NOW
           </button>
+          <a
+            href="/join-us"
+            className="navbar-joinus-btn"
+            title="Join With Us"
+          >
+            <span>JOIN US</span>
+          </a>
+          <a
+            href="/login"
+            className="navbar-login-btn"
+            title="Login / Register"
+          >
+            <FaUser />
+            <span>LOGIN</span>
+          </a>
         </div>
       </nav>
 
@@ -115,7 +117,7 @@ const Consultation = () => {
           <div>
             <h4>EXPLORE</h4>
             <a href="/">Home</a>
-            <a href="/gemstones">Gemstones</a>
+            <a href="/gemstones">Shop</a>
             <a href="/About">Our Heritage</a>
             <a href="/trust">Trust &amp; Certification</a>
             <a href="/reviews">Reviews</a>

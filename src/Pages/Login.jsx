@@ -3,9 +3,7 @@ import {
   FaEnvelope,
   FaFacebookF,
   FaHeart,
-  FaSearch,
   FaShoppingBag,
-  FaTimes,
   FaUser,
   FaLock,
   FaPhoneAlt,
@@ -23,6 +21,7 @@ import {
   startAdminSession,
 } from "../adminAccess.js";
 import "./Login.css";
+import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
 import "../components/SiteFooter.css";
 
 const Login = () => {
@@ -156,33 +155,19 @@ const Login = () => {
           <img src="/logo.png" alt="Ceylon Royal Gemstones" />
           <div className="about-logo-text"><span>CEYLON</span><small>ROYAL GEMSTONES</small></div>
         </a>
+        <MobileSiteMenu />
         <div className="about-nav-links">
           <a href="/">Home</a>
-          <a href="/gemstones">Gemstones</a>
+          <a href="/gemstones">Shop</a>
           <a href="/About">Heritage</a>
           <a href="/trust">Certification</a>
           <a href="/reviews">Reviews</a>
           <a href="/contact">Contact</a>
           <a href="/blog">Blog</a>
-          <a href="/login" className="active">Login</a>
           <InternationalNavEntry />
         </div>
         <div className="about-nav-actions">
           <InternationalNavEntry mobile />
-          <button
-            type="button"
-            className="about-nav-icon"
-            title="Search"
-            aria-label="Search gemstones"
-            onClick={() => {
-              const query = prompt("Search gemstones:");
-              if (query) {
-                window.location.href = `/?search=${encodeURIComponent(query)}`;
-              }
-            }}
-          >
-            <FaSearch />
-          </button>
           <button
             type="button"
             className="about-nav-icon"
@@ -203,6 +188,22 @@ const Login = () => {
             <FaShoppingBag />
             {cart.length > 0 && <span className="about-badge">{cart.reduce((sum, item) => sum + item.quantity, 0)}</span>}
           </button>
+          <a
+            href="/join-us"
+            className="navbar-joinus-btn"
+            title="Join With Us"
+          >
+            <span>JOIN US</span>
+          </a>
+          <a
+            href="/login"
+            className="navbar-login-btn"
+            title="Login / Register"
+            style={{ borderColor: '#c9a24b', background: 'rgba(201,162,75,0.18)', color: '#c9a24b' }}
+          >
+            <FaUser />
+            <span>LOGIN</span>
+          </a>
         </div>
       </nav>
 
@@ -464,7 +465,7 @@ const Login = () => {
           <div>
             <h4>EXPLORE</h4>
             <a href="/">Home</a>
-            <a href="/gemstones">Gemstones</a>
+            <a href="/gemstones">Shop</a>
             <a href="/About">Our Heritage</a>
             <a href="/trust">Trust &amp; Certification</a>
             <a href="/reviews">Reviews</a>

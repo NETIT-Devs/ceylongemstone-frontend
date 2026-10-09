@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   FaHeart,
   FaShoppingBag,
-  FaSearch,
   FaTimes,
   FaTrash,
   FaGem,
+  FaUser,
   FaWhatsapp,
   FaEnvelope,
   FaPhoneAlt,
@@ -15,6 +15,7 @@ import {
 } from "react-icons/fa";
 
 import "./About.css";
+import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
 import CollectionDrawerActions from "../components/CollectionDrawerActions.jsx";
 import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
 import { getCollectionItemKey, useSharedCollection } from "../useSharedCollection.js";
@@ -74,8 +75,7 @@ const About = () => {
       subtitle: "Ethically Sourced Ceylon Treasures",
       description:
         "Our journey begins deep in the rich soils of Ratnapura. Using time-honored, sustainable techniques passed down through generations, our artisans carefully extract raw gemstones while respecting nature.",
-      image:
-        "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&q=80&w=1000",
+      image: "/about1.jpg",
       badge: "MINING & PIT EXTRACTION"
     },
     {
@@ -84,8 +84,7 @@ const About = () => {
       subtitle: "Unlocking Natural Brilliance",
       description:
         "Every rough gem is uniquely assessed. Master lapidaries inspect light refraction and crystal axes before hand-cutting each facet to maximize fire, clarity, and magnificent color display.",
-      image:
-        "https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&q=80&w=1000",
+      image: "/about2.jpg",
       badge: "MASTER CRAFTSMANSHIP"
     },
     {
@@ -94,8 +93,7 @@ const About = () => {
       subtitle: "Certified Perfection",
       description:
         "The final stage involves high-precision polishing to achieve mirror-like luster. Each stone undergoes rigorous gemological testing and international certification before entering our signature collection.",
-      image:
-        "https://images.unsplash.com/photo-1615655406736-b37c4fabf923?auto=format&fit=crop&q=80&w=1000",
+      image: "/about3.jpg",
       badge: "CERTIFIED ELEGANCE"
     }
   ];
@@ -162,6 +160,7 @@ const About = () => {
 
         {/* NAV LINKS */}
 
+        <MobileSiteMenu />
         <div className="about-nav-links">
 
           <a href="/">
@@ -169,7 +168,7 @@ const About = () => {
           </a>
 
           <a href="/#Gemstones">
-            Gemstones
+            Shop
           </a>
 
           <a
@@ -194,10 +193,6 @@ const About = () => {
             Blog
           </a>
 
-          <a href="/login">
-            Login
-          </a>
-
           <InternationalNavEntry />
 
         </div>
@@ -210,21 +205,6 @@ const About = () => {
           <InternationalNavEntry mobile />
 
           {/* SEARCH */}
-
-          <button
-            className="about-nav-icon"
-            title="Search"
-            onClick={() => {
-              const query = prompt("Search gemstones:");
-              if (query) {
-                window.location.href = `/?search=${encodeURIComponent(query)}`;
-              }
-            }}
-          >
-
-            <FaSearch />
-
-          </button>
 
 
           {/* WISHLIST */}
@@ -265,14 +245,29 @@ const About = () => {
           </button>
 
 
-          {/* INQUIRE */}
-
           <button
             className="about-inquire-btn"
             onClick={() => setSelectedGem(gems[0])}
           >
             INQUIRE NOW
           </button>
+
+          <a
+            href="/join-us"
+            className="navbar-joinus-btn"
+            title="Join With Us"
+          >
+            <span>JOIN US</span>
+          </a>
+
+          <a
+            href="/login"
+            className="navbar-login-btn"
+            title="Login / Register"
+          >
+            <FaUser />
+            <span>LOGIN</span>
+          </a>
 
         </div>
 
@@ -559,12 +554,12 @@ const About = () => {
             and timeless elegance.
           </p>
 
-          <button
+          <a
+            href="/gemstones"
             className="gold-btn"
-            onClick={() => setSelectedGem(gems[0])}
           >
             EXPLORE COLLECTION
-          </button>
+          </a>
 
         </div>
 
@@ -629,7 +624,7 @@ const About = () => {
             </a>
 
             <a href="/#gemstones">
-              Gemstones
+              Shop
             </a>
 
             <a href="/About">

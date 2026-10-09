@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   FaArrowLeft,
   FaEnvelope,
@@ -8,14 +8,20 @@ import {
   FaLock,
   FaMapMarkerAlt,
   FaPhoneAlt,
-  FaSearch,
   FaShoppingBag,
   FaTimes,
+  FaUser,
   FaWhatsapp
 } from "react-icons/fa";
-import { useSharedCollection } from "../useSharedCollection.js";
+import {
+  getCollectionItemKey,
+  useSharedCollection
+} from "../useSharedCollection.js";
+import { useGemInventory } from "../useGemInventory.js";
+import { products } from "./Gemstones.jsx";
 import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
 import "./Checkout.css";
+import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
 
 const formatPrice = (price) =>
   Number(price || 0).toLocaleString("en-US", {
@@ -25,10 +31,23 @@ const formatPrice = (price) =>
   });
 
 const Checkout = () => {
+  const [showMyOrdersLink] = useState(() => {
+    try {
+      const customer = JSON.parse(
+        window.localStorage.getItem("ceylon-user") || "null"
+      );
+      return customer?.loggedIn === true;
+    } catch {
+      return false;
+    }
+  });
   const [wishlist] = useSharedCollection("ceylon-wishlist");
-  const [cart] = useSharedCollection("ceylon-cart");
+  const [cart, setCart] = useSharedCollection("ceylon-cart");
+  const [inventory, setInventory] = useGemInventory(products);
   const [notice, setNotice] = useState("");
   const [isInquiryOpen, setIsInquiryOpen] = useState(false);
+  const [placedOrderId, setPlacedOrderId] = useState("");
+  const orderSubmitted = useRef(false);
   const total = cart.reduce(
     (sum, item) => sum + Number(item.price || 0) * (Number(item.quantity) || 1),
     0
@@ -36,7 +55,97 @@ const Checkout = () => {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    setNotice("Payment is not connected yet. Your order has not been charged.");
+    if (orderSubmitted.current) return;
+
+    const unavailableItem = cart.find(
+      (item) =>
+        (Number(item.quantity) || 1) >
+        (inventory[getCollectionItemKey(item)] ?? 0)
+    );
+
+    if (unavailableItem) {
+      const availableQuantity =
+        inventory[getCollectionItemKey(unavailableItem)] ?? 0;
+      setNotice(
+        `${unavailableItem.name} has only ${availableQuantity} available. Please update your cart.`
+      );
+      return;
+    }
+
+    const formData = new FormData(event.currentTarget);
+    const orderId = `CRG-${Date.now()}`;
+    const orderDate = new Date().toISOString();
+    const country = String(formData.get("country") || "");
+    const shippingAddress = [
+      formData.get("address"),
+      formData.get("city"),
+      formData.get("postal"),
+      country
+    ].filter(Boolean).join(", ");
+    const newOrder = {
+      id: orderId,
+      date: orderDate.slice(0, 10),
+      status: "PROCESSING",
+      statusColor: "status-dispatched",
+      statusText: "Order received and being prepared",
+      paymentStatus: `PENDING (${formatPrice(total)})`,
+      trackingNumber: "Tracking details pending",
+      estimatedDelivery: "To be confirmed",
+      customerName: String(formData.get("name") || ""),
+      customerEmail: String(formData.get("email") || ""),
+      customerPhone: String(formData.get("phone") || ""),
+      shippingAddress,
+      items: cart.map((item) => ({
+        name: item.name,
+        carat: `${item.carat} Ct`,
+        cut: item.cut || item.shape || "Not provided",
+        origin: item.origin || "Ratnapura, Sri Lanka",
+        certificateId: item.certificateNumber || "Certification pending",
+        price: Number(item.price || 0),
+        image: item.image,
+        tag: item.tag || item.treatment || "CERTIFIED NATURAL"
+      })),
+      timeline: [
+        { step: "Order Placed & Confirmed", date: orderDate, completed: true },
+        { step: "Gemological Lab Verification", date: "Pending", completed: false },
+        { step: "Packaging & Dispatch", date: "Pending", completed: false },
+        { step: "Delivery", date: "Pending", completed: false }
+      ]
+    };
+    let savedOrders;
+    try {
+      savedOrders = JSON.parse(
+        window.localStorage.getItem("ceylon-orders") || "[]"
+      );
+      if (!Array.isArray(savedOrders)) {
+        throw new Error("Stored orders are not in a valid list format.");
+      }
+      window.localStorage.setItem(
+        "ceylon-orders",
+        JSON.stringify([newOrder, ...savedOrders])
+      );
+    } catch (error) {
+      console.error("Unable to save the order for My Orders.", error);
+      setNotice("Your order could not be saved. Please try again.");
+      return;
+    }
+
+    orderSubmitted.current = true;
+    setInventory((current) =>
+      cart.reduce((updatedInventory, item) => {
+        const productKey = getCollectionItemKey(item);
+        return {
+          ...updatedInventory,
+          [productKey]: Math.max(
+            0,
+            (updatedInventory[productKey] ?? 0) - (Number(item.quantity) || 1)
+          )
+        };
+      }, current)
+    );
+    setCart([]);
+    setPlacedOrderId(orderId);
+    setNotice(`Order ${orderId} placed. Payment is not connected, so no charge was made.`);
   };
 
   const handleInquirySubmit = (event) => {
@@ -69,34 +178,21 @@ const Checkout = () => {
           </div>
         </a>
 
+        <MobileSiteMenu />
         <div className="about-nav-links">
           <a href="/">Home</a>
-          <a href="/gemstones">Gemstones</a>
+          <a href="/gemstones">Shop</a>
           <a href="/About">Heritage</a>
           <a href="/trust">Certification</a>
           <a href="/reviews">Reviews</a>
           <a href="/contact">Contact</a>
           <a href="/blog">Blog</a>
-          <a href="/login">Login</a>
+          {showMyOrdersLink && <a href="/my-orders">My Orders</a>}
           <InternationalNavEntry />
         </div>
 
         <div className="about-nav-actions">
           <InternationalNavEntry mobile />
-          <button
-            className="about-nav-icon"
-            type="button"
-            title="Search"
-            aria-label="Search gemstones"
-            onClick={() => {
-              const query = prompt("Search gemstones:");
-              if (query) {
-                window.location.href = `/?search=${encodeURIComponent(query)}`;
-              }
-            }}
-          >
-            <FaSearch />
-          </button>
           <a
             className="about-nav-icon"
             href="/gemstones#wishlist"
@@ -130,6 +226,21 @@ const Checkout = () => {
           >
             INQUIRE NOW
           </button>
+          <a
+            href="/join-us"
+            className="navbar-joinus-btn"
+            title="Join With Us"
+          >
+            <span>JOIN US</span>
+          </a>
+          <a
+            href="/login"
+            className="navbar-login-btn"
+            title="Login / Register"
+          >
+            <FaUser />
+            <span>LOGIN</span>
+          </a>
         </div>
       </nav>
 
@@ -158,10 +269,17 @@ const Checkout = () => {
                 <label>Postal code<input name="postal" autoComplete="postal-code" required /></label>
               </div>
               <button className="checkout-pay" type="submit">
-                <FaLock /> PAY {formatPrice(total)}
+                <FaLock /> PLACE ORDER
               </button>
-              {notice && <p className="checkout-notice" role="status">{notice}</p>}
             </form>
+          )}
+          {notice && (
+            <div className="checkout-notice" role="status">
+              <p>{notice}</p>
+              {placedOrderId && showMyOrdersLink && (
+                <a href="/my-orders">View My Orders</a>
+              )}
+            </div>
           )}
         </div>
 
@@ -201,7 +319,7 @@ const Checkout = () => {
           <div>
             <h4>EXPLORE</h4>
             <a href="/">Home</a>
-            <a href="/gemstones">Gemstones</a>
+            <a href="/gemstones">Shop</a>
             <a href="/About">Our Heritage</a>
             <a href="/trust">Trust &amp; Certification</a>
             <a href="/reviews">Reviews</a>

@@ -13,13 +13,6 @@ const CollectionDrawerPanel = ({
   if (!activeDrawer) return null;
 
   const items = activeDrawer === "wishlist" ? wishlist : cart;
-  const updateQuantity = (setItems, productKey, amount) => {
-    setItems((current) => current
-      .map((item) => getCollectionItemKey(item) === productKey
-        ? { ...item, quantity: item.quantity + amount }
-        : item)
-      .filter((item) => item.quantity > 0));
-  };
 
   const removeItem = (productKey) => {
     const setItems = activeDrawer === "wishlist" ? setWishlist : setCart;
@@ -59,8 +52,6 @@ const CollectionDrawerPanel = ({
           ) : (
             items.map((item) => {
               const key = getCollectionItemKey(item);
-              const setItems = activeDrawer === "wishlist" ? setWishlist : setCart;
-              const quantity = Number(item.quantity) || 1;
 
               return (
                 <div className="drawer-item" key={key}>
@@ -68,20 +59,8 @@ const CollectionDrawerPanel = ({
                   <div className="gem-drawer-item-info">
                     <h4>{item.name}</h4>
                     <p>{item.carat} Ct</p>
-                    <strong>${(Number(item.price || 0) * quantity).toLocaleString("en-US")}</strong>
-                    <div className="gem-quantity-control">
-                      <button
-                        type="button"
-                        aria-label={`Decrease ${item.name} quantity`}
-                        onClick={() => updateQuantity(setItems, key, -1)}
-                      >−</button>
-                      <span>{quantity}</span>
-                      <button
-                        type="button"
-                        aria-label={`Increase ${item.name} quantity`}
-                        onClick={() => updateQuantity(setItems, key, 1)}
-                      >+</button>
-                    </div>
+                    <strong>${Number(item.price || 0).toLocaleString("en-US")}</strong>
+                    <p>Qty 1</p>
                   </div>
                   <button
                     type="button"
