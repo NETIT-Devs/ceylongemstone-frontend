@@ -4,7 +4,7 @@ import About from './Pages/About.jsx';
 import Contact from './Pages/contact.jsx';
 import GemstoneDetails from './Pages/GemstoneDetail.jsx';
 import Gemstones, { products } from './Pages/Gemstones.jsx';
-import TrustPage from './Pages/TrustPage.jsx'; // 1. Trust Page එක Import කරගන්න
+import TrustPage from './Pages/TrustPage.jsx'; // Import the Trust Page
 import Checkout from './Pages/Checkout.jsx';
 import Consultation from './Pages/Consultation.jsx';
 import InternationalCustomers from './Pages/InternationalCustomers.jsx';
@@ -129,7 +129,7 @@ function App() {
     return <Consultation />;
   }
 
-  // Trust & Certification Page (2. නව රවුටින් කොන්දේසිය එකතු කිරීම)
+  // Trust & Certification Page
   if (currentPage === '/trust' || currentPage === '/trust-certification' || currentHash === '#trust') {
     return <TrustPage />;
   }
@@ -149,7 +149,7 @@ function App() {
     return <Gemstones />;
   }
 
-  // Default Page (Home එක පෙන්වයි)
+  // Default page (shows the Home page)
   return <Home />;
 }
 
