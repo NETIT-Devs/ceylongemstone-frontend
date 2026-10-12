@@ -1,30 +1,16 @@
+import { API_BASE_URL } from "./services/api.js";
+
 const accountsKey = "ceylon-admin-accounts";
 const sessionKey = "ceylon-admin-session";
 
-export const DEFAULT_ADMIN_ACCOUNTS = [
-  {
-    id: "admin-super-root",
-    name: "Super Administrator",
-    email: "superadmin@ceylonroyalgemstones.com",
-    department: "Executive",
-    role: "super-admin",
-    phone: "+94 71 234 5678",
-    status: "active",
-    passwordHash: "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9", // admin123
-    createdAt: "2026-09-01T00:00:00.000Z"
-  },
-  {
-    id: "admin-operations-01",
-    name: "Operations Admin",
-    email: "admin@ceylonroyalgemstones.com",
-    department: "Operations",
-    role: "admin",
-    phone: "+94 77 987 6543",
-    status: "active",
-    passwordHash: "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9", // admin123
-    createdAt: "2026-09-15T00:00:00.000Z"
-  }
+const ADMIN_LOGIN_ENDPOINTS = [
+  "/api/admin/login",
+  "/admin/login",
+  "/api/auth/admin/login",
+  "/auth/admin/login",
 ];
+
+export const DEFAULT_ADMIN_ACCOUNTS = [];
 
 export const readAdminAccounts = () => {
   try {
@@ -34,7 +20,7 @@ export const readAdminAccounts = () => {
       return DEFAULT_ADMIN_ACCOUNTS;
     }
     const accounts = JSON.parse(raw);
-    if (!Array.isArray(accounts) || accounts.length === 0) {
+    if (!Array.isArray(accounts)) {
       window.localStorage.setItem(accountsKey, JSON.stringify(DEFAULT_ADMIN_ACCOUNTS));
       return DEFAULT_ADMIN_ACCOUNTS;
     }
@@ -72,6 +58,81 @@ export const hashAdminPassword = async (password) => {
   return Array.from(new Uint8Array(hashBuffer), (byte) =>
     byte.toString(16).padStart(2, "0")
   ).join("");
+};
+
+export const loginAdminWithBackend = async (email, password) => {
+  if (!API_BASE_URL) {
+    return null;
+  }
+
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  const candidateEndpoints = [...new Set(ADMIN_LOGIN_ENDPOINTS)];
+  let lastError = null;
+
+  for (const endpoint of candidateEndpoints) {
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ email: normalizedEmail, password }),
+      });
+
+      if (!response.ok) {
+        lastError = new Error(`Admin login failed at ${endpoint}: ${response.status}`);
+        continue;
+      }
+
+      const payload = await response.json().catch(() => ({}));
+      const adminAccount =
+        payload?.admin ||
+        payload?.user ||
+        payload?.account ||
+        payload?.data?.admin ||
+        payload?.data?.user ||
+        payload?.data?.account ||
+        null;
+
+      if (adminAccount && (adminAccount.role === "admin" || adminAccount.role === "super-admin")) {
+        return {
+          id: adminAccount.id || adminAccount.accountId || adminAccount._id || adminAccount.email || normalizedEmail,
+          name: adminAccount.name || adminAccount.fullName || "Administrator",
+          email: adminAccount.email || normalizedEmail,
+          department: adminAccount.department || "Operations",
+          role: adminAccount.role || "admin",
+          phone: adminAccount.phone || "",
+          status: adminAccount.status || "active",
+          passwordHash: adminAccount.passwordHash || "",
+          source: "backend",
+        };
+      }
+
+      if (payload?.success === true && payload?.email) {
+        return {
+          id: payload.id || payload.accountId || payload._id || payload.email,
+          name: payload.name || payload.fullName || "Administrator",
+          email: payload.email,
+          department: payload.department || "Operations",
+          role: payload.role || "admin",
+          phone: payload.phone || "",
+          status: payload.status || "active",
+          passwordHash: payload.passwordHash || "",
+          source: "backend",
+        };
+      }
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (lastError) {
+    console.warn("Backend admin login unavailable or rejected", lastError);
+  }
+
+  return null;
 };
 
 export const startAdminSession = (account) => {

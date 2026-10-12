@@ -121,6 +121,7 @@ const MyOrders = () => {
 
   const handleLogout = () => {
     window.localStorage.removeItem("ceylon-user");
+    window.dispatchEvent(new Event("ceylon-user-auth-change"));
     window.location.href = "/login";
   };
 

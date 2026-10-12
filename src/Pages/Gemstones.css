@@ -17,6 +17,112 @@
 }
 
 /* =====================================================
+   CURRENCY DROPDOWN
+===================================================== */
+
+.currency-selector {
+  position: relative;
+  display: flex;
+  align-items: center;
+  z-index: 1000;
+}
+
+.currency-current {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 13px;
+  border: 1px solid rgba(201, 162, 75, 0.65);
+  border-radius: 130px;
+  background: rgba(6, 28, 43, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #F7F3E8;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.22);
+}
+
+.currency-current:hover {
+  border-color: #C9A24B;
+  background: rgba(201, 162, 75, 0.12);
+  box-shadow: 0 0 18px rgba(201, 162, 75, 0.25);
+  transform: translateY(-1px);
+}
+
+.currency-flag {
+  width: 22px;
+  height: 15px;
+  flex: 0 0 auto;
+  object-fit: cover;
+  border-radius: 3px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.home-currency-current-code,
+.home-currency-option-code {
+  color: #F7F3E8;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.home-currency-option-code {
+  flex: 1;
+  text-align: left;
+}
+
+.home-currency-option-symbol {
+  color: #C9A24B;
+  font-size: 12px;
+}
+
+.currency-symbol {
+  color: #C9A24B;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.currency-chevron {
+  color: #F7F3E8;
+  font-size: 12px;
+  margin-left: 2px;
+}
+
+.currency-dropdown {
+  position: absolute;
+  top: 110%;
+  right: 0;
+  width: 130px;
+  padding: 6px;
+  background: #061C2B;
+  border: 1px solid #C9A24B;
+  border-radius: 16px;
+  z-index: 99999;
+}
+
+.currency-option {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 9px 10px;
+  margin: 0;
+  background: transparent;
+  color: #F7F3E8;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.currency-dropdown .currency-option:hover,
+.currency-dropdown .currency-option.selected {
+  background: rgba(201, 162, 75, 0.14);
+}
+
+/* =====================================================
    NAVBAR
 ===================================================== */
 

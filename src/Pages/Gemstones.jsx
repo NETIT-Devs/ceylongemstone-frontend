@@ -30,7 +30,8 @@ import {
   normalizeCollectionItem,
   useSharedCollection
 } from "../useSharedCollection.js";
-import { formatCurrencyPrice, getCurrentCurrency } from "../currency.js";
+import { currencyRates, formatCurrencyPrice, getCurrentCurrency } from "../currency.js";
+import { hasAdminAccess } from "../adminAccess.js";
 import { useGemInventory } from "../useGemInventory.js";
 import { useGemSubmissions } from "../useGemSubmissions.js";
 
@@ -729,7 +730,9 @@ const treatments = [
 ];
 
 function Gemstones() {
-  const [currency] = useState(getCurrentCurrency);
+  const [currency, setCurrency] = useState(getCurrentCurrency);
+  const [currencyOpen, setCurrencyOpen] = useState(false);
+  const currencyRef = useRef(null);
   const [gemSubmissions] = useGemSubmissions();
   const shopProducts = useMemo(
     () => [
@@ -748,6 +751,31 @@ function Gemstones() {
     Math.max(maxPriceValue, ...shopProducts.map((product) => Number(product.price) || 0)) /
       5000
   ) * 5000;
+
+  const readMyOrdersLinkStatus = () => {
+    try {
+      const customer = JSON.parse(
+        window.localStorage.getItem("ceylon-user") || "null"
+      );
+      return customer?.loggedIn === true && !hasAdminAccess("/admin");
+    } catch {
+      return false;
+    }
+  };
+
+  const [showMyOrdersLink, setShowMyOrdersLink] = useState(readMyOrdersLinkStatus);
+
+  useEffect(() => {
+    const syncMyOrdersLink = () => setShowMyOrdersLink(readMyOrdersLinkStatus());
+
+    window.addEventListener("storage", syncMyOrdersLink);
+    window.addEventListener("ceylon-user-auth-change", syncMyOrdersLink);
+
+    return () => {
+      window.removeEventListener("storage", syncMyOrdersLink);
+      window.removeEventListener("ceylon-user-auth-change", syncMyOrdersLink);
+    };
+  }, []);
 
   const [selectedCategory, setSelectedCategory] = useState(() => {
     try {
@@ -815,6 +843,17 @@ function Gemstones() {
       searchInputRef.current?.focus({ preventScroll: true });
     }
   }, [isSearchOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (currencyRef.current && !currencyRef.current.contains(event.target)) {
+        setCurrencyOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleSelectCategory = (cat) => {
     setSelectedCategory(cat);
@@ -1077,10 +1116,58 @@ function Gemstones() {
           <a href="/reviews">Reviews</a>
           <a href="/contact">Contact</a>
           <a href="/blog">Blog</a>
+          {showMyOrdersLink && <a href="/my-orders">My Orders</a>}
           <InternationalNavEntry />
         </div>
 
         <div className="about-nav-actions">
+
+          <div className="currency-selector" ref={currencyRef}>
+            <button
+              type="button"
+              className="currency-current"
+              aria-label="Select currency"
+              aria-expanded={currencyOpen}
+              onClick={() => setCurrencyOpen((open) => !open)}
+            >
+              <img
+                src={(currencyRates[currency] || currencyRates.USD).flag}
+                alt={`${currency} flag`}
+                className="currency-flag"
+              />
+              <span className="home-currency-current-code">{currency}</span>
+              <span className="currency-symbol">{currencyRates[currency].symbol.trim()}</span>
+              <span className="currency-chevron">▾</span>
+            </button>
+
+            {currencyOpen && (
+              <div className="currency-dropdown">
+                {Object.entries(currencyRates).map(([code, option]) => (
+                  <button
+                    type="button"
+                    key={code}
+                    className={`currency-option ${currency === code ? "selected" : ""}`}
+                    onClick={() => {
+                      setCurrency(code);
+                      window.localStorage.setItem("ceylon-currency", code);
+                      window.dispatchEvent(new Event("ceylon-currency-change"));
+                      const foreignCurrency = code !== "LKR";
+                      window.localStorage.setItem(
+                        "ceylon-international-enabled",
+                        String(foreignCurrency)
+                      );
+                      window.dispatchEvent(new Event("ceylon-international-mode-change"));
+                      setCurrencyOpen(false);
+                    }}
+                  >
+                    <img src={option.flag} alt={`${code} flag`} className="currency-flag" />
+                    <span className="home-currency-option-code">{code}</span>
+                    <span className="home-currency-option-symbol">{option.symbol.trim()}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <InternationalNavEntry mobile />
 

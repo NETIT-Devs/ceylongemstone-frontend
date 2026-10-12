@@ -17,8 +17,8 @@ import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
 import { useSharedCollection } from "../useSharedCollection.js";
 import {
   readAdminAccounts,
-  hashAdminPassword,
   startAdminSession,
+  loginAdminWithBackend,
 } from "../adminAccess.js";
 import "./Login.css";
 import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
@@ -60,28 +60,18 @@ const Login = () => {
     const inputEmail = loginForm.email.trim().toLowerCase();
     const inputPassword = loginForm.password;
 
-    // Check if this account belongs to an administrator or super-admin
-    const adminAccounts = readAdminAccounts();
-    const matchedAdmin = adminAccounts.find(
-      (acc) => acc.email.trim().toLowerCase() === inputEmail
-    );
+    const backendAdmin = await loginAdminWithBackend(inputEmail, inputPassword);
 
-    if (matchedAdmin) {
-      if (matchedAdmin.status !== "active") {
+    if (backendAdmin) {
+      if (backendAdmin.status !== "active") {
         setLoginError("This administrative account has been deactivated. Please contact an executive.");
         return;
       }
 
-      const inputHash = await hashAdminPassword(inputPassword);
-      if (inputHash !== matchedAdmin.passwordHash) {
-        setLoginError("Invalid password for administrative account.");
-        return;
-      }
-
-      startAdminSession(matchedAdmin);
-      const isSuper = matchedAdmin.role === "super-admin";
+      startAdminSession(backendAdmin);
+      const isSuper = backendAdmin.role === "super-admin";
       setSuccessNote(
-        `Welcome, ${matchedAdmin.name}! Redirecting to ${isSuper ? "Super Admin" : "Admin"} Portal...`
+        `Welcome, ${backendAdmin.name}! Redirecting to ${isSuper ? "Super Admin" : "Admin"} Portal...`
       );
       setIsSubmitted(true);
       setTimeout(() => {
@@ -90,6 +80,10 @@ const Login = () => {
       return;
     }
 
+    // Admin login is authenticated by the backend database.
+    // If the supplied credentials are not a backend admin account,
+    // continue with the normal customer session flow.
+
     // Otherwise standard customer login
     const userSession = {
       email: loginForm.email,
@@ -97,10 +91,11 @@ const Login = () => {
       loggedIn: true,
     };
     window.localStorage.setItem("ceylon-user", JSON.stringify(userSession));
+    window.dispatchEvent(new Event("ceylon-user-auth-change"));
     setSuccessNote("Welcome back to Ceylon Royal Gemstones.");
     setIsSubmitted(true);
     setTimeout(() => {
-      window.location.href = "/my-orders";
+      window.location.href = "/";
     }, 1200);
   };
 
@@ -127,10 +122,11 @@ const Login = () => {
       loggedIn: true,
     };
     window.localStorage.setItem("ceylon-user", JSON.stringify(userSession));
+    window.dispatchEvent(new Event("ceylon-user-auth-change"));
     setSuccessNote("Your account has been created successfully.");
     setIsSubmitted(true);
     setTimeout(() => {
-      window.location.href = "/my-orders";
+      window.location.href = "/";
     }, 1200);
   };
 

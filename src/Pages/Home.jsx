@@ -152,7 +152,7 @@ const Home = () => {
   const [selectedGem, setSelectedGem] = useState(null);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [heroSlideIndex, setHeroSlideIndex] = useState(0);
-  const [showMyOrdersLink] = useState(() => {
+  const readMyOrdersLinkStatus = () => {
     try {
       const customer = JSON.parse(
         window.localStorage.getItem("ceylon-user") || "null"
@@ -161,7 +161,20 @@ const Home = () => {
     } catch {
       return false;
     }
-  });
+  };
+  const [showMyOrdersLink, setShowMyOrdersLink] = useState(readMyOrdersLinkStatus);
+
+  useEffect(() => {
+    const syncMyOrdersLink = () => setShowMyOrdersLink(readMyOrdersLinkStatus());
+
+    window.addEventListener("storage", syncMyOrdersLink);
+    window.addEventListener("ceylon-user-auth-change", syncMyOrdersLink);
+
+    return () => {
+      window.removeEventListener("storage", syncMyOrdersLink);
+      window.removeEventListener("ceylon-user-auth-change", syncMyOrdersLink);
+    };
+  }, []);
 
   const [currency, setCurrency] = useState(getCurrentCurrency);
   const [currencyOpen, setCurrencyOpen] = useState(false);
@@ -1013,7 +1026,7 @@ const Home = () => {
         </div>
 
 
-        <div className="heritage-content-below">
+        {/* <div className="heritage-content-below">
 
           <span className="subtitle">
             OUR LEGACY
@@ -1084,7 +1097,7 @@ const Home = () => {
 
           </div>
 
-        </div>
+        </div> */}
 
       </section>
 
