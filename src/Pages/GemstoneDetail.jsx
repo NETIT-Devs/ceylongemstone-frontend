@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { apiGet, apiPost } from '../services/api.js';
 
 import {
   FaArrowLeft,
@@ -170,8 +171,55 @@ const GemstoneDetail = ({ gem }) => {
     }
   };
 
-  const handleInquirySubmit = (e) => {
+  useEffect(() => {
+    if (!gem?.id) return;
+    apiGet("/api/reviews")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.data)) {
+          const gemReviews = data.data
+            .filter((r) => (r.gemstone_id === gem.id || String(r.gemstone_id) === String(gem.id)) && r.status === "APPROVED")
+            .map((r) => ({
+              id: r.id,
+              name: `Collector #${r.user_id}`,
+              rating: Number(r.rating),
+              date: r.created_at ? String(r.created_at).slice(0, 10) : 'Verified',
+              comment: r.comment,
+              photo: null
+            }));
+          if (gemReviews.length > 0) {
+            setReviews((prev) => [...gemReviews, ...prev]);
+          }
+        }
+      })
+      .catch(() => {});
+  }, [gem?.id]);
+
+  const handleInquirySubmit = async (e) => {
     e.preventDefault();
+    const form = e.currentTarget;
+    const name = form.elements[0]?.value || "";
+    const email = form.elements[1]?.value || "";
+    const phone = form.elements[2]?.value || "";
+    const message = form.elements[3]?.value || "";
+
+    try {
+      const user = (() => {
+        try { return JSON.parse(window.localStorage.getItem("ceylon-user") || "null"); }
+        catch { return null; }
+      })();
+
+      await apiPost("/api/enquiries", {
+        name,
+        email,
+        message: phone ? `[Phone: ${phone}] ${message}` : message,
+        gemstone_id: gem?.id || 1,
+        ...(user?.id ? { user_id: user.id } : {})
+      });
+    } catch {
+      // Offline fallback
+    }
+
     alert('Your inquiry has been sent successfully!');
     setShowInquiryForm(false);
   };
@@ -181,7 +229,7 @@ const GemstoneDetail = ({ gem }) => {
     detailSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  const handleReviewSubmit = (e) => {
+  const handleReviewSubmit = async (e) => {
     e.preventDefault();
     if (!newComment.trim()) return;
 
@@ -195,8 +243,28 @@ const GemstoneDetail = ({ gem }) => {
     };
 
     setReviews([reviewObj, ...reviews]);
+    const commentToSend = newComment;
+    const ratingToSend = newRating;
     setNewComment('');
     setNewPhoto(null);
+
+    try {
+      const user = (() => {
+        try { return JSON.parse(window.localStorage.getItem("ceylon-user") || "null"); }
+        catch { return null; }
+      })();
+
+      if (user?.id) {
+        await apiPost("/api/reviews", {
+          user_id: user.id,
+          gemstone_id: gem?.id || 1,
+          rating: ratingToSend,
+          comment: commentToSend,
+        });
+      }
+    } catch {
+      // Offline fallback
+    }
   };
 
   if (!gem) {

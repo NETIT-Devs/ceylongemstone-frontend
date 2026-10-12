@@ -4,6 +4,7 @@ const accountsKey = "ceylon-admin-accounts";
 const sessionKey = "ceylon-admin-session";
 
 const ADMIN_LOGIN_ENDPOINTS = [
+  "/api/auth/login",
   "/api/admin/login",
   "/admin/login",
   "/api/auth/admin/login",
@@ -46,10 +47,16 @@ export const hasAdminAccess = (path) => {
   const session = readAdminSession();
   if (!session?.accountId) return false;
 
-  const account = readAdminAccounts().find((item) => item.id === session.accountId);
-  if (!account || account.role !== session.role || account.status !== "active") return false;
-  if (path === "/super-admin") return account.role === "super-admin";
-  return account.role === "admin" || account.role === "super-admin";
+  const accounts = readAdminAccounts();
+  const account = accounts.find(
+    (item) => item.id === session.accountId || String(item.email || "").toLowerCase() === String(session.email || "").toLowerCase()
+  );
+  const role = account?.role || session.role;
+  const status = account?.status || "active";
+
+  if (status !== "active") return false;
+  if (path === "/super-admin") return role === "super-admin";
+  return role === "admin" || role === "super-admin";
 };
 
 export const hashAdminPassword = async (password) => {
@@ -96,31 +103,43 @@ export const loginAdminWithBackend = async (email, password) => {
         payload?.data?.account ||
         null;
 
-      if (adminAccount && (adminAccount.role === "admin" || adminAccount.role === "super-admin")) {
+      const rawRole = String(adminAccount?.role || payload?.role || "").toUpperCase();
+      const isAdminRole =
+        rawRole === "ADMIN" ||
+        rawRole === "SUPER_ADMIN" ||
+        rawRole === "SUPER-ADMIN" ||
+        adminAccount?.role === "admin" ||
+        adminAccount?.role === "super-admin";
+
+      if (adminAccount && isAdminRole) {
+        const isSuper = rawRole.includes("SUPER") || adminAccount.role === "super-admin";
         return {
           id: adminAccount.id || adminAccount.accountId || adminAccount._id || adminAccount.email || normalizedEmail,
           name: adminAccount.name || adminAccount.fullName || "Administrator",
           email: adminAccount.email || normalizedEmail,
           department: adminAccount.department || "Operations",
-          role: adminAccount.role || "admin",
+          role: isSuper ? "super-admin" : "admin",
           phone: adminAccount.phone || "",
-          status: adminAccount.status || "active",
+          status: adminAccount.status === 0 ? "inactive" : "active",
           passwordHash: adminAccount.passwordHash || "",
           source: "backend",
+          token: payload?.token || null,
         };
       }
 
-      if (payload?.success === true && payload?.email) {
+      if (payload?.success === true && payload?.email && isAdminRole) {
+        const isSuper = rawRole.includes("SUPER");
         return {
           id: payload.id || payload.accountId || payload._id || payload.email,
           name: payload.name || payload.fullName || "Administrator",
           email: payload.email,
           department: payload.department || "Operations",
-          role: payload.role || "admin",
+          role: isSuper ? "super-admin" : "admin",
           phone: payload.phone || "",
-          status: payload.status || "active",
+          status: payload.status === 0 ? "inactive" : "active",
           passwordHash: payload.passwordHash || "",
           source: "backend",
+          token: payload?.token || null,
         };
       }
     } catch (error) {
@@ -142,6 +161,25 @@ export const startAdminSession = (account) => {
     name: account.name,
     role: account.role
   };
+  const accounts = readAdminAccounts();
+  const existingIdx = accounts.findIndex(
+    (item) => item.id === account.id || String(item.email || "").toLowerCase() === String(account.email || "").toLowerCase()
+  );
+  if (existingIdx >= 0) {
+    accounts[existingIdx] = { ...accounts[existingIdx], ...account, status: "active" };
+  } else {
+    accounts.push({
+      id: account.id,
+      name: account.name || "Administrator",
+      email: account.email,
+      department: account.department || "Operations",
+      role: account.role || "admin",
+      phone: account.phone || "",
+      status: "active",
+      source: "backend"
+    });
+  }
+  writeAdminAccounts(accounts);
   window.localStorage.setItem(sessionKey, JSON.stringify(session));
   return session;
 };

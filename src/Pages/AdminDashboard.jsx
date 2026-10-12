@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   FaGem,
   FaShoppingBag,
@@ -48,6 +48,7 @@ import {
   readAdminSession,
   writeAdminAccounts
 } from "../adminAccess.js";
+import { apiGet, apiPut, apiDelete } from "../services/api.js";
 import "./AdminDashboard.css";
 import "./About.css";
 import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
@@ -157,6 +158,74 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [trackingCopied, setTrackingCopied] = useState(false);
   const [dialogState, setDialogState] = useState(null);
+  // Backend data: enquiries fetched from API
+  const [backendEnquiries, setBackendEnquiries] = useState([]);
+  const [backendReviews, setBackendReviews] = useState([]);
+
+  // Fetch backend data on mount
+  useEffect(() => {
+    // Fetch orders
+    apiGet("/api/orders")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+          const mapped = data.data.map((o) => ({
+            id: o.order_number || `ORD-${o.id}`,
+            _backendId: o.id,
+            customerName: o.customer_name || `User #${o.user_id}`,
+            customerEmail: o.customer_email || "",
+            date: o.created_at ? String(o.created_at).slice(0, 10) : "",
+            status: o.order_status || "PENDING",
+            paymentStatus: `${o.payment_status} ($${Number(o.total_amount || 0).toLocaleString()})`,
+            gemName: o.gemstone_name || "Ceylon Gemstone",
+            carat: o.carat || "",
+            certNo: o.certificate_number || "Pending",
+            shippingAddress: o.shipping_address || "",
+            tracking: o.tracking_number || "Pending",
+          }));
+          setAdminOrders([...initialAdminOrders, ...mapped]);
+        }
+      })
+      .catch(() => {});
+
+    // Fetch enquiries
+    apiGet("/api/enquiries")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.data)) {
+          setBackendEnquiries(data.data);
+        }
+      })
+      .catch(() => {});
+
+    // Fetch reviews
+    apiGet("/api/reviews")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.data)) {
+          setBackendReviews(data.data);
+          // Merge backend reviews into customer reviews state
+          const mapped = data.data.map((r) => ({
+            id: `backend-${r.id}`,
+            _backendId: r.id,
+            name: `Customer #${r.user_id}`,
+            location: "Verified Purchase",
+            rating: Number(r.rating),
+            comment: r.comment,
+            status: r.status,
+            avatar: null,
+          }));
+          if (mapped.length > 0) {
+            setCustomerReviews((prev) => [
+              ...mapped,
+              ...prev.filter((r) => !String(r.id).startsWith("backend-"))
+            ]);
+          }
+        }
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const showCustomAlert = (message, title = "Ceylon Royal Gemstones", icon = "info") => {
     setDialogState({
@@ -196,6 +265,12 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     setAdminOrders((prev) =>
       prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
     );
+    // Also update in backend if this is a backend order
+    const order = adminOrders.find((o) => o.id === orderId);
+    if (order?._backendId) {
+      apiPut(`/api/orders/${order._backendId}/status`, { order_status: newStatus })
+        .catch(() => {}); // Silent fail - local state already updated
+    }
   };
 
   const handlePaymentStatusChange = (paymentId, newStatus) => {
@@ -293,6 +368,10 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       `Are you sure you want to delete the published review submitted by ${review.name}?`,
       () => {
         setCustomerReviews((prev) => prev.filter((item) => item.id !== review.id));
+        // Also delete from backend if this is a backend review
+        if (review._backendId) {
+          apiDelete(`/api/reviews/${review._backendId}`).catch(() => {});
+        }
       },
       "Delete Customer Review",
       "danger"

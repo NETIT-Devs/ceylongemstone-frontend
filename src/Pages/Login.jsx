@@ -18,8 +18,10 @@ import { useSharedCollection } from "../useSharedCollection.js";
 import {
   readAdminAccounts,
   startAdminSession,
+  endAdminSession,
   loginAdminWithBackend,
 } from "../adminAccess.js";
+import { apiPost, setCustomerToken } from "../services/api.js";
 import "./Login.css";
 import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
 import "../components/SiteFooter.css";
@@ -42,6 +44,7 @@ const Login = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [successNote, setSuccessNote] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleLoginChange = (e) => {
     setLoginForm({ ...loginForm, [e.target.name]: e.target.value });
@@ -68,6 +71,9 @@ const Login = () => {
         return;
       }
 
+      if (backendAdmin.token) {
+        setCustomerToken(backendAdmin.token);
+      }
       startAdminSession(backendAdmin);
       const isSuper = backendAdmin.role === "super-admin";
       setSuccessNote(
@@ -80,26 +86,88 @@ const Login = () => {
       return;
     }
 
-    // Admin login is authenticated by the backend database.
-    // If the supplied credentials are not a backend admin account,
-    // continue with the normal customer session flow.
+    // ── 2. Standard customer login via backend API ──
+    setIsLoading(true);
+    try {
+      const res = await apiPost("/api/auth/login", {
+        email: loginForm.email,
+        password: loginForm.password,
+      });
+      const data = await res.json();
 
-    // Otherwise standard customer login
-    const userSession = {
-      email: loginForm.email,
-      name: loginForm.email.split("@")[0] || "Royal Collector",
-      loggedIn: true,
-    };
-    window.localStorage.setItem("ceylon-user", JSON.stringify(userSession));
-    window.dispatchEvent(new Event("ceylon-user-auth-change"));
-    setSuccessNote("Welcome back to Ceylon Royal Gemstones.");
-    setIsSubmitted(true);
-    setTimeout(() => {
-      window.location.href = "/";
-    }, 1200);
+      if (!res.ok || !data.success) {
+        setLoginError(data.message || "Invalid email or password.");
+        return;
+      }
+
+      // Save token
+      setCustomerToken(data.token);
+
+      // Check if user has ADMIN or SUPER_ADMIN role
+      const rawRole = String(data.user.role || "").toUpperCase();
+      const isAdminRole = rawRole === "ADMIN" || rawRole === "SUPER_ADMIN" || rawRole === "SUPER-ADMIN";
+      const isSuper = rawRole.includes("SUPER");
+
+      if (isAdminRole) {
+        const adminAccount = {
+          id: data.user.id,
+          name: data.user.name || "Administrator",
+          email: data.user.email,
+          role: isSuper ? "super-admin" : "admin",
+          department: "Operations",
+          status: "active",
+          source: "backend",
+          token: data.token,
+        };
+        startAdminSession(adminAccount);
+        const userSession = {
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.name || "Administrator",
+          phone: data.user.phone,
+          role: data.user.role,
+          loggedIn: true,
+        };
+        window.localStorage.setItem("ceylon-user", JSON.stringify(userSession));
+        window.localStorage.setItem("ceylon-user-id", String(data.user.id));
+        window.dispatchEvent(new Event("ceylon-user-auth-change"));
+
+        setSuccessNote(`Welcome, ${adminAccount.name}! Redirecting to ${isSuper ? "Super Admin" : "Admin"} Portal...`);
+        setIsSubmitted(true);
+        setTimeout(() => {
+          window.location.href = isSuper ? "/super-admin" : "/admin";
+        }, 1000);
+        return;
+      }
+
+      // Standard customer session - clear any admin session
+      endAdminSession();
+      const userSession = {
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.name || data.user.email.split("@")[0],
+        phone: data.user.phone,
+        role: data.user.role,
+        loggedIn: true,
+      };
+      window.localStorage.setItem("ceylon-user", JSON.stringify(userSession));
+      window.localStorage.setItem("ceylon-user-id", String(data.user.id));
+      window.dispatchEvent(new Event("ceylon-user-auth-change"));
+
+      setSuccessNote("Welcome back to Ceylon Royal Gemstones.");
+      setIsSubmitted(true);
+      const redirect = new URLSearchParams(window.location.search).get("redirect");
+      setTimeout(() => {
+        window.location.href = redirect || "/";
+      }, 1200);
+    } catch {
+      setLoginError("Unable to connect to server. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleRegisterSubmit = (e) => {
+  const handleRegisterSubmit = async (e) => {
     e.preventDefault();
     setLoginError("");
 
@@ -108,6 +176,7 @@ const Login = () => {
       return;
     }
 
+    // Block admin emails from public registration
     const adminAccounts = readAdminAccounts();
     if (adminAccounts.some((acc) => acc.email.trim().toLowerCase() === registerForm.email.trim().toLowerCase())) {
       setLoginError("This email address is reserved for administration. Please sign in.");
@@ -115,19 +184,48 @@ const Login = () => {
       return;
     }
 
-    const userSession = {
-      email: registerForm.email,
-      name: registerForm.name || "Royal Collector",
-      phone: registerForm.phone,
-      loggedIn: true,
-    };
-    window.localStorage.setItem("ceylon-user", JSON.stringify(userSession));
-    window.dispatchEvent(new Event("ceylon-user-auth-change"));
-    setSuccessNote("Your account has been created successfully.");
-    setIsSubmitted(true);
-    setTimeout(() => {
-      window.location.href = "/";
-    }, 1200);
+    // ── Register via backend API ──
+    setIsLoading(true);
+    try {
+      const res = await apiPost("/api/auth/register", {
+        name: registerForm.name,
+        email: registerForm.email,
+        phone: registerForm.phone,
+        password: registerForm.password,
+        role: "CUSTOMER",
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setLoginError(data.message || "Registration failed. Please try again.");
+        return;
+      }
+
+      // Clear any previous admin session and save customer session
+      endAdminSession();
+      setCustomerToken(data.token);
+      const userSession = {
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.name || registerForm.name,
+        phone: data.user.phone,
+        role: data.user.role,
+        loggedIn: true,
+      };
+      window.localStorage.setItem("ceylon-user", JSON.stringify(userSession));
+      window.localStorage.setItem("ceylon-user-id", String(data.user.id));
+      window.dispatchEvent(new Event("ceylon-user-auth-change"));
+
+      setSuccessNote("Your account has been created successfully.");
+      setIsSubmitted(true);
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 1200);
+    } catch {
+      setLoginError("Unable to connect to server. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleFacebookLogin = () => {
@@ -335,8 +433,8 @@ const Login = () => {
                   <a href="#" className="login-forgot">Forgot Password?</a>
                 </div>
 
-                <button type="submit" className="login-submit-btn">
-                  Sign In
+                <button type="submit" className="login-submit-btn" disabled={isLoading}>
+                  {isLoading ? "Signing In..." : "Sign In"}
                 </button>
               </form>
             ) : (
@@ -421,8 +519,8 @@ const Login = () => {
                   </div>
                 </div>
 
-                <button type="submit" className="login-submit-btn">
-                  Create Account
+                <button type="submit" className="login-submit-btn" disabled={isLoading}>
+                  {isLoading ? "Creating Account..." : "Create Account"}
                 </button>
               </form>
             )}

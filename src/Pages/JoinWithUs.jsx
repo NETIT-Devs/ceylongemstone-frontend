@@ -24,6 +24,7 @@ import CollectionDrawerActions from '../components/CollectionDrawerActions.jsx';
 import InternationalNavEntry from '../components/InternationalNavEntry.jsx';
 import SiteInquiryModal from '../components/SiteInquiryModal.jsx';
 import { getCollectionItemKey, useSharedCollection } from '../useSharedCollection.js';
+import { apiPost } from '../services/api.js';
 import './About.css';
 import './JoinWithUs.css';
 import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
@@ -177,6 +178,22 @@ export default function JoinWithUs() {
         ? `Certificate image: ${certificateFile.name} (I will attach it in this WhatsApp chat.)`
         : 'Certificate image: I can provide it in this WhatsApp chat if needed.'
     ].join('\n');
+    try {
+      const user = (() => {
+        try { return JSON.parse(window.localStorage.getItem("ceylon-user") || "null"); }
+        catch { return null; }
+      })();
+      apiPost("/api/enquiries", {
+        name: businessName.trim(),
+        email: email.trim(),
+        message: `[Vendor Partnership Application] Business: ${businessName.trim()} | Location: ${location.trim()} | Phone: ${phone.trim()} | Gems: ${gemstoneTypes}`,
+        gemstone_id: 1,
+        ...(user?.id ? { user_id: user.id } : {})
+      }).catch(() => {});
+    } catch {
+      // Backend unavailable or offline
+    }
+
     const whatsappUrl = `https://wa.me/94712345678?text=${encodeURIComponent(message)}`;
     const whatsappWindow = window.open(whatsappUrl, '_blank');
 

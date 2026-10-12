@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { FaTimes } from "react-icons/fa";
+import { apiPost } from "../services/api.js";
 
 const SiteInquiryModal = ({ onClose, source = "Website" }) => {
   const [submitted, setSubmitted] = useState(false);
@@ -15,6 +16,22 @@ const SiteInquiryModal = ({ onClose, source = "Website" }) => {
       `Phone: ${values.get("phone")}`,
       `Inquiry: ${values.get("message")}`
     ].join("\n");
+
+    try {
+      const user = (() => {
+        try { return JSON.parse(window.localStorage.getItem("ceylon-user") || "null"); }
+        catch { return null; }
+      })();
+      apiPost("/api/enquiries", {
+        name: values.get("name"),
+        email: values.get("email"),
+        message: `[${source}] Phone: ${values.get("phone")} - ${values.get("message")}`,
+        gemstone_id: 1,
+        ...(user?.id ? { user_id: user.id } : {})
+      }).catch(() => {});
+    } catch {
+      // Backend unavailable or offline
+    }
 
     window.open(
       `https://wa.me/94712345678?text=${encodeURIComponent(message)}`,
