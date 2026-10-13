@@ -58,7 +58,9 @@ export const apiRequest = (path, options = {}) => {
   return fetch(requestUrl, {
     ...options,
     headers: {
-      "Content-Type": "application/json",
+      ...(typeof FormData !== "undefined" && options.body instanceof FormData
+        ? {}
+        : { "Content-Type": "application/json" }),
       ...authHeaders(),
       ...(options.headers || {}),
     },
