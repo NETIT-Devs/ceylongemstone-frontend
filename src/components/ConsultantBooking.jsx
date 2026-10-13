@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { apiPost } from "../services/api.js";
 import "../Pages/Consultation.css";
 
 const specialists = [
@@ -55,6 +56,22 @@ const ConsultantBooking = ({ sectionId = "specialists" }) => {
       `Consultation topic: ${values.get("topic")}`,
       `Gemstone or details: ${values.get("details")}`
     ].join("\n");
+
+    try {
+      const user = (() => {
+        try { return JSON.parse(window.localStorage.getItem("ceylon-user") || "null"); }
+        catch { return null; }
+      })();
+      apiPost("/api/enquiries", {
+        name: values.get("name"),
+        email: values.get("email"),
+        message: `[Consultation Booking - ${selectedSpecialist?.title || "Specialist"}] Phone: ${values.get("phone")} | Country: ${values.get("country")} | Date: ${values.get("date")} ${values.get("time")} | Topic: ${values.get("topic")} | Details: ${values.get("details")}`,
+        gemstone_id: 1,
+        ...(user?.id ? { user_id: user.id } : {})
+      }).catch(() => {});
+    } catch {
+      // Backend unavailable or offline
+    }
 
     window.open(
       `https://wa.me/94771234567?text=${encodeURIComponent(message)}`,

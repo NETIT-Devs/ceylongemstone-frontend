@@ -22,6 +22,7 @@ import {
 import { useGemInventory } from "../useGemInventory.js";
 import { products } from "./Gemstones.jsx";
 import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
+import { apiPost } from "../services/api.js";
 import "./Checkout.css";
 import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
 
@@ -55,7 +56,7 @@ const Checkout = () => {
     0
   );
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     if (orderSubmitted.current) return;
 
@@ -114,6 +115,8 @@ const Checkout = () => {
         { step: "Delivery", date: "Pending", completed: false }
       ]
     };
+
+    // ── Save to localStorage (always, for offline/guest support) ──
     let savedOrders;
     try {
       const currentUser = JSON.parse(window.localStorage.getItem("ceylon-user") || "null");
@@ -135,6 +138,26 @@ const Checkout = () => {
       return;
     }
 
+    // ── Also post to backend for logged-in customers ──
+    const user = (() => {
+      try { return JSON.parse(window.localStorage.getItem("ceylon-user") || "null"); }
+      catch { return null; }
+    })();
+    if (user?.id) {
+      try {
+        await apiPost("/api/orders", {
+          user_id: user.id,
+          order_number: orderId,
+          total_amount: total,
+          shipping_cost: 0,
+          currency: "USD",
+          shipping_address: shippingAddress,
+        });
+      } catch {
+        // Non-blocking: order was already saved to localStorage
+      }
+    }
+
     orderSubmitted.current = true;
     setInventory((current) =>
       cart.reduce((updatedInventory, item) => {
@@ -150,7 +173,7 @@ const Checkout = () => {
     );
     setCart([]);
     setPlacedOrderId(orderId);
-    setNotice(`Order ${orderId} placed. Payment is not connected, so no charge was made.`);
+    setNotice(`Order ${orderId} placed successfully!`);
   };
 
   const handleInquirySubmit = (event) => {

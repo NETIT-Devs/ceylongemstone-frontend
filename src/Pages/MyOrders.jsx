@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useState } from "react";
 import ShopNavDropdown from "../components/ShopNavDropdown.jsx";
 import BrandLogo from "../components/BrandLogo.jsx";
@@ -25,6 +26,7 @@ import CollectionDrawerPanel from "../components/CollectionDrawerPanel.jsx";
 import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
 import SiteInquiryModal from "../components/SiteInquiryModal.jsx";
 import { useSharedCollection } from "../useSharedCollection.js";
+import { apiGet, clearCustomerToken } from "../services/api.js";
 import "./MyOrders.css";
 import "./About.css";
 import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
@@ -108,7 +110,9 @@ const MyOrders = () => {
       return null;
     }
   });
-  const [orders] = useState(() => {
+
+  // ── Orders: start from localStorage (from Checkout), then enrich from backend ──
+  const [orders, setOrders] = useState(() => {
     try {
       const userEmail = user?.email;
       if (!userEmail) return [];
@@ -125,11 +129,74 @@ const MyOrders = () => {
     }
     return [];
   });
+  const [ordersLoading, setOrdersLoading] = useState(false);
+
+  // Fetch orders from backend when user is logged in
+  useEffect(() => {
+    const userId = user?.id || window.localStorage.getItem("ceylon-user-id");
+    if (!userId) return;
+
+    setOrdersLoading(true);
+    apiGet(`/api/orders/user/${userId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+          // Map backend order format to frontend display format
+          const backendOrders = data.data.map((o) => ({
+            id: o.order_number || `ORD-${o.id}`,
+            date: o.created_at ? String(o.created_at).slice(0, 10) : "",
+            status: o.order_status || "PROCESSING",
+            statusColor:
+              o.order_status === "DELIVERED" ? "status-delivered" :
+              o.order_status === "DISPATCHED" ? "status-dispatched" : "status-dispatched",
+            statusText:
+              o.order_status === "DELIVERED" ? "Delivered & Signed by Recipient" :
+              o.order_status === "DISPATCHED" ? "In Transit" : "Order received and being prepared",
+            paymentStatus: `${o.payment_status} ($${Number(o.total_amount || 0).toLocaleString()})`,
+            trackingNumber: o.tracking_number || "Tracking details pending",
+            estimatedDelivery: o.estimated_delivery || "To be confirmed",
+            shippingAddress: o.shipping_address || "",
+            items: (o.items || []).map((item) => ({
+              name: item.gemstone_name || item.name || "Gemstone",
+              carat: item.carat ? `${item.carat} Ct` : "",
+              cut: item.cut || item.shape || "",
+              origin: item.origin || "Sri Lanka",
+              certificateId: item.certificate_number || "Certification pending",
+              price: Number(item.price || 0),
+              image: item.image_url || "/blueGem.jpg",
+              tag: "CERTIFIED NATURAL",
+            })),
+            timeline: [
+              { step: "Order Placed & Confirmed", date: o.created_at ? String(o.created_at).slice(0, 16) : "", completed: true },
+              { step: "Gemological Lab Verification", date: "Pending", completed: o.order_status !== "PENDING" },
+              { step: "Packaging & Dispatch", date: "Pending", completed: o.order_status === "DISPATCHED" || o.order_status === "DELIVERED" },
+              { step: "Delivery", date: "Pending", completed: o.order_status === "DELIVERED" },
+            ],
+          }));
+          // Merge: backend orders first, then local sample orders
+          const localOrders = (() => {
+            try {
+              const saved = JSON.parse(window.localStorage.getItem("ceylon-orders") || "[]");
+              return Array.isArray(saved) ? saved : [];
+            } catch { return []; }
+          })();
+          setOrders([...localOrders, ...backendOrders, ...sampleOrders]);
+        }
+      })
+      .catch(() => {
+        // Keep existing orders on API failure
+      })
+      .finally(() => setOrdersLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [activeTab, setActiveTab] = useState("ALL");
   const [selectedOrderTracking, setSelectedOrderTracking] = useState(null);
 
   const handleLogout = () => {
+    clearCustomerToken();
     window.localStorage.removeItem("ceylon-user");
+    window.localStorage.removeItem("ceylon-user-id");
     window.localStorage.removeItem("ceylon-admin-session");
     window.dispatchEvent(new Event("ceylon-user-auth-change"));
     window.location.href = "/login";

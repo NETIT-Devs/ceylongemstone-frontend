@@ -1,6 +1,7 @@
 import { useState } from "react";
 import ShopNavDropdown from "../components/ShopNavDropdown.jsx";
 import BrandLogo from "../components/BrandLogo.jsx";
+import { useEffect, useState } from "react";
 import {
   FaEnvelope,
   FaFacebookF,
@@ -19,6 +20,7 @@ import CustomerOrdersNavLink from "../components/CustomerOrdersNavLink.jsx";
 import SiteInquiryModal from "../components/SiteInquiryModal.jsx";
 import { useCustomerReviews } from "../useCustomerReviews.js";
 import { useSharedCollection } from "../useSharedCollection.js";
+import { apiGet, apiPost } from "../services/api.js";
 import "./About.css";
 import "./Reviews.css";
 import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
@@ -30,7 +32,79 @@ const Reviews = () => {
   const [isInquiryOpen, setIsInquiryOpen] = useState(false);
   const [reviewForm, setReviewForm] = useState({ name: "", email: "", rating: 5, comment: "" });
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [customerReviews, setCustomerReviews] = useCustomerReviews();
+
+  // Fetch approved reviews from backend on load
+  useEffect(() => {
+    apiGet("/api/reviews")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+          const backendReviews = data.data
+            .filter((r) => r.status === "APPROVED")
+            .map((r) => ({
+              id: r.id,
+              name: `Customer #${r.user_id}`,
+              location: "Verified Purchase",
+              rating: Number(r.rating),
+              comment: r.comment,
+              avatar: null,
+              gemstone: r.gemstone_name || "",
+              createdAt: r.created_at,
+            }));
+          if (backendReviews.length > 0) {
+            setCustomerReviews((prev) => [...backendReviews, ...prev]);
+          }
+        }
+      })
+      .catch(() => {
+        // Keep existing localStorage reviews on API failure
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Handle review form submission
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    setReviewSubmitting(true);
+
+    // Get user info from session
+    const user = (() => {
+      try { return JSON.parse(window.localStorage.getItem("ceylon-user") || "null"); }
+      catch { return null; }
+    })();
+
+    const newReview = {
+      ...reviewForm,
+      id: `review-${Date.now()}`,
+      name: reviewForm.name.trim(),
+      email: reviewForm.email.trim(),
+      location: "Collector submission",
+      avatar: "",
+      createdAt: new Date().toISOString(),
+    };
+
+    // Optimistically add to UI
+    setCustomerReviews((previous) => [newReview, ...previous]);
+
+    try {
+      if (user?.id) {
+        // Post to backend if logged in
+        await apiPost("/api/reviews", {
+          user_id: user.id,
+          gemstone_id: 1, // General review fallback
+          rating: reviewForm.rating,
+          comment: reviewForm.comment,
+        });
+      }
+    } catch {
+      // Review saved to localStorage via setCustomerReviews above
+    } finally {
+      setReviewSubmitting(false);
+      setReviewSubmitted(true);
+    }
+  };
 
   return (
     <div className="reviews-page">
@@ -205,19 +279,7 @@ const Reviews = () => {
               ) : (
                 <form
                   className="review-form"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    setCustomerReviews((previous) => [{
-                      ...reviewForm,
-                      id: `review-${Date.now()}`,
-                      name: reviewForm.name.trim(),
-                      email: reviewForm.email.trim(),
-                      location: "Collector submission",
-                      avatar: "",
-                      createdAt: new Date().toISOString()
-                    }, ...previous]);
-                    setReviewSubmitted(true);
-                  }}
+                  onSubmit={handleReviewSubmit}
                 >
                   <div className="review-form-group">
                     <label htmlFor="review-name">Your Name</label>
@@ -272,8 +334,8 @@ const Reviews = () => {
                     ></textarea>
                   </div>
 
-                  <button type="submit" className="review-submit-btn">
-                    SUBMIT REVIEW
+                  <button type="submit" className="review-submit-btn" disabled={reviewSubmitting}>
+                    {reviewSubmitting ? "SUBMITTING..." : "SUBMIT REVIEW"}
                   </button>
                 </form>
               )}
