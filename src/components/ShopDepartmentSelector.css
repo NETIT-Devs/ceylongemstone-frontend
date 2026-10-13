@@ -1,0 +1,338 @@
+/* =========================================================
+   SHOP DEPARTMENT SELECTOR - CEYLON ROYAL GEMSTONES
+   Professional Luxury Department Switcher
+========================================================= */
+
+.shop-department-section {
+  width: min(1280px, 92%);
+  margin: 108px auto 24px;
+  background: #ffffff;
+  border: 1px solid rgba(201, 162, 75, 0.45);
+  border-radius: 6px;
+  padding: 18px 24px;
+  box-shadow: 0 10px 30px rgba(6, 28, 43, 0.05);
+  position: relative;
+  z-index: 50;
+  transition: all 0.3s ease;
+}
+
+.shop-department-section:hover {
+  border-color: #c9a24b;
+  box-shadow: 0 14px 38px rgba(201, 162, 75, 0.12);
+}
+
+.shop-department-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+/* Left Title Info */
+.shop-department-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.shop-department-tag {
+  color: #9D7625;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-family: 'Montserrat', sans-serif;
+}
+
+.shop-department-title {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(18px, 2.2vw, 24px);
+  font-weight: 600;
+  color: #061C2B;
+  margin: 0;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+}
+
+.shop-department-title span {
+  color: #c9a24b;
+  font-weight: 700;
+}
+
+/* Right Controls */
+.shop-department-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  position: relative;
+}
+
+/* Quick Switch Pills */
+.shop-department-pills {
+  display: inline-flex;
+  align-items: center;
+  background: #F7F3E8;
+  padding: 4px;
+  border-radius: 4px;
+  border: 1px solid rgba(201, 162, 75, 0.35);
+  gap: 4px;
+}
+
+.shop-dept-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 3px;
+  border: none;
+  background: transparent;
+  color: #061C2B;
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.22s ease;
+}
+
+.shop-dept-pill-icon {
+  font-size: 14px;
+  color: #9D7625;
+  transition: color 0.22s ease;
+}
+
+.shop-dept-pill:hover {
+  background: rgba(201, 162, 75, 0.15);
+  color: #061C2B;
+}
+
+.shop-dept-pill.active {
+  background: #061C2B;
+  color: #c9a24b;
+  box-shadow: 0 4px 12px rgba(6, 28, 43, 0.18);
+}
+
+.shop-dept-pill.active .shop-dept-pill-icon {
+  color: #c9a24b;
+}
+
+/* Dropdown Wrap */
+.shop-department-dropdown-wrap {
+  position: relative;
+  min-width: 220px;
+}
+
+.shop-department-select-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #061C2B;
+  color: #ffffff;
+  border: 1px solid #c9a24b;
+  border-radius: 4px;
+  padding: 9px 16px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 12px rgba(6, 28, 43, 0.12);
+}
+
+.shop-department-select-trigger:hover,
+.shop-department-select-trigger.open {
+  background: #092538;
+  border-color: #e3c46a;
+  box-shadow: 0 6px 16px rgba(201, 162, 75, 0.25);
+}
+
+.shop-dept-trigger-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+}
+
+.shop-dept-trigger-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #c9a24b;
+  text-transform: uppercase;
+}
+
+.shop-dept-trigger-active {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: 'Cinzel', serif;
+  font-size: 13.5px;
+  color: #ffffff;
+  letter-spacing: 0.03em;
+}
+
+.shop-dept-active-icon {
+  font-size: 13px;
+  color: #c9a24b;
+}
+
+.shop-dept-chevron {
+  font-size: 11px;
+  color: #c9a24b;
+  transition: transform 0.25s ease;
+  flex-shrink: 0;
+}
+
+.shop-dept-chevron.rotated {
+  transform: rotate(180deg);
+}
+
+/* Dropdown Menu */
+.shop-department-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 290px;
+  background: #061C2B;
+  border: 1px solid #c9a24b;
+  border-radius: 4px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 1000;
+  animation: deptDropdownFade 0.22s ease-out;
+}
+
+@keyframes deptDropdownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.shop-dept-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: #F7F3E8;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.shop-dept-option-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.shop-dept-option-icon-box {
+  width: 32px;
+  height: 32px;
+  border-radius: 3px;
+  background: rgba(201, 162, 75, 0.12);
+  border: 1px solid rgba(201, 162, 75, 0.4);
+  color: #c9a24b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.shop-dept-option-text strong {
+  display: block;
+  font-family: 'Cinzel', serif;
+  font-size: 13.5px;
+  color: #ffffff;
+  letter-spacing: 0.03em;
+}
+
+.shop-dept-option-text small {
+  display: block;
+  font-size: 10.5px;
+  color: rgba(247, 243, 232, 0.65);
+  margin-top: 2px;
+}
+
+.shop-dept-check-icon {
+  color: #c9a24b;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.shop-dept-option:hover {
+  background: rgba(201, 162, 75, 0.15);
+  border-color: rgba(201, 162, 75, 0.4);
+}
+
+.shop-dept-option:hover .shop-dept-option-icon-box {
+  background: #c9a24b;
+  color: #061c2b;
+}
+
+.shop-dept-option.selected {
+  background: rgba(201, 162, 75, 0.2);
+  border-color: #c9a24b;
+}
+
+.shop-dept-option.selected .shop-dept-option-icon-box {
+  background: #c9a24b;
+  color: #061c2b;
+}
+
+/* =========================================================
+   RESPONSIVE DESIGN
+========================================================= */
+@media (max-width: 900px) {
+  .shop-department-section {
+    margin-top: 96px;
+  }
+
+  .shop-department-inner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .shop-department-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .shop-department-pills {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    text-align: center;
+  }
+
+  .shop-dept-pill {
+    justify-content: center;
+  }
+
+  .shop-department-dropdown-wrap {
+    min-width: 100%;
+  }
+
+  .shop-department-dropdown-menu {
+    width: 100%;
+    right: 0;
+    left: 0;
+  }
+}

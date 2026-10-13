@@ -1,4 +1,6 @@
 import { useState, useRef } from 'react';
+import ShopNavDropdown from "../components/ShopNavDropdown.jsx";
+import BrandLogo from "../components/BrandLogo.jsx";
 import {
   FaArrowLeft,
   FaBuilding,
@@ -22,6 +24,7 @@ import {
 } from 'react-icons/fa';
 import CollectionDrawerActions from '../components/CollectionDrawerActions.jsx';
 import InternationalNavEntry from '../components/InternationalNavEntry.jsx';
+import CustomerOrdersNavLink from "../components/CustomerOrdersNavLink.jsx";
 import SiteInquiryModal from '../components/SiteInquiryModal.jsx';
 import { getCollectionItemKey, useSharedCollection } from '../useSharedCollection.js';
 import './About.css';
@@ -67,6 +70,7 @@ const BENEFITS = [
   }
 ];
 
+// Join With Us page for gemstone business partners and application submissions.
 export default function JoinWithUs() {
   const [wishlist, setWishlist] = useSharedCollection('ceylon-wishlist');
   const [cart, setCart] = useSharedCollection('ceylon-cart');
@@ -207,8 +211,7 @@ export default function JoinWithUs() {
       {/* NAVBAR */}
       <nav className="about-navbar" aria-label="Main navigation">
         <a href="/" className="about-navbar-logo">
-          <img
-            src="/logo.png"
+          <BrandLogo
             alt="Ceylon Royal Gemstones"
             className="navbar-logo-img"
             onError={(e) => {
@@ -225,13 +228,14 @@ export default function JoinWithUs() {
         <MobileSiteMenu />
         <div className="about-nav-links">
           <a href="/">Home</a>
-          <a href="/gemstones">Shop</a>
-          <a href="/About">Heritage</a>
+          <ShopNavDropdown />
+          <a href="/About">Our Story</a>
           <a href="/trust">Certification</a>
           <a href="/reviews">Reviews</a>
           <a href="/contact">Contact</a>
           <a href="/blog">Blog</a>
           <InternationalNavEntry />
+          <CustomerOrdersNavLink />
         </div>
 
         <div className="about-nav-actions">
@@ -369,6 +373,7 @@ export default function JoinWithUs() {
         <div className="joinus-section-header">
           <span className="joinus-section-tag">WHY WORK WITH US</span>
           <h2 className="joinus-section-title">BENEFITS</h2>
+          <div className="joinus-title-divider"></div>
           <p className="joinus-section-subtitle">
             Unmatched trade integrity, direct sourcing and luxury support for your gemstone business.
           </p>
@@ -394,7 +399,7 @@ export default function JoinWithUs() {
       <section className="joinus-cta-banner">
         <h3>READY TO PARTNER WITH US?</h3>
         <p>
-          Build a trusted partnership — apply using the form below.
+          Build a trusted partnership — apply now to join our global network.
         </p>
         <button
           type="button"
@@ -427,7 +432,10 @@ export default function JoinWithUs() {
             </button>
 
             <div className="joinus-form-header">
+              <BrandLogo className="joinus-modal-logo" alt="Ceylon Royal Gemstones" />
+              <span className="joinus-modal-eyebrow">CEYLON ROYAL PARTNERSHIP</span>
               <h2 className="joinus-form-title">PARTNERSHIP APPLICATION</h2>
+              <div className="joinus-title-divider"></div>
               <p className="joinus-form-subtitle">
                 Tell us about your business and gemstone interests.
               </p>
@@ -639,7 +647,7 @@ export default function JoinWithUs() {
         <div className="about-footer-grid">
           <div className="footer-brand">
             <div className="footer-logo">
-              <img src="/logo.png" alt="Ceylon Royal Gemstones" />
+              <BrandLogo alt="Ceylon Royal Gemstones" />
               <div>
                 <strong>CEYLON</strong>
                 <small>ROYAL GEMSTONES</small>
@@ -655,7 +663,7 @@ export default function JoinWithUs() {
             <h4>EXPLORE</h4>
             <a href="/">Home</a>
             <a href="/gemstones">Shop</a>
-            <a href="/About">Our Heritage</a>
+            <a href="/About">Our Story</a>
             <a href="/trust">Trust &amp; Certification</a>
             <a href="/reviews">Reviews</a>
             <a href="/contact">Contact</a>
@@ -709,7 +717,7 @@ export default function JoinWithUs() {
         </div>
 
         <div className="about-footer-bottom">
-          <p>© 2026 Ceylon Royal Gemstones. All Rights Reserved.</p>
+          <p>Copyright © 2026 Powered by NETIT Technology</p>
           <span>NATURAL • AUTHENTIC • CEYLON</span>
         </div>
       </footer>

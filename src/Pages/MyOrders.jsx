@@ -1,4 +1,6 @@
 import { useState } from "react";
+import ShopNavDropdown from "../components/ShopNavDropdown.jsx";
+import BrandLogo from "../components/BrandLogo.jsx";
 import {
   FaBoxOpen,
   FaTruck,
@@ -97,30 +99,38 @@ const MyOrders = () => {
 
   const [user] = useState(() => {
     try {
-      return JSON.parse(window.localStorage.getItem("ceylon-user") || "null");
+      const customer = JSON.parse(window.localStorage.getItem("ceylon-user") || "null");
+      if (customer) return customer;
+      const admin = JSON.parse(window.localStorage.getItem("ceylon-admin-session") || "null");
+      if (admin) return { name: admin.name || "Admin", email: admin.email || "admin@ceylongemstones.com", loggedIn: true };
+      return null;
     } catch {
       return null;
     }
   });
   const [orders] = useState(() => {
     try {
-      const savedOrders = window.localStorage.getItem("ceylon-orders");
+      const userEmail = user?.email;
+      if (!userEmail) return [];
+      const userOrdersKey = `ceylon-orders-${userEmail}`;
+      const savedOrders = window.localStorage.getItem(userOrdersKey);
       if (savedOrders) {
         const parsed = JSON.parse(savedOrders);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return [...parsed, ...sampleOrders];
+          return parsed;
         }
       }
     } catch {
-      // Fallback to sample orders
+      // Fallback to empty
     }
-    return sampleOrders;
+    return [];
   });
   const [activeTab, setActiveTab] = useState("ALL");
   const [selectedOrderTracking, setSelectedOrderTracking] = useState(null);
 
   const handleLogout = () => {
     window.localStorage.removeItem("ceylon-user");
+    window.localStorage.removeItem("ceylon-admin-session");
     window.dispatchEvent(new Event("ceylon-user-auth-change"));
     window.location.href = "/login";
   };
@@ -140,8 +150,7 @@ const MyOrders = () => {
       {/* NAVBAR */}
       <nav className="about-navbar my-orders-navbar">
         <a href="/" className="about-navbar-logo">
-          <img
-            src="/logo.png"
+          <BrandLogo
             alt="Ceylon Royal Gemstones"
             className="navbar-logo-img"
             onError={(e) => {
@@ -158,8 +167,8 @@ const MyOrders = () => {
         <MobileSiteMenu />
         <div className="about-nav-links">
           <a href="/">Home</a>
-          <a href="/gemstones">Shop</a>
-          <a href="/About">Heritage</a>
+          <ShopNavDropdown />
+          <a href="/About">Our Story</a>
           <a href="/trust">Certification</a>
           <a href="/reviews">Reviews</a>
           <a href="/contact">Contact</a>
@@ -483,7 +492,7 @@ const MyOrders = () => {
         <div className="about-footer-grid">
           <div className="footer-brand">
             <div className="footer-logo">
-              <img src="/logo.png" alt="Ceylon Royal Gemstones" />
+              <BrandLogo alt="Ceylon Royal Gemstones" />
               <div>
                 <strong>CEYLON</strong>
                 <small>ROYAL GEMSTONES</small>
@@ -499,7 +508,7 @@ const MyOrders = () => {
             <h4>EXPLORE</h4>
             <a href="/">Home</a>
             <a href="/gemstones">Shop</a>
-            <a href="/About">Our Heritage</a>
+            <a href="/About">Our Story</a>
             <a href="/trust">Trust &amp; Certification</a>
             <a href="/reviews">Reviews</a>
             <a href="/contact">Contact</a>
@@ -541,7 +550,7 @@ const MyOrders = () => {
           </div>
         </div>
         <div className="about-footer-bottom">
-          <p>© 2026 Ceylon Royal Gemstones. All Rights Reserved.</p>
+          <p>Copyright © 2026 Powered by NETIT Technology</p>
           <span>NATURAL • AUTHENTIC • CEYLON</span>
         </div>
       </footer>

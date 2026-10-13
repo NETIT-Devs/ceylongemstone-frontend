@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import ShopNavDropdown from "../components/ShopNavDropdown.jsx";
+import BrandLogo from "../components/BrandLogo.jsx";
 import { motion } from "framer-motion";
 
 import {
@@ -31,14 +33,23 @@ import { useCustomerReviews } from "../useCustomerReviews.js";
 import { hasAdminAccess } from "../adminAccess.js";
 import {
   getCollectionItemKey,
+  normalizeCollectionItem,
   useSharedCollection
 } from "../useSharedCollection.js";
+import { useGemInventory } from "../useGemInventory.js";
+import { useGemProductOverrides } from "../useGemProductOverrides.js";
+import { useGemSubmissions } from "../useGemSubmissions.js";
+import { useJewelleryProductOverrides } from "../useJewelleryProductOverrides.js";
+import { useJewellerySubmissions } from "../useJewellerySubmissions.js";
+import { withActiveProductOffer } from "../productOffers.js";
+import { useHomeHeroSlides } from "../useSiteContent.js";
 import {
   currencyRates,
   formatCurrencyPrice,
   getCurrentCurrency
 } from "../currency.js";
 import { products as gemstonesProducts, categories } from "./Gemstones.jsx";
+import { products as jewelleryProducts } from "./Juwellery.jsx";
 
 
 // =====================================================
@@ -81,6 +92,17 @@ const initialGems = gemstonesProducts.map((p) => ({
   tag:          tagMap[p.category] || "NATURAL GEM",
 }));
 
+const featuredJewelleryIds = [2, 8, 11, 9];
+
+const getReviewInitials = (review) => {
+  if (review?.initials) return review.initials;
+  if (!review?.name) return "CR";
+  const parts = review.name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return review.name.trim().slice(0, 2).toUpperCase();
+};
 
 // =====================================================
 // =====================================================
@@ -152,12 +174,22 @@ const Home = () => {
   const [selectedGem, setSelectedGem] = useState(null);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [heroSlideIndex, setHeroSlideIndex] = useState(0);
+  const [managedHeroSlides] = useHomeHeroSlides();
+  const homeHeroSlides = useMemo(
+    () => [...heroSlides, ...managedHeroSlides],
+    [managedHeroSlides]
+  );
   const readMyOrdersLinkStatus = () => {
     try {
       const customer = JSON.parse(
         window.localStorage.getItem("ceylon-user") || "null"
       );
-      return customer?.loggedIn === true && !hasAdminAccess("/admin");
+      if (customer?.loggedIn === true) return true;
+      const admin = JSON.parse(
+        window.localStorage.getItem("ceylon-admin-session") || "null"
+      );
+      if (admin?.accountId) return true;
+      return false;
     } catch {
       return false;
     }
@@ -187,6 +219,74 @@ const Home = () => {
 
   const [activeDrawer, setActiveDrawer] = useState(null);
   const [customerReviews] = useCustomerReviews();
+  const [gemSubmissions] = useGemSubmissions();
+  const [gemProductOverrides] = useGemProductOverrides();
+  const [jewellerySubmissions] = useJewellerySubmissions();
+  const [jewelleryProductOverrides] = useJewelleryProductOverrides();
+  const [inventory] = useGemInventory(gemstonesProducts);
+  const homeShopProducts = useMemo(
+    () => [
+      ...gemstonesProducts.map((product) => ({
+        ...product,
+        ...gemProductOverrides[String(product.id)],
+        category: product.category
+      })),
+      ...gemSubmissions
+        .filter((submission) => submission.status === "approved")
+        .map((submission) => submission.gem)
+    ],
+    [gemProductOverrides, gemSubmissions]
+  );
+  const homeJewelleryProducts = useMemo(
+    () => [
+      ...jewelleryProducts
+        .map((product) => ({
+          ...product,
+          ...jewelleryProductOverrides[String(product.id)]
+        }))
+        .filter((product) => !product.deleted),
+      ...jewellerySubmissions
+        .filter((submission) => submission.status === "approved")
+        .map((submission) => submission.jewellery)
+    ],
+    [jewelleryProductOverrides, jewellerySubmissions]
+  );
+  const featuredJewellery = useMemo(
+    () => featuredJewelleryIds
+      .map((id) => homeJewelleryProducts.find((product) => product.id === id))
+      .filter(Boolean),
+    [homeJewelleryProducts]
+  );
+  const featuredGems = useMemo(
+    () => {
+      const royalBlueSapphire = homeShopProducts.find(
+        (gem) => gem.id === 1 || gem.productKey === "royal-blue-sapphire"
+      );
+      const otherBlueSapphires = homeShopProducts.filter(
+        (gem) =>
+          gem.category === "Blue Sapphire" &&
+          gem !== royalBlueSapphire
+      );
+
+      return [
+        ...(royalBlueSapphire ? [royalBlueSapphire] : []),
+        ...otherBlueSapphires.slice(0, royalBlueSapphire ? 3 : 4),
+        ...homeShopProducts.filter((gem) => gem.category === "Ruby").slice(0, 2),
+        ...homeShopProducts.filter((gem) => gem.category === "Green Gemstone").slice(0, 2)
+      ];
+    },
+    [homeShopProducts]
+  );
+
+  useEffect(() => {
+    const syncCurrency = () => setCurrency(getCurrentCurrency());
+    window.addEventListener("ceylon-currency-change", syncCurrency);
+    window.addEventListener("storage", syncCurrency);
+    return () => {
+      window.removeEventListener("ceylon-currency-change", syncCurrency);
+      window.removeEventListener("storage", syncCurrency);
+    };
+  }, []);
 
 
   // =====================================================
@@ -256,14 +356,18 @@ const Home = () => {
   // =====================================================
 
   useEffect(() => {
+    setHeroSlideIndex((index) => index % homeHeroSlides.length);
+  }, [homeHeroSlides.length]);
+
+  useEffect(() => {
     const heroTimer = setInterval(() => {
       setHeroSlideIndex(
-        (prev) => (prev + 1) % heroSlides.length
+        (prev) => (prev + 1) % homeHeroSlides.length
       );
     }, 5000);
 
     return () => clearInterval(heroTimer);
-  }, []);
+  }, [homeHeroSlides.length]);
 
   useEffect(() => {
     const handleHashScroll = () => {
@@ -281,6 +385,76 @@ const Home = () => {
     return () => window.removeEventListener("hashchange", handleHashScroll);
   }, []);
 
+  // =====================================================
+  // CUSTOMER REVIEWS SLIDESHOW
+  // =====================================================
+
+  const [reviewSlideIndex, setReviewSlideIndex] = useState(0);
+  const [cardsPerView, setCardsPerView] = useState(() => {
+    if (typeof window === "undefined") return 3;
+    if (window.innerWidth < 680) return 1;
+    if (window.innerWidth < 1024) return 2;
+    return 3;
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 680) setCardsPerView(1);
+      else if (window.innerWidth < 1024) setCardsPerView(2);
+      else setCardsPerView(3);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const displayReviews = useMemo(() => {
+    if (!customerReviews || customerReviews.length === 0) return [];
+    if (customerReviews.length < 6) {
+      return [...customerReviews, ...customerReviews];
+    }
+    return customerReviews;
+  }, [customerReviews]);
+
+  const maxReviewIndex = Math.max(0, displayReviews.length - cardsPerView);
+
+  useEffect(() => {
+    if (reviewSlideIndex > maxReviewIndex) {
+      setReviewSlideIndex(maxReviewIndex);
+    }
+  }, [maxReviewIndex, reviewSlideIndex]);
+
+  useEffect(() => {
+    if (maxReviewIndex <= 0) return;
+    const timer = setInterval(() => {
+      setReviewSlideIndex((prev) => (prev >= maxReviewIndex ? 0 : prev + 1));
+    }, 3200);
+    return () => clearInterval(timer);
+  }, [maxReviewIndex]);
+
+  const handlePrevReview = () => {
+    if (maxReviewIndex <= 0) return;
+    setReviewSlideIndex((prev) => (prev <= 0 ? maxReviewIndex : prev - 1));
+  };
+
+  const handleNextReview = () => {
+    if (maxReviewIndex <= 0) return;
+    setReviewSlideIndex((prev) => (prev >= maxReviewIndex ? 0 : prev + 1));
+  };
+
+  const reviewTouchStartX = useRef(null);
+  const handleReviewTouchStart = (e) => {
+    reviewTouchStartX.current = e.touches[0].clientX;
+  };
+  const handleReviewTouchEnd = (e) => {
+    if (reviewTouchStartX.current === null) return;
+    const diff = reviewTouchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 40) {
+      if (diff > 0) handleNextReview();
+      else handlePrevReview();
+    }
+    reviewTouchStartX.current = null;
+  };
+
 
   // =====================================================
   // FORMAT PRICE
@@ -295,6 +469,62 @@ const Home = () => {
     setItems((current) =>
       current.filter((item) => getCollectionItemKey(item) !== productKey)
     );
+  };
+
+  const toggleFeaturedWishlist = (product) => {
+    const productKey = getCollectionItemKey(product);
+    setWishlist((current) =>
+      current.some((item) => getCollectionItemKey(item) === productKey)
+        ? current.filter((item) => getCollectionItemKey(item) !== productKey)
+        : [...current, normalizeCollectionItem({ ...product, quantity: 1 })]
+    );
+  };
+
+  const addFeaturedGemToCart = (product) => {
+    const productKey = getCollectionItemKey(product);
+    if ((inventory[productKey] ?? 0) < 1) return;
+
+    const offerProduct = withActiveProductOffer(product);
+    const originalPrice = Number(offerProduct.basePriceUSD ?? offerProduct.price);
+    const discountRate = Number(offerProduct.discountRate);
+    const offerPrice = discountRate > 0 && discountRate <= 100
+      ? Math.round(originalPrice * (1 - discountRate / 100))
+      : originalPrice;
+
+    setCart((current) => current.some(
+      (item) => getCollectionItemKey(item) === productKey
+    )
+      ? current
+      : [...current, normalizeCollectionItem({
+          ...offerProduct,
+          price: offerPrice,
+          basePriceUSD: originalPrice,
+          quantity: 1
+        })]
+    );
+    setActiveDrawer("cart");
+  };
+
+  const addFeaturedJewelleryToCart = (product) => {
+    const offerProduct = withActiveProductOffer(product);
+    const originalPrice = Number(offerProduct.basePriceUSD ?? offerProduct.price);
+    const discountRate = Number(offerProduct.discountRate);
+    const offerPrice = discountRate > 0 && discountRate <= 100
+      ? Math.round(originalPrice * (1 - discountRate / 100))
+      : originalPrice;
+
+    setCart((current) => current.some(
+      (item) => getCollectionItemKey(item) === getCollectionItemKey(product)
+    )
+      ? current
+      : [...current, normalizeCollectionItem({
+          ...offerProduct,
+          price: offerPrice,
+          basePriceUSD: originalPrice,
+          quantity: 1
+        })]
+    );
+    setActiveDrawer("cart");
   };
 
   const wishlistCount = wishlist.reduce(
@@ -329,8 +559,7 @@ const Home = () => {
           className="about-navbar-logo"
         >
 
-          <img
-            src="/logo.png"
+          <BrandLogo
             alt="Ceylon Royal Gemstones"
             className="navbar-logo-img"
             onError={(e) => {
@@ -370,12 +599,10 @@ const Home = () => {
             Home
           </a>
 
-          <a href="/Gemstones">
-            Shop
-          </a>
+          <ShopNavDropdown />
 
           <a href="/About">
-            Heritage
+            Our Story
           </a>
 
           <a href="/trust">
@@ -394,7 +621,11 @@ const Home = () => {
             Blog
           </a>
 
-          {showMyOrdersLink && <a href="/my-orders">My Orders</a>}
+          {showMyOrdersLink && (
+            <a href="/my-orders">
+              My Orders
+            </a>
+          )}
 
           <InternationalNavEntry />
 
@@ -607,7 +838,7 @@ const Home = () => {
 
           {/* HERO IMAGE SLIDESHOW */}
           <div className="hero-slides-wrapper">
-            {heroSlides.map((slide, idx) => (
+            {homeHeroSlides.map((slide, idx) => (
               <img
                 key={slide.id}
                 src={slide.image}
@@ -627,7 +858,7 @@ const Home = () => {
 
           {/* HERO SLIDE DOTS */}
           <div className="hero-slide-dots">
-            {heroSlides.map((slide, idx) => (
+            {homeHeroSlides.map((slide, idx) => (
               <span
                 key={slide.id}
                 className={`hero-dot ${heroSlideIndex === idx ? "active" : ""}`}
@@ -642,7 +873,7 @@ const Home = () => {
           <button
             type="button"
             className="hero-arrow-btn hero-arrow-prev"
-            onClick={() => setHeroSlideIndex((prev) => (prev - 1 + heroSlides.length) % heroSlides.length)}
+            onClick={() => setHeroSlideIndex((prev) => (prev - 1 + homeHeroSlides.length) % homeHeroSlides.length)}
             aria-label="Previous slide"
           >
             ‹
@@ -650,7 +881,7 @@ const Home = () => {
           <button
             type="button"
             className="hero-arrow-btn hero-arrow-next"
-            onClick={() => setHeroSlideIndex((prev) => (prev + 1 % heroSlides.length))}
+            onClick={() => setHeroSlideIndex((prev) => (prev + 1) % homeHeroSlides.length)}
             aria-label="Next slide"
           >
             ›
@@ -763,12 +994,10 @@ const Home = () => {
                 </a>
 
                 <a
-                  href="https://wa.me/94712345678?text=Hi%2C%20I%20would%20like%20to%20book%20a%20video%20consultation."
+                  href="/join-us"
                   className="btn-primary"
-                  target="_blank"
-                  rel="noreferrer"
                 >
-                  Book a Video Consultation
+                  Join Us
                 </a>
 
               </motion.div>
@@ -785,82 +1014,37 @@ const Home = () => {
         ====================================================== */}
 
         <div className="hero-trust-bar">
-
           <div className="trust-bar-item">
-
             <FaShieldAlt className="trust-bar-icon" />
-
             <div>
-
-              <h4>
-                100% Certified Natural
-              </h4>
-
-              <p>
-                Authentic Sri Lankan Gemstones
-              </p>
-
+              <h4>100% Certified Natural</h4>
+              <p>Authentic Sri Lankan Gemstones</p>
             </div>
-
           </div>
 
-
           <div className="trust-bar-item">
-
             <FaShippingFast className="trust-bar-icon" />
-
             <div>
-
-              <h4>
-                Worldwide Express Shipping
-              </h4>
-
-              <p>
-                Safe & Secure Delivery
-              </p>
-
+              <h4>Worldwide Express Shipping</h4>
+              <p>Safe & Secure Delivery</p>
             </div>
-
           </div>
 
-
           <div className="trust-bar-item">
-
             <FaGem className="trust-bar-icon" />
-
             <div>
-
-              <h4>
-                GIA / GRS Certified
-              </h4>
-
-              <p>
-                International Lab Reports
-              </p>
-
+              <h4>GIA / GRS Certified</h4>
+              <p>International Lab Reports</p>
             </div>
-
           </div>
-
 
           <div className="trust-bar-item">
-
             <FaLock className="trust-bar-icon" />
-
             <div>
-
-              <h4>
-                Secure Payments
-              </h4>
-
-              <p>
-                Your Trust, Our Priority
-              </p>
-
+              <h4>Secure Payments</h4>
+              <p>Your Trust, Our Priority</p>
             </div>
-
           </div>
-
         </div>
 
       </div>
@@ -893,7 +1077,7 @@ const Home = () => {
         <div className="gem-category-grid">
 
           {categories
-            .filter((category) => category !== "Padparadscha Sapphire")
+             .filter((category) => category !== "Padparadscha Sapphire")
             .map((category) => {
 
             return (
@@ -925,6 +1109,235 @@ const Home = () => {
 
         </div>
 
+      </section>
+
+      <section className="home-shop-featured-section">
+        <div className="gem-section-heading">
+          <span>HANDPICKED FOR YOU</span>
+          <h2>Featured <strong>Gemstones</strong></h2>
+          <p>Explore selected Blue Sapphires, Rubies and Green Gemstones from our collection.</p>
+        </div>
+
+        <div className="gem-product-grid home-shop-featured-grid">
+          {featuredGems.map((product) => {
+            const productKey = getCollectionItemKey(product);
+            const inStock = (inventory[productKey] ?? 0) > 0;
+            const offerProduct = withActiveProductOffer(product);
+            const originalPrice = Number(offerProduct.basePriceUSD ?? offerProduct.price);
+            const discountRate = Number(offerProduct.discountRate);
+            const hasDiscount = discountRate > 0 && discountRate <= 100;
+            const offerPrice = hasDiscount
+              ? Math.round(originalPrice * (1 - discountRate / 100))
+              : originalPrice;
+            const isWishlisted = wishlist.some(
+              (item) => getCollectionItemKey(item) === productKey
+            );
+
+            return (
+              <article className="gem-product-card" key={productKey}>
+                <div className="product-image-box">
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    loading="lazy"
+                    onError={(event) => {
+                      event.currentTarget.src = "/logo.png";
+                    }}
+                  />
+                  <span className="product-treatment">{product.treatment}</span>
+                  {hasDiscount ? (
+                    <span className="product-discount-label">{discountRate}% OFF</span>
+                  ) : offerProduct.discountLabel?.trim() ? (
+                    <span className="product-discount-label">{offerProduct.discountLabel}</span>
+                  ) : null}
+                  <button
+                    type="button"
+                    className={`product-wishlist ${isWishlisted ? "liked" : ""}`}
+                    aria-label={`${isWishlisted ? "Remove from" : "Add to"} wishlist: ${product.name}`}
+                    onClick={() => toggleFeaturedWishlist(product)}
+                  >
+                    <FaHeart />
+                  </button>
+                </div>
+
+                <div className="product-info">
+                  <span className="product-category">{product.category}</span>
+                  <h3>
+                    <a
+                      className="product-name-link"
+                      href={`/gemstones/${product.id}`}
+                    >
+                      {product.name}
+                    </a>
+                  </h3>
+                  <div className="product-details">
+                    <span className="product-carat">{product.carat} Ct</span>
+                    <span>{product.shape}</span>
+                    <span>{product.cut}</span>
+                  </div>
+                  <div className="product-card-actions">
+                    <button
+                      type="button"
+                      className={`product-stock-status ${inStock ? "in-stock" : "out-of-stock"}`}
+                      disabled
+                      aria-label={`${product.name} ${inStock ? "available" : "out of stock"}`}
+                    >
+                      {inStock ? "AVAILABLE" : "OUT OF STOCK"}
+                    </button>
+                    <button
+                      type="button"
+                      className="product-view-details"
+                      onClick={() => window.location.assign(`/gemstones/${product.id}`)}
+                    >
+                      VIEW DETAILS
+                    </button>
+                  </div>
+                  <div className="product-bottom">
+                    <div className={`product-prices ${hasDiscount ? "has-discount" : ""}`}>
+                      {hasDiscount && (
+                        <del className="product-original-price">
+                          {formatPrice(originalPrice)}
+                        </del>
+                      )}
+                      <strong>{formatPrice(offerPrice)}</strong>
+                    </div>
+                    <button
+                      type="button"
+                      className={`add-to-cart-btn ${inStock ? "" : "out-of-stock"}`}
+                      aria-label={
+                        inStock
+                          ? `Add ${product.name} to cart`
+                          : `${product.name} is out of stock`
+                      }
+                      disabled={!inStock}
+                      onClick={() => addFeaturedGemToCart(product)}
+                    >
+                      <FaShoppingBag />
+                      <span>{inStock ? "ADD TO CART" : "OUT OF STOCK"}</span>
+                    </button>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="home-featured-jewellery-section">
+        <div className="gem-section-heading">
+          <span>CEYLON ROYAL COLLECTION</span>
+          <h2>Featured <strong>Jewellery</strong></h2>
+          <p>Discover a selected necklace, ring, bracelet and pair of earrings.</p>
+        </div>
+
+        <div className="gem-product-grid home-shop-featured-grid">
+          {featuredJewellery.map((item) => {
+            const offerItem = withActiveProductOffer(item);
+            const originalPrice = Number(offerItem.basePriceUSD ?? offerItem.price);
+            const discountRate = Number(offerItem.discountRate);
+            const hasDiscount = discountRate > 0 && discountRate <= 100;
+            const offerPrice = hasDiscount
+              ? Math.round(originalPrice * (1 - discountRate / 100))
+              : originalPrice;
+
+            return (
+            <article className="gem-product-card" key={item.id}>
+              <div className="product-image-box">
+                <img
+                  src={item.image}
+                  alt={item.name}
+                  loading="lazy"
+                  onError={(event) => {
+                    event.currentTarget.src = "/logo.png";
+                  }}
+                />
+                <span className="product-treatment">{item.treatment}</span>
+                {hasDiscount ? (
+                  <span className="product-discount-label">
+                    {discountRate}% OFF
+                  </span>
+                ) : offerItem.discountLabel?.trim() ? (
+                  <span className="product-discount-label">{offerItem.discountLabel}</span>
+                ) : null}
+                <button
+                  type="button"
+                  className={`product-wishlist ${
+                    wishlist.some(
+                      (wishlistItem) =>
+                        getCollectionItemKey(wishlistItem) === getCollectionItemKey(item)
+                    )
+                      ? "liked"
+                      : ""
+                  }`}
+                  aria-label={`${
+                    wishlist.some(
+                      (wishlistItem) =>
+                        getCollectionItemKey(wishlistItem) === getCollectionItemKey(item)
+                    )
+                      ? "Remove from"
+                      : "Add to"
+                  } wishlist: ${item.name}`}
+                  onClick={() => toggleFeaturedWishlist(item)}
+                >
+                  <FaHeart />
+                </button>
+              </div>
+
+              <div className="product-info">
+                <span className="product-category">{item.category}</span>
+                <h3>
+                  <a
+                    className="product-name-link"
+                    href={`/jewellery?product=${item.id}`}
+                  >
+                    {item.name}
+                  </a>
+                </h3>
+                <div className="product-details">
+                  <span>{item.color}</span>
+                  <span>{item.shape}</span>
+                </div>
+                <div className="product-card-actions">
+                  <button
+                    type="button"
+                    className="product-stock-status in-stock"
+                    disabled
+                    aria-label={`${item.name} available`}
+                  >
+                    AVAILABLE
+                  </button>
+                  <button
+                    type="button"
+                    className="product-view-details"
+                    onClick={() => window.location.assign(`/jewellery?product=${item.id}`)}
+                  >
+                    VIEW DETAILS
+                  </button>
+                </div>
+                <div className="product-bottom">
+                  <div className={`product-prices ${hasDiscount ? "has-discount" : ""}`}>
+                    {hasDiscount && (
+                      <del className="product-original-price">
+                        {formatPrice(originalPrice)}
+                      </del>
+                    )}
+                    <strong>{formatPrice(offerPrice)}</strong>
+                  </div>
+                  <button
+                    type="button"
+                    className="add-to-cart-btn"
+                    aria-label={`Add ${item.name} to cart`}
+                    onClick={() => addFeaturedJewelleryToCart(item)}
+                  >
+                    <FaShoppingBag />
+                    <span>ADD TO CART</span>
+                  </button>
+                </div>
+              </div>
+            </article>
+            );
+          })}
+        </div>
       </section>
 
 
@@ -1112,98 +1525,146 @@ const Home = () => {
       >
 
         <div className="reviews-container">
+          {/* Decorative Gem Facet Watermarks */}
+          <div className="reviews-watermark reviews-watermark-left" aria-hidden="true">
+            <svg viewBox="0 0 200 240" fill="none" stroke="currentColor" strokeWidth="1.2">
+              <polygon points="100,20 180,70 150,210 50,210 20,70" />
+              <line x1="100" y1="20" x2="60" y2="110" />
+              <line x1="100" y1="20" x2="140" y2="110" />
+              <line x1="20" y1="70" x2="60" y2="110" />
+              <line x1="180" y1="70" x2="140" y2="110" />
+              <line x1="60" y1="110" x2="140" y2="110" />
+              <line x1="60" y1="110" x2="50" y2="210" />
+              <line x1="140" y1="110" x2="150" y2="210" />
+              <line x1="100" y1="20" x2="100" y2="210" />
+            </svg>
+          </div>
+          <div className="reviews-watermark reviews-watermark-right" aria-hidden="true">
+            <svg viewBox="0 0 200 240" fill="none" stroke="currentColor" strokeWidth="1.2">
+              <polygon points="100,20 180,70 150,210 50,210 20,70" />
+              <line x1="100" y1="20" x2="60" y2="110" />
+              <line x1="100" y1="20" x2="140" y2="110" />
+              <line x1="20" y1="70" x2="60" y2="110" />
+              <line x1="180" y1="70" x2="140" y2="110" />
+              <line x1="60" y1="110" x2="140" y2="110" />
+              <line x1="60" y1="110" x2="50" y2="210" />
+              <line x1="140" y1="110" x2="150" y2="210" />
+              <line x1="100" y1="20" x2="100" y2="210" />
+            </svg>
+          </div>
 
           <div className="reviews-header">
 
-            <span className="subtitle">
-              CLIENT TESTIMONIALS
-            </span>
+            <div className="reviews-eyebrow">
+              <span className="reviews-eyebrow-line" />
+              <span className="reviews-eyebrow-text">CLIENT TESTIMONIALS</span>
+              <span className="reviews-eyebrow-line" />
+            </div>
 
-            <h2>
-              REVIEWS FROM COLLECTORS
+            <h2 className="reviews-main-title">
+              TRUSTED BY GEM COLLECTORS
             </h2>
 
-            <div className="gold-line" />
+            <div className="reviews-gem-divider">
+              <span className="divider-line" />
+              <svg className="gem-outline-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M6 3h12l4 7-10 11L2 10l4-7z" />
+                <path d="M2 10h20" />
+                <path d="M6 3l4 7 2 11 2-11 4-7" />
+              </svg>
+              <span className="divider-line" />
+            </div>
 
-            <p>
-
-              Read genuine reviews from distinguished
-              gemstone connoisseurs and luxury jewelry
-              collectors around the globe.
-
+            <p className="reviews-description">
+              Discover why collectors and jewelry lovers around the world choose us for authentic gemstones and exceptional service.
             </p>
 
           </div>
 
+          <div
+            className="reviews-carousel-wrapper"
+            onTouchStart={handleReviewTouchStart}
+            onTouchEnd={handleReviewTouchEnd}
+          >
+            <div className="reviews-track-viewport">
+              <div
+                className="reviews-track"
+                style={{
+                  transform: `translateX(-${reviewSlideIndex * (100 / cardsPerView)}%)`
+                }}
+              >
+                {displayReviews.map((review, idx) => (
+                  <div
+                    className="review-card-slide"
+                    key={`${review.id}-${idx}`}
+                    style={{ flex: `0 0 ${100 / cardsPerView}%` }}
+                  >
+                    <div className="review-card-inner">
+                      <div className="review-card-stars">
+                        {[...Array(review.rating || 5)].map((_, i) => (
+                          <FaStar key={i} className="review-star-icon" />
+                        ))}
+                      </div>
 
-          <div className="reviews-grid">
+                      <div className="review-card-quote">
+                        <span className="quote-mark-open">“</span>
+                        <p className="review-card-text">
+                          "{review.comment.replace(/^"|"$/g, "")}"
+                        </p>
+                        <span className="quote-mark-close">”</span>
+                      </div>
 
-            {customerReviews.map(
-              (review) => (
+                      <div className="review-card-gem-divider">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#d4af37" strokeWidth="1.5">
+                          <path d="M6 3h12l4 7-10 11L2 10l4-7z" />
+                          <path d="M2 10h20" />
+                          <path d="M6 3l4 7 2 11 2-11 4-7" />
+                        </svg>
+                      </div>
 
-                <div
-                  className="review-card"
-                  key={review.id}
-                >
-
-                  <div className="star-rating">
-
-                    {[...Array(
-                      review.rating
-                    )].map(
-                      (_, i) => (
-
-                        <FaStar
-                          key={i}
-                          className="star-icon"
-                        />
-
-                      )
-                    )}
-
-                  </div>
-
-
-                  <p className="review-comment">
-
-                    "{review.comment}"
-
-                  </p>
-
-
-                  <div className="review-user-info">
-
-                    {review.avatar ? (
-                      <img
-                        src={review.avatar}
-                        alt={review.name}
-                        className="review-avatar"
-                      />
-                    ) : (
-                      <span className="review-avatar-fallback" aria-hidden="true">
-                        {review.name.slice(0, 2).toUpperCase()}
-                      </span>
-                    )}
-
-                    <div>
-
-                      <h4 className="user-name">
-                        {review.name}
-                      </h4>
-
-                      <span className="user-location">
-                        {review.location}
-                      </span>
-
+                      <div className="review-card-author">
+                        <div className="review-author-avatar">
+                          {review.avatar ? (
+                            <img
+                              src={review.avatar}
+                              alt={review.name}
+                              className="review-avatar-img"
+                            />
+                          ) : (
+                            <span className="review-initials">
+                              {getReviewInitials(review)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="review-author-info">
+                          <h4 className="review-author-name">
+                            {review.name.toUpperCase()}
+                          </h4>
+                          <div className="review-author-loc">
+                            <FaMapMarkerAlt className="review-pin-icon" />
+                            <span>{review.location}</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-
                   </div>
+                ))}
+              </div>
+            </div>
 
-                </div>
-
-              )
+            {maxReviewIndex > 0 && (
+              <div className="reviews-dots">
+                {[...Array(maxReviewIndex + 1)].map((_, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    className={`reviews-dot ${reviewSlideIndex === idx ? "active" : ""}`}
+                    onClick={() => setReviewSlideIndex(idx)}
+                    aria-label={`Go to slide ${idx + 1}`}
+                  />
+                ))}
+              </div>
             )}
-
           </div>
 
         </div>
@@ -1506,8 +1967,7 @@ const Home = () => {
 
             {/* LOGO */}
 
-            <img
-              src="/logo.png"
+            <BrandLogo
               alt="Ceylon Royal Gemstones"
               className="about-modal-logo"
               onError={(e) => {
@@ -1528,23 +1988,13 @@ const Home = () => {
             </span>
 
 
-            {/* GEM NAME */}
-
             <h3>
-              {selectedGem.name}
+              Ceylon Royal Gemstones
             </h3>
 
 
-            {/* GEM DETAILS */}
-
             <p>
-
-              {selectedGem.origin}
-
-              {" • "}
-
-              {selectedGem.carat}
-
+              Contact our team for help with gemstone selection, sourcing, certification, or a purchase.
             </p>
 
 
@@ -1552,41 +2002,55 @@ const Home = () => {
 
             <form
               onSubmit={(e) => {
-
                 e.preventDefault();
+                const values = new FormData(e.currentTarget);
+                const message = [
+                  "Gemstone inquiry from the Ceylon Royal Gemstones website",
+                  `Name: ${values.get("name")}`,
+                  `Email: ${values.get("email")}`,
+                  `Phone: ${values.get("phone")}`,
+                  `Inquiry: ${values.get("message")}`
+                ].join("\n");
 
-                alert(
-                  "Your inquiry has been sent successfully!"
+                window.open(
+                  `https://wa.me/94712345678?text=${encodeURIComponent(message)}`,
+                  "_blank",
+                  "noopener,noreferrer"
                 );
-
                 setSelectedGem(null);
-
               }}
             >
 
 
               <input
+                name="name"
                 type="text"
+                autoComplete="name"
                 placeholder="Your Full Name"
                 required
               />
 
 
               <input
+                name="email"
                 type="email"
+                autoComplete="email"
                 placeholder="Email Address"
                 required
               />
 
 
               <input
+                name="phone"
                 type="tel"
+                autoComplete="tel"
                 placeholder="WhatsApp / Phone Number"
                 required
               />
 
 
               <textarea
+                name="message"
                 placeholder="Tell us about your requirements..."
                 rows="4"
                 required
@@ -1625,8 +2089,7 @@ const Home = () => {
 
             <div className="footer-logo">
 
-              <img
-                src="/logo.png"
+              <BrandLogo
                 alt="Ceylon Royal Gemstones"
                 onError={(e) => {
 
@@ -1681,7 +2144,7 @@ const Home = () => {
             </a>
 
             <a href="/About">
-              Our Heritage
+              Our Story
             </a>
             <a href="/trust">
               Trust & Certification
@@ -1803,7 +2266,7 @@ const Home = () => {
         <div className="about-footer-bottom">
 
           <p>
-            © 2026 Ceylon Royal Gemstones. All Rights Reserved.
+            Copyright © 2026 Powered by NETIT Technology
           </p>
 
           <span>

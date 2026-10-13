@@ -10,7 +10,12 @@ const readReviews = () => {
 
     const parsedReviews = JSON.parse(storedReviews);
     if (!Array.isArray(parsedReviews)) return customerReviews;
-    return parsedReviews.map(r => ({
+
+    const userSubmitted = parsedReviews.filter(
+      (r) => !customerReviews.some((def) => def.id === r.id)
+    );
+
+    return [...userSubmitted, ...customerReviews].map(r => ({
       ...r,
       avatar: r.avatar && r.avatar.includes("unsplash.com") ? null : r.avatar
     }));

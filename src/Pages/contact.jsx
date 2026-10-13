@@ -1,4 +1,6 @@
 import { useState } from "react";
+import ShopNavDropdown from "../components/ShopNavDropdown.jsx";
+import BrandLogo from "../components/BrandLogo.jsx";
 
 import {
   FaHeart,
@@ -22,6 +24,7 @@ import "./contact.css";
 import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
 import CollectionDrawerActions from "../components/CollectionDrawerActions.jsx";
 import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
+import CustomerOrdersNavLink from "../components/CustomerOrdersNavLink.jsx";
 import {
   getCollectionItemKey,
   useSharedCollection
@@ -163,8 +166,7 @@ const Contact = () => {
           className="about-navbar-logo"
         >
 
-          <img
-            src="/logo.png"
+          <BrandLogo
             alt="Ceylon Royal Gemstones"
             onError={(e) => {
               e.currentTarget.style.display = "none";
@@ -193,13 +195,12 @@ const Contact = () => {
             Home
           </a>
 
-          <a href="/#gemstones">
-            Shop
-          </a>
+          <ShopNavDropdown />
 
           <a href="/About">
-            Heritage
+            Our Story
           </a>
+
           <a href="/trust">
             Certification
           </a>
@@ -218,6 +219,7 @@ const Contact = () => {
           <a href="/blog">Blog</a>
 
           <InternationalNavEntry />
+          <CustomerOrdersNavLink />
 
         </div>
 
@@ -319,8 +321,7 @@ const Contact = () => {
 
           <div className="hero-logo-wrapper">
 
-            <img
-              src="/logo.png"
+            <BrandLogo
               alt="Ceylon Royal Gemstones Logo"
               className="hero-bright-logo"
               onError={(e) => {
@@ -923,8 +924,7 @@ const Contact = () => {
 
             <div className="footer-logo contact-footer-logo">
 
-              <img
-                src="/logo.png"
+              <BrandLogo
                 alt="Ceylon Royal Gemstones"
                 onError={(e) => {
                   e.currentTarget.style.display = "none";
@@ -971,7 +971,7 @@ const Contact = () => {
             </a>
 
             <a href="/About">
-              Our Heritage
+              Our Story
             </a>
             <a href="/trust">
               Trust & Certification
@@ -1066,7 +1066,7 @@ const Contact = () => {
         <div className="contact-footer-bottom">
 
           <p>
-            © 2026 Ceylon Royal Gemstones. All Rights Reserved.
+            Copyright © 2026 Powered by NETIT Technology
           </p>
 
           <span>
@@ -1211,8 +1211,7 @@ const Contact = () => {
             </button>
 
 
-            <img
-              src="/logo.png"
+            <BrandLogo
               alt="Ceylon Royal Gemstones"
               className="about-modal-logo"
             />

@@ -589,19 +589,54 @@
 
   .mobile-site-menu-links a,
   .mobile-site-menu-actions a,
-  .mobile-site-menu-actions button {
+  .mobile-site-menu-actions button,
+  .mobile-site-menu-shop-trigger {
     display: flex;
     align-items: center;
     min-height: 48px;
+    width: 100%;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     color: #f7f3e8;
     font: 500 14px "Montserrat", sans-serif;
     text-decoration: none;
   }
 
+  .mobile-site-menu-shop-trigger {
+    justify-content: space-between;
+    padding: 0;
+    background: transparent;
+    border-top: 0;
+    border-right: 0;
+    border-left: 0;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .mobile-site-menu-shop-trigger svg {
+    font-size: 11px;
+    transition: transform 0.2s ease;
+  }
+
+  .mobile-site-menu-shop-trigger[aria-expanded="true"] svg {
+    transform: rotate(180deg);
+  }
+
+  .mobile-site-menu-shop-options {
+    padding: 2px 0 8px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .mobile-site-menu-links .mobile-site-menu-shop-options a {
+    min-height: 42px;
+    border-bottom: 0;
+    color: rgba(247, 243, 232, 0.76);
+    font-size: 13px;
+  }
+
   .mobile-site-menu-links a:hover,
   .mobile-site-menu-actions a:hover,
-  .mobile-site-menu-actions button:hover {
+  .mobile-site-menu-actions button:hover,
+  .mobile-site-menu-shop-trigger:hover {
     color: #e2bf69;
   }
 

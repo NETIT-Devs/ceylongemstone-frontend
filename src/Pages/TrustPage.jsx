@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import ShopNavDropdown from "../components/ShopNavDropdown.jsx";
+import BrandLogo from "../components/BrandLogo.jsx";
 import {
   FaEnvelope,
   FaFacebookF,
@@ -16,6 +18,7 @@ import {
 import TrustAndCertification from '../components/TrustAndCertification';
 import CollectionDrawerActions from '../components/CollectionDrawerActions.jsx';
 import InternationalNavEntry from '../components/InternationalNavEntry.jsx';
+import CustomerOrdersNavLink from "../components/CustomerOrdersNavLink.jsx";
 import { getCollectionItemKey, useSharedCollection } from '../useSharedCollection.js';
 import './About.css';
 import './TrustPage.css';
@@ -39,8 +42,7 @@ const TrustPage = () => {
     <main className="trust-page-shell">
       <nav className="about-navbar" aria-label="Main navigation">
         <a href="/" className="about-navbar-logo">
-          <img
-            src="/logo.png"
+          <BrandLogo
             alt="Ceylon Royal Gemstones"
             className="navbar-logo-img"
             onError={(e) => {
@@ -56,13 +58,14 @@ const TrustPage = () => {
         <MobileSiteMenu />
         <div className="about-nav-links">
           <a href="/">Home</a>
-          <a href="/gemstones">Shop</a>
-          <a href="/About">Heritage</a>
+          <ShopNavDropdown />
+          <a href="/About">Our Story</a>
           <a href="/trust" className="active">Certification</a>
           <a href="/reviews">Reviews</a>
           <a href="/contact">Contact</a>
           <a href="/blog">Blog</a>
           <InternationalNavEntry />
+          <CustomerOrdersNavLink />
         </div>
         <div className="about-nav-actions">
           <InternationalNavEntry mobile />
@@ -120,7 +123,7 @@ const TrustPage = () => {
         <div className="about-footer-grid">
           <div className="footer-brand">
             <div className="footer-logo">
-              <img src="/logo.png" alt="Ceylon Royal Gemstones" />
+              <BrandLogo alt="Ceylon Royal Gemstones" />
               <div>
                 <strong>CEYLON</strong>
                 <small>ROYAL GEMSTONES</small>
@@ -136,7 +139,7 @@ const TrustPage = () => {
             <h4>EXPLORE</h4>
             <a href="/">Home</a>
             <a href="/#gemstones">Shop</a>
-            <a href="/About">Our Heritage</a>
+            <a href="/About">Our Story</a>
             <a href="/trust">Trust &amp; Certification</a>
             <a href="/reviews">Reviews</a>
             <a href="/contact">Contact</a>
@@ -173,7 +176,7 @@ const TrustPage = () => {
           </div>
         </div>
         <div className="about-footer-bottom">
-          <p>© 2026 Ceylon Royal Gemstones. All Rights Reserved.</p>
+          <p>Copyright © 2026 Powered by NETIT Technology</p>
           <span>NATURAL · AUTHENTIC · CEYLON</span>
         </div>
       </footer>

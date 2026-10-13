@@ -1,4 +1,6 @@
 import { useRef, useState } from 'react';
+import ShopNavDropdown from "../components/ShopNavDropdown.jsx";
+import BrandLogo from "../components/BrandLogo.jsx";
 
 import {
   FaArrowLeft,
@@ -22,16 +24,33 @@ import './GemstoneDetail.css';
 import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
 import CollectionDrawerActions from '../components/CollectionDrawerActions.jsx';
 import InternationalNavEntry from '../components/InternationalNavEntry.jsx';
+import CustomerOrdersNavLink from "../components/CustomerOrdersNavLink.jsx";
 import { formatCurrencyPrice, getCurrentCurrency } from '../currency.js';
 import {
   getCollectionItemKey,
   normalizeCollectionItem,
   useSharedCollection
 } from '../useSharedCollection.js';
+import { withActiveProductOffer } from '../productOffers.js';
 
 const GemstoneDetail = ({ gem }) => {
   const [currency] = useState(getCurrentCurrency);
-  const viewLabels = ['Front', 'Back', 'Right', 'Left'];
+  const originalGemPrice = Number(gem.basePriceUSD ?? gem.price ?? gem.priceUSD ?? 0);
+  const activeDiscountRate = Number(
+    withActiveProductOffer(gem).discountRate
+  );
+  const currentGemPrice = activeDiscountRate > 0
+    ? Math.round(originalGemPrice * (1 - activeDiscountRate / 100))
+    : originalGemPrice;
+  const viewLabels = [
+    'Front',
+    'Left',
+    'Right',
+    'Back',
+    'Additional View 1',
+    'Additional View 2'
+  ];
+  const legacyViewLabels = ['Front', 'Back', 'Right', 'Left'];
   const rawGalleryViews = Array.isArray(gem?.galleryViews) && gem.galleryViews.length > 0
     ? gem.galleryViews
     : Array.isArray(gem?.images) && gem.images.length > 0
@@ -41,8 +60,8 @@ const GemstoneDetail = ({ gem }) => {
         : [];
   const galleryViews = rawGalleryViews
     .map((view, index) => typeof view === 'string'
-      ? { label: viewLabels[index] || `View ${index + 1}`, url: view }
-      : { label: view.label || viewLabels[index] || `View ${index + 1}`, url: view.url || view.src })
+      ? { label: legacyViewLabels[index] || viewLabels[index] || `View ${index + 1}`, url: view }
+      : { label: view.label || legacyViewLabels[index] || viewLabels[index] || `View ${index + 1}`, url: view.url || view.src })
     .filter((view) => view.url);
   const suppliedRotationFrames = Array.isArray(gem?.rotationFrames)
     ? gem.rotationFrames
@@ -122,6 +141,14 @@ const GemstoneDetail = ({ gem }) => {
 
   const addProductToCart = (product) => {
     const productKey = getCollectionItemKey(product);
+    const offerProduct = withActiveProductOffer(product);
+    const originalPrice = Number(
+      offerProduct.basePriceUSD ?? offerProduct.price ?? offerProduct.priceUSD ?? 0
+    );
+    const discountRate = Number(offerProduct.discountRate);
+    const offerPrice = discountRate > 0
+      ? Math.round(originalPrice * (1 - discountRate / 100))
+      : originalPrice;
 
     setCart((current) => {
       const alreadyInCart = current.some(
@@ -132,7 +159,12 @@ const GemstoneDetail = ({ gem }) => {
 
       return [
         ...current,
-        normalizeCollectionItem({ ...product, quantity: 1 })
+        normalizeCollectionItem({
+          ...offerProduct,
+          price: offerPrice,
+          basePriceUSD: originalPrice,
+          quantity: 1
+        })
       ];
     });
   };
@@ -220,7 +252,7 @@ const GemstoneDetail = ({ gem }) => {
     <div className="luxury-detail-wrapper">
       <header className="gem-detail-navbar about-navbar">
         <a href="/" className="gem-detail-brand about-navbar-logo">
-          <img src="/logo.png" alt="Ceylon Royal Gemstones" />
+          <BrandLogo alt="Ceylon Royal Gemstones" />
           <span className="about-logo-text">
             <strong>CEYLON</strong>
             <small>ROYAL GEMSTONES</small>
@@ -230,13 +262,14 @@ const GemstoneDetail = ({ gem }) => {
         <MobileSiteMenu />
         <nav className="gem-detail-nav-links about-nav-links" aria-label="Main navigation">
           <a href="/">Home</a>
-          <a href="/gemstones" className="active">Shop</a>
-          <a href="/About">Heritage</a>
+          <ShopNavDropdown current="gems" />
+          <a href="/About">Our Story</a>
           <a href="/trust">Certification</a>
           <a href="/reviews">Reviews</a>
           <a href="/contact">Contact</a>
           <a href="/blog">Blog</a>
           <InternationalNavEntry />
+          <CustomerOrdersNavLink />
         </nav>
 
         <div className="gem-detail-nav-actions about-nav-actions">
@@ -456,8 +489,13 @@ const GemstoneDetail = ({ gem }) => {
 
           <div className="price-container">
             <div className="price-usd">
-              {formatCurrencyPrice(gem.basePriceUSD ?? gem.price ?? gem.priceUSD ?? 0, currency)}
+              {formatCurrencyPrice(currentGemPrice, currency)}
             </div>
+            {activeDiscountRate > 0 && (
+              <del className="product-original-price">
+                {formatCurrencyPrice(originalGemPrice, currency)}
+              </del>
+            )}
           </div>
 
           <h2 className="gem-about-heading">ABOUT THE GEM</h2>
@@ -497,7 +535,7 @@ const GemstoneDetail = ({ gem }) => {
             </button>
           </div>
 
-          <div className="cta-button-group">
+          <div className="cta-button-group gemstone-cta-button-group">
             <button
               type="button"
               className="gold-btn"
@@ -529,7 +567,7 @@ const GemstoneDetail = ({ gem }) => {
             <span>QUANTITY</span>
             <strong className="purchase-single-quantity">1</strong>
             <strong>
-              {formatCurrencyPrice(gem.basePriceUSD ?? gem.price ?? gem.priceUSD ?? 0, currency)}
+              {formatCurrencyPrice(currentGemPrice, currency)}
             </strong>
           </div>
 
@@ -617,14 +655,13 @@ const GemstoneDetail = ({ gem }) => {
         </div>
       </div>
 
-      {/* Premium Reviews & Client Photographs */}
+      {/*
       <div className="reviews-section">
         <div className="reviews-header">
           <h2>CLIENT REVIEWS & GALLERY</h2>
           <p>Verified testimonials from private collectors and gemstone enthusiasts.</p>
         </div>
 
-        {/* Add Review Form */}
         <form className="luxury-review-form" onSubmit={handleReviewSubmit}>
           <h3>Share Your Experience</h3>
           
@@ -665,7 +702,6 @@ const GemstoneDetail = ({ gem }) => {
           <button type="submit" className="submit-gold-btn">SUBMIT TESTIMONIAL</button>
         </form>
 
-        {/* Reviews Feed */}
         <div className="reviews-feed">
           {reviews.map((rev) => (
             <div key={rev.id} className="review-card-luxury">
@@ -691,12 +727,13 @@ const GemstoneDetail = ({ gem }) => {
           ))}
         </div>
       </div>
+      */}
 
       <footer className="gem-detail-footer">
         <div className="gem-detail-footer-grid">
           <div className="gem-detail-footer-brand">
             <a href="/" className="gem-detail-brand gem-detail-footer-logo">
-              <img src="/logo.png" alt="" />
+              <BrandLogo alt="" />
               <span>
                 <strong>CEYLON</strong>
                 <small>ROYAL GEMSTONES</small>
@@ -709,7 +746,7 @@ const GemstoneDetail = ({ gem }) => {
             <h2>EXPLORE</h2>
             <a href="/">Home</a>
             <a href="/gemstones">Shop</a>
-            <a href="/About">Our Heritage</a>
+            <a href="/About">Our Story</a>
             <a href="/trust">Trust & Certification</a>
             <a href="/reviews">Reviews</a>
             <a href="/contact">Contact</a>
@@ -741,7 +778,7 @@ const GemstoneDetail = ({ gem }) => {
         </div>
 
         <div className="gem-detail-footer-bottom">
-          <span>© 2026 Ceylon Royal Gemstones. All Rights Reserved.</span>
+          <span>Copyright © 2026 Powered by NETIT Technology</span>
           <span>NATURAL · AUTHENTIC · CEYLON</span>
         </div>
       </footer>
@@ -764,8 +801,7 @@ const GemstoneDetail = ({ gem }) => {
               ×
             </button>
 
-            <img
-              src="/logo.png"
+            <BrandLogo
               alt="Ceylon Royal Gemstones"
               className="gem-detail-inquiry-logo about-modal-logo"
             />

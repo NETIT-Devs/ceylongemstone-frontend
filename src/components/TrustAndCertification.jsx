@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import BrandLogo from "./BrandLogo.jsx";
 import { products } from '../Pages/Gemstones.jsx';
 
 const TrustAndCertification = ({ inquiryOpen, onInquiryClose }) => {
@@ -79,8 +80,7 @@ const TrustAndCertification = ({ inquiryOpen, onInquiryClose }) => {
         <div className="hero-overlay"></div>
         <div className="about-hero-content">
           <div className="hero-logo-wrapper">
-            <img
-              src="/logo.png"
+            <BrandLogo
               alt="Ceylon Royal Gemstones Logo"
               className="hero-bright-logo"
               onError={(e) => {
@@ -196,7 +196,7 @@ const TrustAndCertification = ({ inquiryOpen, onInquiryClose }) => {
           )}
         </div>
 
-        {/* 2. Authenticity, Treatments, Heritage & Company Info Grid */}
+        {/* 2. Authenticity, Treatments, Our Story & Company Info Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           
           {/* Card 1: Natural / Heated / Untreated info */}
@@ -265,7 +265,7 @@ const TrustAndCertification = ({ inquiryOpen, onInquiryClose }) => {
             >
               ×
             </button>
-            <img src="/logo.png" alt="Ceylon Royal Gemstones" className="about-modal-logo" />
+            <BrandLogo alt="Ceylon Royal Gemstones" className="about-modal-logo" />
             <span>PRIVATE GEMSTONE INQUIRY</span>
             <h3 id="trust-inquiry-title">Trust &amp; Certification</h3>
             <p>Send your gemstone or certificate question to our team.</p>

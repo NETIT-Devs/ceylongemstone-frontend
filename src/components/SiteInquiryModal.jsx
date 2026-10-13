@@ -1,4 +1,5 @@
 import { useState } from "react";
+import BrandLogo from "./BrandLogo.jsx";
 import { FaTimes } from "react-icons/fa";
 
 const SiteInquiryModal = ({ onClose, source = "Website" }) => {
@@ -42,7 +43,7 @@ const SiteInquiryModal = ({ onClose, source = "Website" }) => {
         >
           <FaTimes />
         </button>
-        <img className="about-modal-logo" src="/logo.png" alt="Ceylon Royal Gemstones" />
+        <BrandLogo className="about-modal-logo" alt="Ceylon Royal Gemstones" />
         <span>PRIVATE GEMSTONE INQUIRY</span>
         <h3 id="site-inquiry-title">Contact Our Team</h3>
         <p>Share your gemstone question and our team will respond through WhatsApp.</p>

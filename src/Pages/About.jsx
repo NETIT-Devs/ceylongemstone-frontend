@@ -1,4 +1,6 @@
 import { useState } from "react";
+import ShopNavDropdown from "../components/ShopNavDropdown.jsx";
+import BrandLogo from "../components/BrandLogo.jsx";
 import {
   FaHeart,
   FaShoppingBag,
@@ -18,6 +20,7 @@ import "./About.css";
 import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
 import CollectionDrawerActions from "../components/CollectionDrawerActions.jsx";
 import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
+import CustomerOrdersNavLink from "../components/CustomerOrdersNavLink.jsx";
 import { getCollectionItemKey, useSharedCollection } from "../useSharedCollection.js";
 
 const About = () => {
@@ -140,8 +143,7 @@ const About = () => {
 
         <a href="/" className="about-navbar-logo">
 
-          <img
-            src="/logo.png"
+          <BrandLogo
             alt="Ceylon Royal Gemstones"
             onError={(e) => {
               e.target.onerror = null;
@@ -167,15 +169,13 @@ const About = () => {
             Home
           </a>
 
-          <a href="/#Gemstones">
-            Shop
-          </a>
+          <ShopNavDropdown />
 
           <a
             href="/About"
             className="active"
           >
-            Heritage
+            Our Story
           </a>
           <a href="/trust">
             Certification
@@ -194,6 +194,7 @@ const About = () => {
           </a>
 
           <InternationalNavEntry />
+          <CustomerOrdersNavLink />
 
         </div>
 
@@ -286,8 +287,7 @@ const About = () => {
 
           <div className="hero-logo-wrapper">
 
-            <img
-              src="/logo.png"
+            <BrandLogo
               alt="Ceylon Royal Gemstones Logo"
               className="hero-bright-logo"
               onError={(e) => {
@@ -368,6 +368,41 @@ const About = () => {
 
       </section>
 
+      <section className="founder-section" aria-labelledby="founder-heading">
+        <div className="founder-heading">
+          <span className="gold-subtitle">THE VISION BEHIND OUR GEMS</span>
+          <h2 id="founder-heading">A Founder’s Passion, A Ceylon Legacy</h2>
+          <div className="gold-divider founder-divider"></div>
+        </div>
+
+        <div className="founder-image-frame">
+          <img
+            src="/AboutUS.jpg"
+            alt="Ceylon Royal Gemstones founder examining a sapphire"
+            className="founder-image"
+          />
+          <span className="founder-image-caption">ROOTED IN RATNAPURA, SRI LANKA</span>
+        </div>
+
+        <div className="founder-content">
+          <p className="founder-role">
+            <span>Nimal Perera</span>
+            Founder &amp; Gemstone Specialist
+          </p>
+          <p>
+           Ceylon Royal Gemstones was founded on a deep appreciation for Sri Lanka’s rich gemstone heritage and the rare artistry that brings each natural treasure to life. Expanding from exceptional loose gems to bespoke fine jewelry, our founder’s vision is to share the authentic elegance of Ceylon with the world while building lasting relationships rooted in trust, transparency, and care.
+          </p>
+          <p>
+            Situated in the heart of Sri Lanka’s historic gem country, we collaborate with local miners, master lapidaries, and fine jewelry craftsmen to curate and create extraordinary pieces. From hand-selected sapphires to custom rings, pendants, and fine jewelry, every creation is crafted with precision and supported by recognized gemological certification.
+          </p>
+          <div className="founder-company-details">
+            <div>
+              <strong>Our home</strong>
+              <span>Ratnapura, Sri Lanka</span>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* =====================================================
           PROCESS SECTION
@@ -580,8 +615,7 @@ const About = () => {
 
             <div className="footer-logo">
 
-              <img
-                src="/logo.png"
+              <BrandLogo
                 alt="Ceylon Royal Gemstones"
                 onError={(e) => {
                   e.target.onerror = null;
@@ -628,7 +662,7 @@ const About = () => {
             </a>
 
             <a href="/About">
-              Our Heritage
+              Our Story
             </a>
             <a href="/trust">
               Trust & Certification
@@ -719,7 +753,7 @@ const About = () => {
         <div className="about-footer-bottom">
 
           <p>
-            © 2026 Ceylon Royal Gemstones. All Rights Reserved.
+            Copyright © 2026 Powered by NETIT Technology
           </p>
 
           <span>
@@ -876,8 +910,7 @@ const About = () => {
             </button>
 
 
-            <img
-              src="/logo.png"
+            <BrandLogo
               alt="Ceylon Royal Gemstones"
               className="about-modal-logo"
             />

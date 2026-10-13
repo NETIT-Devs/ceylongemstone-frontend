@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from "react";
+import ShopNavDropdown from "../components/ShopNavDropdown.jsx";
+import BrandLogo from "../components/BrandLogo.jsx";
 import {
   FaEnvelope,
   FaFacebookF,
@@ -15,6 +17,7 @@ import {
 } from "react-icons/fa";
 import CollectionDrawerPanel from "../components/CollectionDrawerPanel.jsx";
 import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
+import CustomerOrdersNavLink from "../components/CustomerOrdersNavLink.jsx";
 import SiteInquiryModal from "../components/SiteInquiryModal.jsx";
 import { currencyRates, getCurrentCurrency } from "../currency.js";
 import { useSharedCollection } from "../useSharedCollection.js";
@@ -74,8 +77,7 @@ const InternationalCustomers = () => {
     <div className="international-page">
       <nav className="about-navbar international-navbar">
         <a href="/" className="about-navbar-logo">
-          <img
-            src="/logo.png"
+          <BrandLogo
             alt="Ceylon Royal Gemstones"
             className="navbar-logo-img"
             onError={(e) => {
@@ -91,13 +93,14 @@ const InternationalCustomers = () => {
         <MobileSiteMenu />
         <div className="about-nav-links">
           <a href="/">Home</a>
-          <a href="/gemstones">Shop</a>
-          <a href="/About">Heritage</a>
+          <ShopNavDropdown />
+          <a href="/About">Our Story</a>
           <a href="/trust">Certification</a>
           <a href="/reviews">Reviews</a>
           <a href="/contact">Contact</a>
           <a href="/blog">Blog</a>
           <InternationalNavEntry active />
+          <CustomerOrdersNavLink />
         </div>
         <div className="about-nav-actions international-nav-actions">
           <div className="currency-selector" ref={currencyRef}>
@@ -301,7 +304,7 @@ const InternationalCustomers = () => {
         <div className="about-footer-grid">
           <div className="footer-brand">
             <div className="footer-logo">
-              <img src="/logo.png" alt="Ceylon Royal Gemstones" />
+              <BrandLogo alt="Ceylon Royal Gemstones" />
               <div>
                 <strong>CEYLON</strong>
                 <small>ROYAL GEMSTONES</small>
@@ -317,7 +320,7 @@ const InternationalCustomers = () => {
             <h4>EXPLORE</h4>
             <a href="/">Home</a>
             <a href="/gemstones">Shop</a>
-            <a href="/About">Our Heritage</a>
+            <a href="/About">Our Story</a>
             <a href="/trust">Trust &amp; Certification</a>
             <a href="/reviews">Reviews</a>
             <a href="/contact">Contact</a>
@@ -350,7 +353,7 @@ const InternationalCustomers = () => {
           </div>
         </div>
         <div className="about-footer-bottom">
-          <p>© 2026 Ceylon Royal Gemstones. All Rights Reserved.</p>
+          <p>Copyright © 2026 Powered by NETIT Technology</p>
           <span>NATURAL • AUTHENTIC • CEYLON</span>
         </div>
       </footer>

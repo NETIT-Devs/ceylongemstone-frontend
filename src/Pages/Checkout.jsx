@@ -1,4 +1,6 @@
 import { useRef, useState } from "react";
+import ShopNavDropdown from "../components/ShopNavDropdown.jsx";
+import BrandLogo from "../components/BrandLogo.jsx";
 import {
   FaArrowLeft,
   FaEnvelope,
@@ -114,14 +116,17 @@ const Checkout = () => {
     };
     let savedOrders;
     try {
+      const currentUser = JSON.parse(window.localStorage.getItem("ceylon-user") || "null");
+      const userEmail = currentUser?.email;
+      const ordersKey = userEmail ? `ceylon-orders-${userEmail}` : "ceylon-orders";
       savedOrders = JSON.parse(
-        window.localStorage.getItem("ceylon-orders") || "[]"
+        window.localStorage.getItem(ordersKey) || "[]"
       );
       if (!Array.isArray(savedOrders)) {
         throw new Error("Stored orders are not in a valid list format.");
       }
       window.localStorage.setItem(
-        "ceylon-orders",
+        ordersKey,
         JSON.stringify([newOrder, ...savedOrders])
       );
     } catch (error) {
@@ -171,7 +176,7 @@ const Checkout = () => {
     <div className="checkout-page">
       <nav className="about-navbar checkout-navbar">
         <a href="/" className="about-navbar-logo">
-          <img src="/logo.png" alt="Ceylon Royal Gemstones" />
+          <BrandLogo alt="Ceylon Royal Gemstones" />
           <div className="about-logo-text">
             <span>CEYLON</span>
             <small>ROYAL GEMSTONES</small>
@@ -181,8 +186,8 @@ const Checkout = () => {
         <MobileSiteMenu />
         <div className="about-nav-links">
           <a href="/">Home</a>
-          <a href="/gemstones">Shop</a>
-          <a href="/About">Heritage</a>
+          <ShopNavDropdown />
+          <a href="/About">Our Story</a>
           <a href="/trust">Certification</a>
           <a href="/reviews">Reviews</a>
           <a href="/contact">Contact</a>
@@ -304,7 +309,7 @@ const Checkout = () => {
         <div className="about-footer-grid">
           <div className="footer-brand">
             <div className="footer-logo">
-              <img src="/logo.png" alt="Ceylon Royal Gemstones" />
+              <BrandLogo alt="Ceylon Royal Gemstones" />
               <div>
                 <strong>CEYLON</strong>
                 <small>ROYAL GEMSTONES</small>
@@ -320,7 +325,7 @@ const Checkout = () => {
             <h4>EXPLORE</h4>
             <a href="/">Home</a>
             <a href="/gemstones">Shop</a>
-            <a href="/About">Our Heritage</a>
+            <a href="/About">Our Story</a>
             <a href="/trust">Trust &amp; Certification</a>
             <a href="/reviews">Reviews</a>
             <a href="/contact">Contact</a>
@@ -351,7 +356,7 @@ const Checkout = () => {
           </div>
         </div>
         <div className="about-footer-bottom">
-          <p>© 2026 Ceylon Royal Gemstones. All Rights Reserved.</p>
+          <p>Copyright © 2026 Powered by NETIT Technology</p>
           <span>NATURAL • AUTHENTIC • CEYLON</span>
         </div>
       </footer>
@@ -376,9 +381,8 @@ const Checkout = () => {
             >
               <FaTimes />
             </button>
-            <img
+            <BrandLogo
               className="about-modal-logo"
-              src="/logo.png"
               alt="Ceylon Royal Gemstones"
             />
             <span>PRIVATE GEMSTONE INQUIRY</span>

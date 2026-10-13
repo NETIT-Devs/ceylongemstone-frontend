@@ -348,7 +348,16 @@
   letter-spacing: 0.5px;
 }
 
-.form-group input {
+.admin-form-label {
+  color: #041d1a;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
   padding: 10px 12px;
   border: 1px solid #dcd5c4;
   border-radius: 4px;
@@ -359,23 +368,175 @@
   outline: none;
 }
 
-.form-group input:focus {
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
   border-color: #c9a24b;
   background: #ffffff;
 }
 
-.add-gem-submit-btn {
-  grid-column: span 3;
-  padding: 12px;
-  border: 1px solid #c9a24b;
+.admin-image-help {
+  color: #6a7b77;
+  font-size: 11px;
+}
+
+.admin-image-picker {
+  position: relative;
+  display: flex;
+  min-height: 76px;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px dashed #b9ad8c;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #fffdf8, #f8f5eb);
+  color: #041d1a;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.admin-image-picker:hover,
+.admin-image-picker:focus-within {
+  border-color: #c9a24b;
+  background: #fffdf7;
+  box-shadow: 0 0 0 3px rgba(201, 162, 75, 0.12);
+}
+
+.admin-image-picker-input {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: inherit;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.admin-image-picker-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  place-items: center;
+  border-radius: 50%;
   background: #041d1a;
-  color: #c9a24b;
+  color: #d4b66b;
+  font-size: 16px;
+}
+
+.admin-image-picker-copy {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 4px;
+}
+
+.admin-image-picker-copy strong {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-image-picker-copy small {
+  color: #6a7b77;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.admin-image-picker-action {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border: 1px solid #c9a24b;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #041d1a;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.form-group textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.site-content-wide-field {
+  grid-column: span 3;
+}
+
+.gem-detail-upload-heading {
+  margin: 12px 0 6px;
+  color: #041d1a;
+  font-family: "Cinzel", serif;
+  font-size: 16px;
+}
+
+.gem-detail-upload-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.gem-detail-video-upload {
+  max-width: 520px;
+  margin-top: 16px;
+}
+
+.site-content-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.site-content-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid #e4decb;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.site-content-row-info {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.site-content-row-info strong {
+  overflow-wrap: anywhere;
+  color: #041d1a;
+  font-size: 13px;
+}
+
+.site-content-row-info span {
+  color: #6a7b77;
+  font-size: 11px;
+}
+
+.add-gem-form-actions {
+  grid-column: span 3;
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.add-gem-submit-btn,
+.add-gem-cancel-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 4px;
   font-family: "Cinzel", serif;
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 1px;
   cursor: pointer;
-  border-radius: 4px;
   transition: all 0.3s ease;
   display: flex;
   align-items: center;
@@ -383,9 +544,25 @@
   gap: 8px;
 }
 
+.add-gem-submit-btn {
+  border: 1px solid #c9a24b;
+  background: #041d1a;
+  color: #c9a24b;
+}
+
 .add-gem-submit-btn:hover {
   background: #c9a24b;
   color: #041d1a;
+}
+
+.add-gem-cancel-btn {
+  border: 1px solid #d9a6ac;
+  background: #fff1f2;
+  color: #a33342;
+}
+
+.add-gem-cancel-btn:hover {
+  background: #f8dfe3;
 }
 
 /* GEMS GRID */
@@ -443,26 +620,53 @@
   margin-bottom: 12px;
 }
 
+.admin-gem-discount-rate {
+  display: inline-block;
+  margin: -4px 0 12px;
+  padding: 6px 9px;
+  border-radius: 4px;
+  background: #fdf7e8;
+  color: #8c6930;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
 .admin-gem-actions {
   display: flex;
   gap: 8px;
+  align-items: stretch;
 }
 
+.gem-edit-btn,
 .gem-delete-btn {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #e11d48;
-  background: #fff1f2;
-  color: #e11d48;
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 4px;
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
-  border-radius: 4px;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
+}
+
+.gem-edit-btn {
+  border: 1px solid #c9a24b;
+  background: #fdf7e8;
+  color: #8c6930;
+}
+
+.gem-edit-btn:hover {
+  background: #f4e4b6;
+}
+
+.gem-delete-btn {
+  border: 1px solid #e11d48;
+  background: #fff1f2;
+  color: #e11d48;
 }
 
 .gem-delete-btn:hover {
@@ -476,6 +680,15 @@
   .admin-gems-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+  .add-gem-form-actions {
+    grid-column: span 2;
+  }
+  .site-content-wide-field {
+    grid-column: span 2;
+  }
+  .gem-detail-upload-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 
   .add-gem-submit-btn {
     grid-column: span 2;
@@ -487,6 +700,36 @@
   .add-gem-form,
   .admin-gems-grid {
     grid-template-columns: 1fr;
+  }
+  .add-gem-form-actions {
+    grid-column: span 1;
+  }
+  .site-content-wide-field {
+    grid-column: span 1;
+  }
+  .gem-detail-upload-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .admin-image-picker {
+    min-height: 72px;
+    gap: 9px;
+    padding: 10px;
+  }
+  .admin-image-picker-icon {
+    width: 38px;
+    height: 38px;
+    flex-basis: 38px;
+  }
+  .admin-image-picker-action {
+    padding: 8px;
+    font-size: 10px;
+  }
+  .site-content-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .site-content-row .gem-delete-btn {
+    align-self: stretch;
   }
 
   .add-gem-submit-btn {

@@ -533,6 +533,125 @@
   font-size: 13px;
 }
 
+.founder-section {
+  width: min(1120px, calc(100% - 48px));
+  margin: 0 auto 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.founder-heading {
+  text-align: center;
+}
+
+.founder-image-frame {
+  position: relative;
+  width: 100%;
+  max-width: 760px;
+  min-height: 360px;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #061C2B;
+  box-shadow: 0 22px 55px rgba(6, 28, 43, 0.18);
+}
+
+.founder-image-frame::after {
+  position: absolute;
+  inset: 45% 0 0;
+  content: "";
+  background: linear-gradient(transparent, rgba(6, 28, 43, 0.76));
+}
+
+.founder-image {
+  display: block;
+  width: 100%;
+  height: 360px;
+  min-height: 360px;
+  object-fit: cover;
+  object-position: center;
+}
+
+.founder-image-caption {
+  position: absolute;
+  z-index: 1;
+  right: 22px;
+  bottom: 20px;
+  left: 22px;
+  color: #F7F3E8;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.founder-heading h2 {
+  margin: 12px 0 0;
+  color: #061C2B;
+  font-family: "Cinzel", serif;
+  font-size: clamp(30px, 3.3vw, 42px);
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.founder-divider {
+  width: 70px;
+  height: 2px;
+  margin: 22px auto 0;
+  background: #C9A24B;
+}
+
+.founder-role {
+  margin: 0 0 14px;
+  color: #063B32;
+  font-family: "Cinzel", serif;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.founder-role span {
+  display: block;
+  margin-bottom: 4px;
+  color: #061C2B;
+  font-size: 22px;
+}
+
+.founder-content > p:not(.founder-role) {
+  margin: 0 0 14px;
+  color: #64748B;
+  font-size: 16px;
+  line-height: 1.9;
+}
+
+.founder-company-details {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 24px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(201, 162, 75, 0.45);
+}
+
+.founder-company-details div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.founder-company-details strong {
+  color: #9D7625;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.founder-company-details span {
+  color: #061C2B;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
 
 /* =========================================================
    PROCESS
@@ -1618,6 +1737,21 @@
     font-size: 9px;
   }
 
+  .founder-section {
+    width: calc(100% - 36px);
+    margin-bottom: 72px;
+    gap: 28px;
+  }
+
+  .founder-image-frame,
+  .founder-image {
+    min-height: 0;
+    height: 280px;
+  }
+
+  .founder-heading h2 {
+    font-size: 32px;
+  }
 
   /* HERO */
 

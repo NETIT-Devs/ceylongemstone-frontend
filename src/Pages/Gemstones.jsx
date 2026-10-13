@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import ShopNavDropdown from "../components/ShopNavDropdown.jsx";
+import BrandLogo from "../components/BrandLogo.jsx";
 import {
   FaSearch,
   FaHeart,
@@ -33,7 +35,9 @@ import {
 import { currencyRates, formatCurrencyPrice, getCurrentCurrency } from "../currency.js";
 import { hasAdminAccess } from "../adminAccess.js";
 import { useGemInventory } from "../useGemInventory.js";
+import { useGemProductOverrides } from "../useGemProductOverrides.js";
 import { useGemSubmissions } from "../useGemSubmissions.js";
+import { withActiveProductOffer } from "../productOffers.js";
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const products = [
@@ -683,6 +687,7 @@ export const categories = [
 
 const maxCaratValue = Math.ceil(Math.max(...products.map((product) => product.carat)));
 const maxPriceValue = Math.ceil(Math.max(...products.map((product) => product.price)) / 5000) * 5000;
+const PRODUCTS_PER_PAGE = 15;
 
 const colors = [
   "All Colors",
@@ -733,15 +738,20 @@ function Gemstones() {
   const [currency, setCurrency] = useState(getCurrentCurrency);
   const [currencyOpen, setCurrencyOpen] = useState(false);
   const currencyRef = useRef(null);
+  const [gemProductOverrides] = useGemProductOverrides();
   const [gemSubmissions] = useGemSubmissions();
   const shopProducts = useMemo(
     () => [
-      ...products,
+      ...products.map((product) => ({
+        ...product,
+        ...gemProductOverrides[String(product.id)],
+        category: product.category
+      })),
       ...gemSubmissions
         .filter((submission) => submission.status === "approved")
         .map((submission) => submission.gem)
     ],
-    [gemSubmissions]
+    [gemProductOverrides, gemSubmissions]
   );
   const shopMaxCaratValue = Math.max(
     maxCaratValue,
@@ -757,7 +767,12 @@ function Gemstones() {
       const customer = JSON.parse(
         window.localStorage.getItem("ceylon-user") || "null"
       );
-      return customer?.loggedIn === true && !hasAdminAccess("/admin");
+      if (customer?.loggedIn === true) return true;
+      const admin = JSON.parse(
+        window.localStorage.getItem("ceylon-admin-session") || "null"
+      );
+      if (admin?.accountId) return true;
+      return false;
     } catch {
       return false;
     }
@@ -790,6 +805,7 @@ function Gemstones() {
     } catch { /* URL parsing unsupported */ }
     return "All Gemstones";
   });
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [searchTerm, setSearchTerm] = useState(() => {
     try {
@@ -1006,6 +1022,39 @@ function Gemstones() {
     shopProducts
   ]);
 
+  const pageCount = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * PRODUCTS_PER_PAGE,
+    currentPage * PRODUCTS_PER_PAGE
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [
+    selectedCategory,
+    searchTerm,
+    selectedColor,
+    minCarat,
+    maxCarat,
+    selectedShape,
+    selectedCut,
+    selectedTreatment,
+    minPrice,
+    maxPrice
+  ]);
+
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(page, Math.max(pageCount, 1)));
+  }, [pageCount]);
+
+  const goToPage = (page) => {
+    setCurrentPage(page);
+    document.getElementById("gem-product-results")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
+  };
+
   const toggleWishlist = (product) => {
     const productKey = getCollectionItemKey(product);
 
@@ -1032,6 +1081,17 @@ function Gemstones() {
     const productKey = getCollectionItemKey(product);
     const stockQuantity = inventory[productKey] ?? 0;
     if (stockQuantity < 1) return;
+    const offerProduct = withActiveProductOffer(product);
+    const originalPrice = Number(offerProduct.basePriceUSD ?? offerProduct.price);
+    const discountRate = Number(offerProduct.discountRate);
+    const discountedPrice = discountRate > 0 && discountRate <= 100
+      ? Math.round(originalPrice * (1 - discountRate / 100))
+      : originalPrice;
+    const cartProduct = {
+      ...offerProduct,
+      price: discountedPrice,
+      basePriceUSD: originalPrice
+    };
 
     setCart((current) => {
       const exists = current.some(
@@ -1042,7 +1102,7 @@ function Gemstones() {
 
       return [
         ...current,
-        normalizeCollectionItem({ ...product, quantity: 1 })
+        normalizeCollectionItem({ ...cartProduct, quantity: 1 })
       ];
     });
     setActiveDrawer("cart");
@@ -1089,8 +1149,7 @@ function Gemstones() {
       <nav className="about-navbar">
 
         <a href="/" className="about-navbar-logo">
-          <img
-            src="/logo.png"
+          <BrandLogo
             alt="Ceylon Royal Gemstones"
             onError={(e) => {
               e.target.onerror = null;
@@ -1108,10 +1167,8 @@ function Gemstones() {
         <MobileSiteMenu onInquire={() => setInquiryProduct(products[0])} />
         <div className="about-nav-links">
           <a href="/">Home</a>
-          <a href="/gemstones" className="active">
-            Shop
-          </a>
-          <a href="/About">Heritage</a>
+          <ShopNavDropdown current="gems" />
+          <a href="/About">Our Story</a>
           <a href="/trust">Certification</a>
           <a href="/reviews">Reviews</a>
           <a href="/contact">Contact</a>
@@ -1247,8 +1304,7 @@ function Gemstones() {
         <div className="gem-hero-content">
 
           <div className="gem-hero-logo">
-            <img
-              src="/logo.png"
+            <BrandLogo
               alt="Ceylon Royal Gemstones"
             />
           </div>
@@ -1625,13 +1681,21 @@ function Gemstones() {
 
             {filteredProducts.length > 0 ? (
 
+              <>
               <div className="gem-product-grid">
 
-                {filteredProducts.map((product) => {
+                {paginatedProducts.map((product) => {
 
                   const productKey = getCollectionItemKey(product);
                   const stockQuantity = inventory[productKey] ?? 0;
                   const inStock = stockQuantity > 0;
+                  const offerProduct = withActiveProductOffer(product);
+                  const originalPrice = Number(offerProduct.basePriceUSD ?? offerProduct.price);
+                  const discountRate = Number(offerProduct.discountRate);
+                  const hasDiscount = discountRate > 0 && discountRate <= 100;
+                  const offerPrice = hasDiscount
+                    ? Math.round(originalPrice * (1 - discountRate / 100))
+                    : originalPrice;
                   const liked = wishlist.some(
                     (item) =>
                       getCollectionItemKey(item) ===
@@ -1659,6 +1723,16 @@ function Gemstones() {
                           {product.treatment}
                         </span>
 
+                        {Number(offerProduct.discountRate) > 0 ? (
+                          <span className="product-discount-label">
+                            {Number(offerProduct.discountRate)}% OFF
+                          </span>
+                        ) : offerProduct.discountLabel?.trim() ? (
+                          <span className="product-discount-label">
+                            {offerProduct.discountLabel}
+                          </span>
+                        ) : null}
+
                         <button
                           type="button"
                           className={`product-wishlist ${
@@ -1672,20 +1746,6 @@ function Gemstones() {
                           <FaHeart />
                         </button>
 
-                        <div className="product-overlay">
-
-                          <button
-                            onClick={() =>
-                              window.location.assign(
-                                `/gemstones/${product.id}`
-                              )
-                            }
-                          >
-                            VIEW DETAILS
-                          </button>
-
-                        </div>
-
                       </div>
 
                       <div className="product-info">
@@ -1695,12 +1755,17 @@ function Gemstones() {
                         </span>
 
                         <h3>
+                          <a
+                            className="product-name-link"
+                            href={`/gemstones/${product.id}`}
+                          >
                           {product.name}
+                          </a>
                         </h3>
 
                         <div className="product-details">
 
-                          <span>
+                          <span className="product-carat">
                             {product.carat} Ct
                           </span>
 
@@ -1714,24 +1779,42 @@ function Gemstones() {
 
                         </div>
 
-                        <button
-                          type="button"
-                          className={`product-stock-status ${
-                            inStock ? "in-stock" : "out-of-stock"
-                          }`}
-                          disabled
-                          aria-label={`${product.name} ${
-                            inStock ? "available" : "out of stock"
-                          }`}
-                        >
-                          {inStock ? "AVAILABLE" : "OUT OF STOCK"}
-                        </button>
+                        <div className="product-card-actions">
+                          <button
+                            type="button"
+                            className={`product-stock-status ${
+                              inStock ? "in-stock" : "out-of-stock"
+                            }`}
+                            disabled
+                            aria-label={`${product.name} ${
+                              inStock ? "available" : "out of stock"
+                            }`}
+                          >
+                            {inStock ? "AVAILABLE" : "OUT OF STOCK"}
+                          </button>
+                          <button
+                            type="button"
+                            className="product-view-details"
+                            onClick={() =>
+                              window.location.assign(`/gemstones/${product.id}`)
+                            }
+                          >
+                            VIEW DETAILS
+                          </button>
+                        </div>
 
                         <div className="product-bottom">
 
-                          <strong>
-                            {formatCurrencyPrice(product.price, currency)}
-                          </strong>
+                          <div className={`product-prices ${hasDiscount ? "has-discount" : ""}`}>
+                            {hasDiscount && (
+                              <del className="product-original-price">
+                                {formatCurrencyPrice(originalPrice, currency)}
+                              </del>
+                            )}
+                            <strong>
+                              {formatCurrencyPrice(offerPrice, currency)}
+                            </strong>
+                          </div>
 
                           <button
                             type="button"
@@ -1761,6 +1844,42 @@ function Gemstones() {
                 })}
 
               </div>
+
+              {pageCount > 1 && (
+                <nav className="shop-pagination" aria-label="Gemstone pages">
+                  <button
+                    type="button"
+                    className="shop-pagination-arrow"
+                    aria-label="Previous page"
+                    disabled={currentPage === 1}
+                    onClick={() => goToPage(currentPage - 1)}
+                  >
+                    &lt;
+                  </button>
+                  {Array.from({ length: pageCount }, (_, index) => index + 1).map((page) => (
+                    <button
+                      type="button"
+                      key={page}
+                      className={`shop-pagination-page ${page === currentPage ? "active" : ""}`}
+                      aria-label={`Page ${page}`}
+                      aria-current={page === currentPage ? "page" : undefined}
+                      onClick={() => goToPage(page)}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    className="shop-pagination-arrow"
+                    aria-label="Next page"
+                    disabled={currentPage === pageCount}
+                    onClick={() => goToPage(currentPage + 1)}
+                  >
+                    &gt;
+                  </button>
+                </nav>
+              )}
+              </>
 
             ) : (
 
@@ -1859,8 +1978,7 @@ function Gemstones() {
           <div className="footer-brand">
 
             <div className="footer-logo">
-              <img
-                src="/logo.png"
+              <BrandLogo
                 alt="Ceylon Royal Gemstones"
                 onError={(e) => {
                   e.target.onerror = null;
@@ -1886,7 +2004,7 @@ function Gemstones() {
             <h4>EXPLORE</h4>
             <a href="/">Home</a>
             <a href="/gemstones">Shop</a>
-            <a href="/About">Our Heritage</a>
+            <a href="/About">Our Story</a>
             <a href="/trust">Trust & Certification</a>
             <a href="/reviews">Reviews</a>
             <a href="/contact">Contact</a>
@@ -1941,7 +2059,7 @@ function Gemstones() {
         </div>
 
         <div className="about-footer-bottom">
-          <p>© 2026 Ceylon Royal Gemstones. All Rights Reserved.</p>
+          <p>Copyright © 2026 Powered by NETIT Technology</p>
           <span>NATURAL • AUTHENTIC • CEYLON</span>
         </div>
 
@@ -2083,8 +2201,7 @@ function Gemstones() {
               <FaTimes />
             </button>
 
-            <img
-              src="/logo.png"
+            <BrandLogo
               alt="Ceylon Royal Gemstones"
               className="about-modal-logo"
             />

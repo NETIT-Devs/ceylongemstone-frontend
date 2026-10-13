@@ -1,4 +1,6 @@
 import { useState } from "react";
+import ShopNavDropdown from "../components/ShopNavDropdown.jsx";
+import BrandLogo from "../components/BrandLogo.jsx";
 import {
   FaEnvelope,
   FaFacebookF,
@@ -14,6 +16,7 @@ import {
 import { FaFacebook } from "react-icons/fa6";
 import CollectionDrawerPanel from "../components/CollectionDrawerPanel.jsx";
 import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
+import CustomerOrdersNavLink from "../components/CustomerOrdersNavLink.jsx";
 import { useSharedCollection } from "../useSharedCollection.js";
 import {
   readAdminAccounts,
@@ -23,6 +26,36 @@ import {
 import "./Login.css";
 import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
 import "../components/SiteFooter.css";
+
+const getPostLoginDestination = () => "/";
+
+const REGISTERED_USERS_KEY = "ceylon-registered-users";
+
+export const getRegisteredUsers = () => {
+  try {
+    const raw = window.localStorage.getItem(REGISTERED_USERS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+export const saveRegisteredUser = (user) => {
+  try {
+    const users = getRegisteredUsers();
+    const existingIndex = users.findIndex(
+      (u) => u.email.toLowerCase() === user.email.toLowerCase()
+    );
+    if (existingIndex >= 0) {
+      users[existingIndex] = { ...users[existingIndex], ...user };
+    } else {
+      users.push(user);
+    }
+    window.localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(users));
+  } catch (err) {
+    console.error("Failed to save registered user:", err);
+  }
+};
 
 const Login = () => {
   const [wishlist, setWishlist] = useSharedCollection("ceylon-wishlist");
@@ -80,14 +113,28 @@ const Login = () => {
       return;
     }
 
-    // Admin login is authenticated by the backend database.
-    // If the supplied credentials are not a backend admin account,
-    // continue with the normal customer session flow.
+    // Require created account before login
+    const registeredUsers = getRegisteredUsers();
+    const foundUser = registeredUsers.find(
+      (u) => u.email.toLowerCase() === inputEmail
+    );
 
-    // Otherwise standard customer login
+    if (!foundUser) {
+      setLoginError("No account found with this email. Please create an account first.");
+      return;
+    }
+
+    if (foundUser.password !== inputPassword) {
+      setLoginError("Incorrect password. Please verify your password and try again.");
+      return;
+    }
+
+    // Standard verified customer login
     const userSession = {
-      email: loginForm.email,
-      name: loginForm.email.split("@")[0] || "Royal Collector",
+      email: foundUser.email,
+      name: foundUser.name || foundUser.email.split("@")[0] || "Royal Collector",
+      phone: foundUser.phone || "",
+      verified: true,
       loggedIn: true,
     };
     window.localStorage.setItem("ceylon-user", JSON.stringify(userSession));
@@ -95,7 +142,7 @@ const Login = () => {
     setSuccessNote("Welcome back to Ceylon Royal Gemstones.");
     setIsSubmitted(true);
     setTimeout(() => {
-      window.location.href = "/";
+      window.location.href = getPostLoginDestination();
     }, 1200);
   };
 
@@ -103,35 +150,92 @@ const Login = () => {
     e.preventDefault();
     setLoginError("");
 
+    const regEmail = registerForm.email.trim().toLowerCase();
+
     if (registerForm.password !== registerForm.confirmPassword) {
       setLoginError("Passwords do not match. Please re-enter.");
       return;
     }
 
+    if (registerForm.password.length < 4) {
+      setLoginError("Password must be at least 4 characters long.");
+      return;
+    }
+
     const adminAccounts = readAdminAccounts();
-    if (adminAccounts.some((acc) => acc.email.trim().toLowerCase() === registerForm.email.trim().toLowerCase())) {
+    if (adminAccounts.some((acc) => acc.email.trim().toLowerCase() === regEmail)) {
       setLoginError("This email address is reserved for administration. Please sign in.");
       setIsLoginMode(true);
       return;
     }
 
+    const registeredUsers = getRegisteredUsers();
+    if (registeredUsers.some((u) => u.email.toLowerCase() === regEmail)) {
+      setLoginError("An account with this email already exists. Please sign in.");
+      setIsLoginMode(true);
+      return;
+    }
+
+    const newUser = {
+      name: registerForm.name.trim() || "Royal Collector",
+      email: regEmail,
+      phone: registerForm.phone.trim(),
+      password: registerForm.password,
+      verified: true,
+      createdAt: new Date().toISOString(),
+    };
+    saveRegisteredUser(newUser);
+
+    // After creating account, switch to Sign In mode and prompt user to login
+    setLoginForm({ email: regEmail, password: "" });
+    setIsLoginMode(true);
+    setSuccessNote("Account created successfully! Please sign in with your email and password.");
+    setRegisterForm({
+      name: "",
+      email: "",
+      phone: "",
+      password: "",
+      confirmPassword: "",
+    });
+  };
+
+  const handleFacebookLogin = () => {
+    setLoginError("");
+    const fbEmail = prompt(
+      "Enter your Facebook email or account to continue:",
+      "collector@facebook.com"
+    );
+    if (!fbEmail) return;
+
+    const cleanEmail = fbEmail.trim().toLowerCase();
+    const fbName =
+      cleanEmail.split("@")[0].replace(/[._-]/g, " ") || "Facebook Collector";
+    const formattedName =
+      fbName.charAt(0).toUpperCase() + fbName.slice(1);
+
+    const fbUser = {
+      name: formattedName,
+      email: cleanEmail,
+      provider: "facebook",
+      verified: true,
+      createdAt: new Date().toISOString(),
+    };
+    saveRegisteredUser(fbUser);
+
     const userSession = {
-      email: registerForm.email,
-      name: registerForm.name || "Royal Collector",
-      phone: registerForm.phone,
+      email: fbUser.email,
+      name: fbUser.name,
+      provider: "facebook",
+      verified: true,
       loggedIn: true,
     };
     window.localStorage.setItem("ceylon-user", JSON.stringify(userSession));
     window.dispatchEvent(new Event("ceylon-user-auth-change"));
-    setSuccessNote("Your account has been created successfully.");
+    setSuccessNote(`Signed in via Facebook as ${userSession.name}! Welcome.`);
     setIsSubmitted(true);
     setTimeout(() => {
-      window.location.href = "/";
+      window.location.href = getPostLoginDestination();
     }, 1200);
-  };
-
-  const handleFacebookLogin = () => {
-    alert("Facebook login will be available soon!");
   };
 
   return (
@@ -148,19 +252,20 @@ const Login = () => {
       </video>
       <nav className="about-navbar login-page-navbar">
         <a href="/" className="about-navbar-logo">
-          <img src="/logo.png" alt="Ceylon Royal Gemstones" />
+          <BrandLogo alt="Ceylon Royal Gemstones" />
           <div className="about-logo-text"><span>CEYLON</span><small>ROYAL GEMSTONES</small></div>
         </a>
         <MobileSiteMenu />
         <div className="about-nav-links">
           <a href="/">Home</a>
-          <a href="/gemstones">Shop</a>
-          <a href="/About">Heritage</a>
+          <ShopNavDropdown />
+          <a href="/About">Our Story</a>
           <a href="/trust">Certification</a>
           <a href="/reviews">Reviews</a>
           <a href="/contact">Contact</a>
           <a href="/blog">Blog</a>
           <InternationalNavEntry />
+          <CustomerOrdersNavLink />
         </div>
         <div className="about-nav-actions">
           <InternationalNavEntry mobile />
@@ -209,7 +314,7 @@ const Login = () => {
           <div className="login-brand-panel">
             <div>
               <div className="login-brand-logo">
-                <img src="/logo.png" alt="Ceylon Royal Gemstones" />
+                <BrandLogo alt="Ceylon Royal Gemstones" />
                 <div className="login-brand-logo-text">
                   <span>CEYLON</span>
                   <small>ROYAL GEMSTONES</small>
@@ -240,7 +345,7 @@ const Login = () => {
           {/* RIGHT — Form */}
           <div className="login-card">
             <div className="login-header">
-              <img src="/logo.png" alt="Ceylon Royal Gemstones" className="login-logo" />
+              <BrandLogo alt="Ceylon Royal Gemstones" className="login-logo" />
               <span className="login-subtitle">CEYLON ROYAL GEMSTONES</span>
               <h1>{isLoginMode ? "Welcome Back" : "Create Account"}</h1>
               <p>{isLoginMode ? "Sign in to access your account" : "Join our community of gemstone collectors"}</p>
@@ -262,6 +367,24 @@ const Login = () => {
                 }}
               >
                 {loginError}
+              </div>
+            )}
+
+            {successNote && !isSubmitted && (
+              <div
+                className="login-success-note"
+                style={{
+                  background: "rgba(40, 167, 69, 0.15)",
+                  border: "1px solid rgba(40, 167, 69, 0.45)",
+                  color: "#75dd8b",
+                  padding: "11px 16px",
+                  borderRadius: "8px",
+                  marginBottom: "16px",
+                  fontSize: "0.88rem",
+                  textAlign: "center",
+                }}
+              >
+                {successNote}
               </div>
             )}
 
@@ -453,7 +576,7 @@ const Login = () => {
         <div className="about-footer-grid">
           <div className="footer-brand">
             <div className="footer-logo">
-              <img src="/logo.png" alt="Ceylon Royal Gemstones" />
+              <BrandLogo alt="Ceylon Royal Gemstones" />
               <div><strong>CEYLON</strong><small>ROYAL GEMSTONES</small></div>
             </div>
             <p>Discover the timeless beauty of authentic Sri Lankan gemstones, carefully sourced, crafted and presented with royal elegance.</p>
@@ -462,7 +585,7 @@ const Login = () => {
             <h4>EXPLORE</h4>
             <a href="/">Home</a>
             <a href="/gemstones">Shop</a>
-            <a href="/About">Our Heritage</a>
+            <a href="/About">Our Story</a>
             <a href="/trust">Trust &amp; Certification</a>
             <a href="/reviews">Reviews</a>
             <a href="/contact">Contact</a>
@@ -487,7 +610,7 @@ const Login = () => {
           </div>
         </div>
         <div className="about-footer-bottom">
-          <p>© 2026 Ceylon Royal Gemstones. All Rights Reserved.</p>
+          <p>Copyright © 2026 Powered by NETIT Technology</p>
           <span>NATURAL • AUTHENTIC • CEYLON</span>
         </div>
       </footer>

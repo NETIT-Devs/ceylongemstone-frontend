@@ -1,4 +1,6 @@
 import { useState } from "react";
+import ShopNavDropdown from "../components/ShopNavDropdown.jsx";
+import BrandLogo from "../components/BrandLogo.jsx";
 import {
   FaGem,
   FaShoppingBag,
@@ -25,12 +27,14 @@ import {
   FaCopy,
   FaPrint,
   FaUser,
-  FaExclamationTriangle
+  FaExclamationTriangle,
+  FaUpload
 } from "react-icons/fa";
 import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
 import CollectionDrawerPanel from "../components/CollectionDrawerPanel.jsx";
 import SiteInquiryModal from "../components/SiteInquiryModal.jsx";
 import { products } from "./Gemstones.jsx";
+import { products as jewelleryProducts } from "./Juwellery.jsx";
 import {
   getCollectionItemKey,
   useSharedCollection
@@ -39,7 +43,16 @@ import {
   LOW_STOCK_THRESHOLD,
   useGemInventory
 } from "../useGemInventory.js";
+import { useGemProductOverrides } from "../useGemProductOverrides.js";
 import { useGemSubmissions } from "../useGemSubmissions.js";
+import { useJewelleryProductOverrides } from "../useJewelleryProductOverrides.js";
+import { useJewellerySubmissions } from "../useJewellerySubmissions.js";
+import {
+  prepareGemGalleryImage,
+  prepareProductImage,
+  readGemInspectionVideo
+} from "../imageUpload.js";
+import { useHomeHeroSlides, useManagedBlogPosts } from "../useSiteContent.js";
 import { useCustomerReviews } from "../useCustomerReviews.js";
 import {
   endAdminSession,
@@ -124,6 +137,15 @@ const initialAdminPayments = [
   }
 ];
 
+const gemDetailImageLabels = [
+  "Front",
+  "Left",
+  "Right",
+  "Back",
+  "Additional View 1",
+  "Additional View 2"
+];
+
 const AdminDashboard = ({ isSuperAdmin = false }) => {
   const [wishlist, setWishlist] = useSharedCollection("ceylon-wishlist");
   const [cart, setCart] = useSharedCollection("ceylon-cart");
@@ -133,11 +155,27 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
   const [activeTab, setActiveTab] = useState("ORDERS");
   const [adminOrders, setAdminOrders] = useState(initialAdminOrders);
   const [gemSubmissions, setGemSubmissions] = useGemSubmissions();
+  const [gemProductOverrides, setGemProductOverrides] = useGemProductOverrides();
+  const [jewellerySubmissions, setJewellerySubmissions] = useJewellerySubmissions();
+  const [jewelleryProductOverrides, setJewelleryProductOverrides] =
+    useJewelleryProductOverrides();
   const [deletedGemIds, setDeletedGemIds] = useState([]);
   const gemsList = [
-    ...products,
+    ...products.map((gem) => ({
+      ...gem,
+      ...gemProductOverrides[String(gem.id)]
+    })),
     ...gemSubmissions.map((submission) => submission.gem)
   ].filter((gem) => !deletedGemIds.includes(gem.id));
+  const jewelleryList = [
+    ...jewelleryProducts
+      .map((item) => ({
+        ...item,
+        ...jewelleryProductOverrides[String(item.id)]
+      }))
+      .filter((item) => !item.deleted),
+    ...jewellerySubmissions.map((submission) => submission.jewellery)
+  ];
   const [inventory, setInventory] = useGemInventory(products);
   const [stockAdditions, setStockAdditions] = useState({});
   const [payments, setPayments] = useState(initialAdminPayments);
@@ -189,8 +227,175 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     origin: "Ratnapura, Sri Lanka",
     price: "",
     tag: "CERTIFIED NATURAL",
-    image: "/blueGem.jpg"
+    image: "/blueGem.jpg",
+    galleryViews: [],
+    videoUrl: "",
+    discountRate: "",
+    discountLabel: "",
+    offerStartDate: "",
+    offerEndDate: ""
   });
+  const [editingGemId, setEditingGemId] = useState(null);
+  const [newJewellery, setNewJewellery] = useState({
+    name: "",
+    category: "Necklaces",
+    color: "",
+    shape: "",
+    price: "",
+    image: "",
+    discountRate: "",
+    offerStartDate: "",
+    offerEndDate: ""
+  });
+  const [editingJewelleryId, setEditingJewelleryId] = useState(null);
+  const [managedHeroSlides, setManagedHeroSlides] = useHomeHeroSlides();
+  const [managedBlogPosts, setManagedBlogPosts] = useManagedBlogPosts();
+  const [newHeroSlide, setNewHeroSlide] = useState({ alt: "", image: "" });
+  const [newBlogPost, setNewBlogPost] = useState({
+    title: "",
+    category: "Gemstone Guide",
+    excerpt: "",
+    content: "",
+    image: ""
+  });
+
+  const handleProductImageSelection = async (event, setForm) => {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    try {
+      const image = await prepareProductImage(file);
+      setForm((current) => ({ ...current, image }));
+    } catch (error) {
+      showCustomAlert(
+        error instanceof Error ? error.message : "The selected image could not be processed.",
+        "Image Upload Error",
+        "warning"
+      );
+    } finally {
+      input.value = "";
+    }
+  };
+
+  const handleGemGalleryImageSelection = async (event, label) => {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    try {
+      const url = await prepareGemGalleryImage(file);
+      setNewGem((current) => ({
+        ...current,
+        image: label === "Front" ? url : current.image,
+        galleryViews: [
+          ...current.galleryViews.filter((view) => view.label !== label),
+          { label, url }
+        ]
+      }));
+    } catch (error) {
+      showCustomAlert(
+        error instanceof Error ? error.message : "The selected image could not be processed.",
+        "Gem View Upload Error",
+        "warning"
+      );
+    } finally {
+      input.value = "";
+    }
+  };
+
+  const handleGemVideoSelection = async (event) => {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    try {
+      const videoUrl = await readGemInspectionVideo(file);
+      setNewGem((current) => ({ ...current, videoUrl }));
+    } catch (error) {
+      showCustomAlert(
+        error instanceof Error ? error.message : "The selected video could not be processed.",
+        "Gem Video Upload Error",
+        "warning"
+      );
+    } finally {
+      input.value = "";
+    }
+  };
+
+  const handleAddHeroSlide = (event) => {
+    event.preventDefault();
+    if (!newHeroSlide.alt.trim() || !newHeroSlide.image) {
+      showCustomAlert("Add a slide title and choose an image.", "Complete the Hero Slide", "warning");
+      return;
+    }
+
+    const slide = {
+      id: `admin-hero-${Date.now()}`,
+      alt: newHeroSlide.alt.trim(),
+      image: newHeroSlide.image
+    };
+    setManagedHeroSlides((current) => [...current, slide]);
+    setNewHeroSlide({ alt: "", image: "" });
+    showCustomAlert("The new homepage hero slide has been published.", "Hero Slide Published", "success");
+  };
+
+  const handleAddBlogPost = (event) => {
+    event.preventDefault();
+    const paragraphs = newBlogPost.content
+      .split(/\r?\n/)
+      .map((paragraph) => paragraph.trim())
+      .filter(Boolean);
+    if (!newBlogPost.title.trim() || !newBlogPost.excerpt.trim() ||
+      paragraphs.length === 0 || !newBlogPost.image) {
+      showCustomAlert(
+        "Complete the title, summary, article text, and image before publishing.",
+        "Complete the Blog Post",
+        "warning"
+      );
+      return;
+    }
+
+    const post = {
+      id: `admin-blog-${Date.now()}`,
+      title: newBlogPost.title.trim(),
+      category: newBlogPost.category,
+      date: new Date().toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+      }),
+      readTime: `${Math.max(1, Math.ceil(paragraphs.join(" ").split(/\s+/).length / 200))} min read`,
+      image: newBlogPost.image,
+      excerpt: newBlogPost.excerpt.trim(),
+      content: paragraphs
+    };
+    setManagedBlogPosts((current) => [post, ...current]);
+    setNewBlogPost({
+      title: "",
+      category: "Gemstone Guide",
+      excerpt: "",
+      content: "",
+      image: ""
+    });
+    showCustomAlert("The article has been published on the Blog page.", "Blog Post Published", "success");
+  };
+
+  const handleRemoveSiteContent = (kind, id) => {
+    const isHeroSlide = kind === "hero slide";
+    showCustomConfirm(
+      `Remove this ${kind} from the website?`,
+      () => {
+        if (isHeroSlide) {
+          setManagedHeroSlides((current) => current.filter((item) => item.id !== id));
+        } else {
+          setManagedBlogPosts((current) => current.filter((item) => item.id !== id));
+        }
+      },
+      `Remove ${isHeroSlide ? "Hero Slide" : "Blog Post"}`,
+      "danger"
+    );
+  };
 
   const handleStatusChange = (orderId, newStatus) => {
     setAdminOrders((prev) =>
@@ -299,51 +504,136 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     );
   };
 
-  const handleAddGem = (e) => {
-    e.preventDefault();
-    if (!newGem.name || !newGem.price) return;
-
-    const gemId = Date.now();
-    const createdGem = {
-      id: gemId,
-      detailId: gemId,
-      productKey: `${newGem.name.toLowerCase().replace(/\s+/g, "-")}-${gemId}`,
-      name: newGem.name.toUpperCase(),
-      category: "Other Gemstone",
-      origin: newGem.origin,
-      carat: newGem.carat ? Number.parseFloat(newGem.carat) : 3,
-      basePriceUSD: Number(newGem.price),
-      price: Number(newGem.price),
-      image: newGem.image || "/blueGem.jpg",
-      tag: newGem.tag || "CERTIFIED NATURAL"
-    };
-
-    setGemSubmissions((current) => [
-      ...current,
-      {
-        id: gemId,
-        gem: createdGem,
-        status: "pending",
-        submittedAt: new Date().toISOString()
-      }
-    ]);
-    setInventory((current) => ({
-      ...current,
-      [getCollectionItemKey(createdGem)]: current[getCollectionItemKey(createdGem)] ?? 1
-    }));
+  const resetGemForm = () => {
     setNewGem({
       name: "",
       carat: "",
       origin: "Ratnapura, Sri Lanka",
       price: "",
       tag: "CERTIFIED NATURAL",
-      image: "/blueGem.jpg"
+      image: "/blueGem.jpg",
+      galleryViews: [],
+      videoUrl: "",
+      discountRate: "",
+      discountLabel: "",
+      offerStartDate: "",
+      offerEndDate: ""
     });
-    showCustomAlert(
-      `"${createdGem.name}" has been submitted for Super Admin approval.`,
-      "Gemstone Submitted",
-      "success"
+    setEditingGemId(null);
+  };
+
+  const handleEditGem = (gem) => {
+    setEditingGemId(gem.id);
+    setNewGem({
+      name: gem.name,
+      carat: gem.carat ? String(gem.carat) : "",
+      origin: gem.origin || "Ratnapura, Sri Lanka",
+      price: String(gem.basePriceUSD ?? gem.price ?? ""),
+      tag: gem.tag || "CERTIFIED NATURAL",
+      image: gem.image || "/blueGem.jpg",
+      galleryViews: Array.isArray(gem.galleryViews) ? gem.galleryViews : [],
+      videoUrl: gem.videoUrl || "",
+      discountRate: gem.discountRate != null ? String(gem.discountRate) : "",
+      discountLabel: gem.discountLabel || "",
+      offerStartDate: gem.offerStartDate || "",
+      offerEndDate: gem.offerEndDate || ""
+    });
+    setActiveTab("GEMS");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleAddGem = (e) => {
+    e.preventDefault();
+    if (!newGem.name || !newGem.price) return;
+    if (newGem.discountRate && (!newGem.offerStartDate || !newGem.offerEndDate)) {
+      showCustomAlert("Choose both offer start and end dates.", "Offer Dates Required", "warning");
+      return;
+    }
+    if (
+      newGem.discountRate &&
+      newGem.offerStartDate > newGem.offerEndDate
+    ) {
+      showCustomAlert("Offer end date must be on or after the start date.", "Invalid Offer Dates", "warning");
+      return;
+    }
+
+    const normalizedPrice = Number(newGem.price);
+    const normalizedDiscountRate = Number(newGem.discountRate);
+    if (
+      !Number.isFinite(normalizedPrice) ||
+      normalizedPrice <= 0 ||
+      (newGem.discountRate &&
+        (!Number.isFinite(normalizedDiscountRate) ||
+          normalizedDiscountRate < 1 ||
+          normalizedDiscountRate > 100))
+    ) {
+      showCustomAlert("Enter a valid price and an offer rate between 1 and 100.", "Invalid Gemstone Details", "warning");
+      return;
+    }
+
+    const gemId = editingGemId ?? Date.now();
+    const existingProduct = products.find((gem) => gem.id === editingGemId);
+    const existingSubmission = gemSubmissions.find(
+      (submission) => submission.gem.id === editingGemId
     );
+    const createdGem = {
+      id: gemId,
+      detailId: gemId,
+      productKey: `${newGem.name.toLowerCase().replace(/\s+/g, "-")}-${gemId}`,
+      name: newGem.name.toUpperCase(),
+      category: existingProduct?.category ?? existingSubmission?.gem.category ?? "Other Gemstone",
+      origin: newGem.origin,
+      carat: newGem.carat ? Number.parseFloat(newGem.carat) : 3,
+      basePriceUSD: normalizedPrice,
+      price: normalizedPrice,
+      image: newGem.image || "/blueGem.jpg",
+      galleryViews: newGem.galleryViews.filter((view) => view.url),
+      videoUrl: newGem.videoUrl || "",
+      tag: newGem.tag || "CERTIFIED NATURAL",
+      discountRate: newGem.discountRate ? normalizedDiscountRate : null,
+      discountLabel: newGem.discountLabel.trim(),
+      offerStartDate: newGem.discountRate ? newGem.offerStartDate : "",
+      offerEndDate: newGem.discountRate ? newGem.offerEndDate : ""
+    };
+
+    if (editingGemId) {
+      setGemSubmissions((current) =>
+        current.map((submission) =>
+          submission.gem.id === editingGemId
+            ? { ...submission, gem: createdGem }
+            : submission
+        )
+      );
+      if (existingProduct) {
+        Object.assign(existingProduct, createdGem);
+        setGemProductOverrides((current) => ({
+          ...current,
+          [String(editingGemId)]: createdGem
+        }));
+      }
+      showCustomAlert(`"${createdGem.name}" has been updated successfully.`, "Gemstone Updated", "success");
+    } else {
+      setGemSubmissions((current) => [
+        ...current,
+        {
+          id: gemId,
+          gem: createdGem,
+          status: "pending",
+          submittedAt: new Date().toISOString()
+        }
+      ]);
+      showCustomAlert(
+        `"${createdGem.name}" has been submitted for Super Admin approval.`,
+        "Gemstone Submitted",
+        "success"
+      );
+    }
+
+    setInventory((current) => ({
+      ...current,
+      [getCollectionItemKey(createdGem)]: current[getCollectionItemKey(createdGem)] ?? 1
+    }));
+    resetGemForm();
   };
 
   const handleGemApproval = (submissionId, status) => {
@@ -353,6 +643,166 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
           ? { ...submission, status, reviewedAt: new Date().toISOString() }
           : submission
       )
+    );
+  };
+
+  const resetJewelleryForm = () => {
+    setNewJewellery({
+      name: "",
+      category: "Necklaces",
+      color: "",
+      shape: "",
+      price: "",
+      image: "",
+      discountRate: "",
+      offerStartDate: "",
+      offerEndDate: ""
+    });
+    setEditingJewelleryId(null);
+  };
+
+  const handleEditJewellery = (item) => {
+    setEditingJewelleryId(item.id);
+    setNewJewellery({
+      name: item.name || "",
+      category: item.category || "Necklaces",
+      color: item.color || "",
+      shape: item.shape || "",
+      price: String(item.basePriceUSD ?? item.price ?? ""),
+      image: item.image || "",
+      discountRate: item.discountRate != null ? String(item.discountRate) : "",
+      offerStartDate: item.offerStartDate || "",
+      offerEndDate: item.offerEndDate || ""
+    });
+    setActiveTab("JEWELLERY");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleSaveJewellery = (event) => {
+    event.preventDefault();
+    if (!newJewellery.name.trim() || !newJewellery.price) return;
+    if (!newJewellery.image) {
+      showCustomAlert("Choose an image for this jewellery item.", "Image Required", "warning");
+      return;
+    }
+    if (newJewellery.discountRate && (!newJewellery.offerStartDate || !newJewellery.offerEndDate)) {
+      showCustomAlert("Choose both offer start and end dates.", "Offer Dates Required", "warning");
+      return;
+    }
+    if (
+      newJewellery.discountRate &&
+      newJewellery.offerStartDate > newJewellery.offerEndDate
+    ) {
+      showCustomAlert("Offer end date must be on or after the start date.", "Invalid Offer Dates", "warning");
+      return;
+    }
+
+    const normalizedPrice = Number(newJewellery.price);
+    const normalizedRate = Number(newJewellery.discountRate);
+    if (
+      !Number.isFinite(normalizedPrice) ||
+      normalizedPrice <= 0 ||
+      (newJewellery.discountRate &&
+        (!Number.isFinite(normalizedRate) || normalizedRate < 1 || normalizedRate > 100))
+    ) {
+      showCustomAlert("Enter a valid price and an offer rate between 1 and 100.", "Invalid Jewellery Details", "warning");
+      return;
+    }
+
+    const existingBaseProduct = jewelleryProducts.find(
+      (item) => item.id === editingJewelleryId
+    );
+    const existingSubmission = jewellerySubmissions.find(
+      (submission) => submission.jewellery.id === editingJewelleryId
+    );
+    const itemId = editingJewelleryId ?? Date.now();
+    const savedItem = {
+      id: itemId,
+      productKey:
+        existingBaseProduct?.productKey ||
+        existingSubmission?.jewellery.productKey ||
+        `${newJewellery.name.trim().toLowerCase().replace(/\s+/g, "-")}-${itemId}`,
+      name: newJewellery.name.trim(),
+      category: newJewellery.category,
+      color: newJewellery.color.trim(),
+      shape: newJewellery.shape.trim() || `${newJewellery.category.slice(0, -1)} style`,
+      cut: "Handcrafted",
+      treatment: "Handcrafted",
+      price: normalizedPrice,
+      basePriceUSD: normalizedPrice,
+      image: newJewellery.image.trim(),
+      discountRate: newJewellery.discountRate ? normalizedRate : null,
+      discountLabel: "",
+      offerStartDate: newJewellery.discountRate ? newJewellery.offerStartDate : "",
+      offerEndDate: newJewellery.discountRate ? newJewellery.offerEndDate : ""
+    };
+
+    if (editingJewelleryId !== null) {
+      if (existingSubmission) {
+        setJewellerySubmissions((current) =>
+          current.map((submission) =>
+            submission.id === existingSubmission.id
+              ? { ...submission, jewellery: savedItem }
+              : submission
+          )
+        );
+      } else {
+        setJewelleryProductOverrides((current) => ({
+          ...current,
+          [String(itemId)]: savedItem
+        }));
+      }
+      showCustomAlert(`"${savedItem.name}" has been updated successfully.`, "Jewellery Updated", "success");
+    } else {
+      setJewellerySubmissions((current) => [
+        ...current,
+        {
+          id: itemId,
+          jewellery: savedItem,
+          status: "pending",
+          submittedAt: new Date().toISOString()
+        }
+      ]);
+      showCustomAlert(
+        `"${savedItem.name}" has been submitted for Super Admin approval.`,
+        "Jewellery Submitted",
+        "success"
+      );
+    }
+    resetJewelleryForm();
+  };
+
+  const handleJewelleryApproval = (submissionId, status) => {
+    setJewellerySubmissions((current) =>
+      current.map((submission) =>
+        submission.id === submissionId
+          ? { ...submission, status, reviewedAt: new Date().toISOString() }
+          : submission
+      )
+    );
+  };
+
+  const handleDeleteJewellery = (itemId) => {
+    showCustomConfirm(
+      "Remove this jewellery item from the active shop collection?",
+      () => {
+        const isBaseProduct = jewelleryProducts.some((item) => item.id === itemId);
+        if (isBaseProduct) {
+          setJewelleryProductOverrides((current) => ({
+            ...current,
+            [String(itemId)]: {
+              ...current[String(itemId)],
+              deleted: true
+            }
+          }));
+        } else {
+          setJewellerySubmissions((current) =>
+            current.filter((submission) => submission.jewellery.id !== itemId)
+          );
+        }
+      },
+      "Remove Jewellery",
+      "danger"
     );
   };
 
@@ -401,6 +851,9 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
   const pendingGemApprovals = gemSubmissions.filter(
     (submission) => submission.status === "pending"
   );
+  const pendingJewelleryApprovals = jewellerySubmissions.filter(
+    (submission) => submission.status === "pending"
+  );
   const currentAdmin = readAdminSession() || (isSuperAdmin ? {
     accountId: "admin-super-root",
     name: "Super Administrator",
@@ -418,8 +871,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       {/* NAVBAR */}
       <nav className="about-navbar admin-navbar">
         <a href="/" className="about-navbar-logo">
-          <img
-            src="/logo.png"
+          <BrandLogo
             alt="Ceylon Royal Gemstones"
             className="navbar-logo-img"
             onError={(e) => {
@@ -436,8 +888,8 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
         <MobileSiteMenu />
         <div className="about-nav-links">
           <a href="/">Home</a>
-          <a href="/gemstones">Shop</a>
-          <a href="/About">Heritage</a>
+          <ShopNavDropdown />
+          <a href="/About">Our Story</a>
           <a href="/trust">Certification</a>
           <a href="/reviews">Reviews</a>
           <a href="/contact">Contact</a>
@@ -619,6 +1071,30 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
             >
               <FaGem /> Gems Management ({gemsList.length})
             </button>
+            <button
+              type="button"
+              className={`admin-tab-btn ${activeTab === "JEWELLERY" ? "active" : ""}`}
+              aria-pressed={activeTab === "JEWELLERY"}
+              onClick={() => setActiveTab("JEWELLERY")}
+            >
+              <FaGem /> Jewellery Management ({jewelleryList.length})
+            </button>
+            <button
+              type="button"
+              className={`admin-tab-btn ${activeTab === "HERO_SLIDES" ? "active" : ""}`}
+              aria-pressed={activeTab === "HERO_SLIDES"}
+              onClick={() => setActiveTab("HERO_SLIDES")}
+            >
+              <FaUpload /> Home Hero Slides ({managedHeroSlides.length})
+            </button>
+            <button
+              type="button"
+              className={`admin-tab-btn ${activeTab === "BLOG" ? "active" : ""}`}
+              aria-pressed={activeTab === "BLOG"}
+              onClick={() => setActiveTab("BLOG")}
+            >
+              <FaFileInvoice /> Blog Management ({managedBlogPosts.length})
+            </button>
             {isSuperAdmin && (
               <button
                 type="button"
@@ -627,6 +1103,16 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                 onClick={() => setActiveTab("GEM_APPROVAL")}
               >
                 <FaCheckCircle /> Gem Approval ({pendingGemApprovals.length})
+              </button>
+            )}
+            {isSuperAdmin && (
+              <button
+                type="button"
+                className={`admin-tab-btn ${activeTab === "JEWELLERY_APPROVAL" ? "active" : ""}`}
+                aria-pressed={activeTab === "JEWELLERY_APPROVAL"}
+                onClick={() => setActiveTab("JEWELLERY_APPROVAL")}
+              >
+                <FaCheckCircle /> Jewellery Approval ({pendingJewelleryApprovals.length})
               </button>
             )}
             <button
@@ -1111,6 +1597,84 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
             </section>
           )}
 
+          {isSuperAdmin && activeTab === "JEWELLERY_APPROVAL" && (
+            <section className="admin-section">
+              <div className="admin-section-heading">
+                <div>
+                  <h2><FaCheckCircle /> Jewellery Approval</h2>
+                  <p>Review jewellery items submitted by Admins before they appear in the shop.</p>
+                </div>
+                <span className="admin-live-note">
+                  {pendingJewelleryApprovals.length} PENDING APPROVALS
+                </span>
+              </div>
+              <div className="admin-table-wrapper">
+                <table className="admin-table gem-approval-table">
+                  <thead>
+                    <tr>
+                      <th>Jewellery</th>
+                      <th>Type &amp; Color</th>
+                      <th>Price</th>
+                      <th>Submitted</th>
+                      <th>Decision</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pendingJewelleryApprovals.map((submission) => (
+                      <tr key={submission.id}>
+                        <td>
+                          <strong>{submission.jewellery.name}</strong>
+                          <div className="table-subtext">
+                            {submission.jewellery.shape}
+                          </div>
+                        </td>
+                        <td>
+                          {submission.jewellery.category}
+                          <div className="table-subtext">{submission.jewellery.color}</div>
+                        </td>
+                        <td>
+                          <strong className="gold-text">
+                            ${Number(submission.jewellery.price || 0).toLocaleString()} USD
+                          </strong>
+                        </td>
+                        <td>
+                          {submission.submittedAt
+                            ? new Date(submission.submittedAt).toLocaleDateString()
+                            : "Just now"}
+                        </td>
+                        <td>
+                          <div className="gem-approval-actions">
+                            <button
+                              type="button"
+                              className="gem-approval-approve"
+                              onClick={() => handleJewelleryApproval(submission.id, "approved")}
+                            >
+                              <FaCheckCircle /> Approve
+                            </button>
+                            <button
+                              type="button"
+                              className="gem-approval-reject"
+                              onClick={() => handleJewelleryApproval(submission.id, "rejected")}
+                            >
+                              <FaTimes /> Reject
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {pendingJewelleryApprovals.length === 0 && (
+                      <tr>
+                        <td className="admin-empty-state" colSpan="5">
+                          There are no jewellery items waiting for approval.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
           {/* TAB 2: GEMS MANAGEMENT */}
           {activeTab === "GEMS" && (
             <section className="admin-section">
@@ -1166,17 +1730,119 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                     />
                   </div>
                   <div className="form-group">
-                    <label>Image URL</label>
+                    <span className="admin-form-label">Gemstone Image</span>
+                    <label className="admin-image-picker" htmlFor="gem-image-file">
+                      <input
+                        id="gem-image-file"
+                        className="admin-image-picker-input"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={(event) => handleProductImageSelection(event, setNewGem)}
+                      />
+                      <span className="admin-image-picker-icon"><FaUpload /></span>
+                      <span className="admin-image-picker-copy">
+                        <strong>{newGem.image ? "Choose a different image" : "Choose an image"}</strong>
+                        <small>Browse files on this device</small>
+                      </span>
+                      <span className="admin-image-picker-action">Browse files</span>
+                    </label>
+                    <span className="admin-image-help">JPEG, PNG, or WebP · up to 10 MB · works on desktop, tablet, and mobile.</span>
+                  </div>
+                  <div className="site-content-wide-field">
+                    <h3 className="gem-detail-upload-heading">View Details Gallery</h3>
+                    <p className="admin-image-help">
+                      Upload up to six labeled detail images and an inspection video for this gemstone.
+                    </p>
+                    <div className="gem-detail-upload-grid">
+                      {gemDetailImageLabels.map((label, index) => {
+                        const selectedView = newGem.galleryViews.find(
+                          (view) => view.label.toLowerCase() === label.toLowerCase()
+                        );
+                        const inputId = `gem-detail-image-${index}`;
+                        return (
+                          <div className="form-group" key={label}>
+                            <span className="admin-form-label">{label} View</span>
+                            <label className="admin-image-picker" htmlFor={inputId}>
+                              <input
+                                id={inputId}
+                                className="admin-image-picker-input"
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                onChange={(event) => handleGemGalleryImageSelection(event, label)}
+                              />
+                              <span className="admin-image-picker-icon"><FaUpload /></span>
+                              <span className="admin-image-picker-copy">
+                                <strong>{selectedView ? "Replace image" : "Choose image"}</strong>
+                                <small>{selectedView ? "Image uploaded" : "JPEG, PNG, or WebP"}</small>
+                              </span>
+                              <span className="admin-image-picker-action">Browse</span>
+                            </label>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="form-group gem-detail-video-upload">
+                      <span className="admin-form-label">Inspection Video</span>
+                      <label className="admin-image-picker" htmlFor="gem-detail-video">
+                        <input
+                          id="gem-detail-video"
+                          className="admin-image-picker-input"
+                          type="file"
+                          accept="video/mp4,video/webm"
+                          onChange={handleGemVideoSelection}
+                        />
+                        <span className="admin-image-picker-icon"><FaUpload /></span>
+                        <span className="admin-image-picker-copy">
+                          <strong>{newGem.videoUrl ? "Replace inspection video" : "Choose inspection video"}</strong>
+                          <small>{newGem.videoUrl ? "Video uploaded" : "MP4 or WebM · up to 1 MB"}</small>
+                        </span>
+                        <span className="admin-image-picker-action">Browse</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>Offer Rate (%) (optional)</label>
                     <input
-                      type="text"
-                      placeholder="/blueGem.jpg"
-                      value={newGem.image}
-                      onChange={(e) => setNewGem({ ...newGem, image: e.target.value })}
+                      type="number"
+                      placeholder="e.g. 10"
+                      value={newGem.discountRate}
+                      onChange={(e) => setNewGem({ ...newGem, discountRate: e.target.value })}
+                      min="1"
+                      max="100"
+                      step="1"
                     />
                   </div>
-                  <button type="submit" className="add-gem-submit-btn">
-                    <FaPlus /> ADD GEMSTONE TO INVENTORY
-                  </button>
+                  <div className="form-group">
+                    <label htmlFor="gem-offer-start-date">Offer Start Date</label>
+                    <input
+                      id="gem-offer-start-date"
+                      type="date"
+                      value={newGem.offerStartDate}
+                      onChange={(e) => setNewGem({ ...newGem, offerStartDate: e.target.value })}
+                      required={Boolean(newGem.discountRate)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="gem-offer-end-date">Offer End Date</label>
+                    <input
+                      id="gem-offer-end-date"
+                      type="date"
+                      value={newGem.offerEndDate}
+                      onChange={(e) => setNewGem({ ...newGem, offerEndDate: e.target.value })}
+                      min={newGem.offerStartDate || undefined}
+                      required={Boolean(newGem.discountRate)}
+                    />
+                  </div>
+                  <div className="add-gem-form-actions">
+                    <button type="submit" className="add-gem-submit-btn">
+                      <FaPlus /> {editingGemId ? "UPDATE GEMSTONE" : "ADD GEMSTONE TO INVENTORY"}
+                    </button>
+                    {editingGemId && (
+                      <button type="button" className="add-gem-cancel-btn" onClick={resetGemForm}>
+                        <FaTimes /> Cancel Edit
+                      </button>
+                    )}
+                  </div>
                 </form>
               </div>
 
@@ -1208,7 +1874,22 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                       <h3>{gem.name}</h3>
                       <p>{gem.carat ? `${gem.carat} Ct` : "3.50 Ct"} • {gem.origin}</p>
                       <strong className="gem-price">${Number(gem.basePriceUSD || gem.price || 0).toLocaleString()} USD</strong>
+                      {Number(gem.discountRate) > 0 && (
+                        <span className="admin-gem-discount-rate">
+                          OFFER RATE: {Number(gem.discountRate)}% OFF
+                          {gem.offerStartDate && gem.offerEndDate
+                            ? ` · ${gem.offerStartDate} to ${gem.offerEndDate}`
+                            : ""}
+                        </span>
+                      )}
                       <div className="admin-gem-actions">
+                        <button
+                          type="button"
+                          className="gem-edit-btn"
+                          onClick={() => handleEditGem(gem)}
+                        >
+                          Edit
+                        </button>
                         <button
                           type="button"
                           className="gem-delete-btn"
@@ -1224,6 +1905,386 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
               </div>
             </section>
           )}
+
+          {activeTab === "JEWELLERY" && (
+            <section className="admin-section">
+              <div className="add-gem-card">
+                <h2><FaPlus /> {editingJewelleryId ? "Edit Jewellery Item" : "Add Jewellery to Collection"}</h2>
+                <p>
+                  New items are sent to Super Admin for approval. Updates to existing items are saved immediately.
+                </p>
+                <form onSubmit={handleSaveJewellery} className="add-gem-form">
+                  <div className="form-group">
+                    <label>Jewellery Name</label>
+                    <input
+                      type="text"
+                      value={newJewellery.name}
+                      onChange={(event) => setNewJewellery({ ...newJewellery, name: event.target.value })}
+                      placeholder="e.g. Blue Gem Necklace"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="jewellery-category">Category</label>
+                    <select
+                      id="jewellery-category"
+                      value={newJewellery.category}
+                      onChange={(event) => setNewJewellery({ ...newJewellery, category: event.target.value })}
+                    >
+                      <option value="Necklaces">Necklaces</option>
+                      <option value="Bracelets">Bracelets</option>
+                      <option value="Rings">Rings</option>
+                      <option value="Earrings">Earrings</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Gemstone Color</label>
+                    <input
+                      type="text"
+                      value={newJewellery.color}
+                      onChange={(event) => setNewJewellery({ ...newJewellery, color: event.target.value })}
+                      placeholder="e.g. Blue"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Design / Style</label>
+                    <input
+                      type="text"
+                      value={newJewellery.shape}
+                      onChange={(event) => setNewJewellery({ ...newJewellery, shape: event.target.value })}
+                      placeholder="e.g. Gemstone Pendant Necklace"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Price (USD $)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      step="0.01"
+                      value={newJewellery.price}
+                      onChange={(event) => setNewJewellery({ ...newJewellery, price: event.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <span className="admin-form-label">Jewellery Image</span>
+                    <label className="admin-image-picker" htmlFor="jewellery-image-file">
+                      <input
+                        id="jewellery-image-file"
+                        className="admin-image-picker-input"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={(event) => handleProductImageSelection(event, setNewJewellery)}
+                      />
+                      <span className="admin-image-picker-icon"><FaUpload /></span>
+                      <span className="admin-image-picker-copy">
+                        <strong>{newJewellery.image ? "Choose a different image" : "Choose an image"}</strong>
+                        <small>Browse files on this device</small>
+                      </span>
+                      <span className="admin-image-picker-action">Browse files</span>
+                    </label>
+                    <span className="admin-image-help">JPEG, PNG, or WebP · up to 10 MB · works on desktop, tablet, and mobile.</span>
+                  </div>
+                  <div className="form-group">
+                    <label>Offer Rate (%) (optional)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      step="1"
+                      value={newJewellery.discountRate}
+                      onChange={(event) => setNewJewellery({ ...newJewellery, discountRate: event.target.value })}
+                      placeholder="e.g. 10"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="jewellery-offer-start-date">Offer Start Date</label>
+                    <input
+                      id="jewellery-offer-start-date"
+                      type="date"
+                      value={newJewellery.offerStartDate}
+                      onChange={(event) => setNewJewellery({ ...newJewellery, offerStartDate: event.target.value })}
+                      required={Boolean(newJewellery.discountRate)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="jewellery-offer-end-date">Offer End Date</label>
+                    <input
+                      id="jewellery-offer-end-date"
+                      type="date"
+                      value={newJewellery.offerEndDate}
+                      onChange={(event) => setNewJewellery({ ...newJewellery, offerEndDate: event.target.value })}
+                      min={newJewellery.offerStartDate || undefined}
+                      required={Boolean(newJewellery.discountRate)}
+                    />
+                  </div>
+                  <div className="add-gem-form-actions">
+                    <button type="submit" className="add-gem-submit-btn">
+                      <FaPlus /> {editingJewelleryId ? "UPDATE JEWELLERY" : "SUBMIT JEWELLERY"}
+                    </button>
+                    {editingJewelleryId !== null && (
+                      <button type="button" className="add-gem-cancel-btn" onClick={resetJewelleryForm}>
+                        <FaTimes /> Cancel Edit
+                      </button>
+                    )}
+                  </div>
+                </form>
+              </div>
+
+              <h2><FaGem /> Jewellery Collection ({jewelleryList.length})</h2>
+              <div className="admin-gems-grid">
+                {jewelleryList.map((item) => {
+                  const reviewStatus = jewellerySubmissions.find(
+                    (submission) => submission.jewellery.id === item.id
+                  )?.status;
+                  return (
+                    <article className="admin-gem-card" key={item.id}>
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        onError={(event) => {
+                          event.currentTarget.onerror = null;
+                          event.currentTarget.src = "/logo.png";
+                        }}
+                      />
+                      <div className="admin-gem-body">
+                        <span className="gem-tag">{item.category}</span>
+                        {reviewStatus && (
+                          <span className={`gem-review-status status-${reviewStatus}`}>
+                            {reviewStatus}
+                          </span>
+                        )}
+                        <h3>{item.name}</h3>
+                        <p>{item.color} • {item.shape}</p>
+                        <strong className="gem-price">
+                          ${Number(item.basePriceUSD ?? item.price ?? 0).toLocaleString()} USD
+                        </strong>
+                        {Number(item.discountRate) > 0 && (
+                          <span className="admin-gem-discount-rate">
+                            OFFER: {Number(item.discountRate)}% OFF
+                            {item.offerStartDate && item.offerEndDate
+                              ? ` · ${item.offerStartDate} to ${item.offerEndDate}`
+                              : ""}
+                          </span>
+                        )}
+                        <div className="admin-gem-actions">
+                          <button
+                            type="button"
+                            className="gem-edit-btn"
+                            onClick={() => handleEditJewellery(item)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            className="gem-delete-btn"
+                            onClick={() => handleDeleteJewellery(item.id)}
+                          >
+                            <FaTrash /> Remove
+                          </button>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+                {jewelleryList.length === 0 && (
+                  <p className="admin-empty-state">No jewellery items are in the collection.</p>
+                )}
+              </div>
+            </section>
+          )}
+
+          {activeTab === "HERO_SLIDES" && (
+            <section className="admin-section">
+              <div className="admin-section-heading">
+                <div>
+                  <h2><FaUpload /> Homepage Hero Slides</h2>
+                  <p>Upload an image and title to add it to the homepage hero slideshow.</p>
+                </div>
+                <span className="admin-live-note">{managedHeroSlides.length} UPLOADED SLIDES</span>
+              </div>
+              <div className="add-gem-card">
+                <form className="add-gem-form" onSubmit={handleAddHeroSlide}>
+                  <div className="form-group">
+                    <label htmlFor="hero-slide-title">Slide title / image description</label>
+                    <input
+                      id="hero-slide-title"
+                      value={newHeroSlide.alt}
+                      onChange={(event) => setNewHeroSlide((current) => ({
+                        ...current,
+                        alt: event.target.value
+                      }))}
+                      placeholder="e.g. Rare Ceylon Blue Sapphire"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <span className="admin-form-label">Hero slide image</span>
+                    <label className="admin-image-picker" htmlFor="hero-slide-image">
+                      <input
+                        id="hero-slide-image"
+                        className="admin-image-picker-input"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={(event) => handleProductImageSelection(event, setNewHeroSlide)}
+                      />
+                      <span className="admin-image-picker-icon"><FaUpload /></span>
+                      <span className="admin-image-picker-copy">
+                        <strong>{newHeroSlide.image ? "Image selected" : "Choose a slide image"}</strong>
+                        <small>Browse files on this device</small>
+                      </span>
+                      <span className="admin-image-picker-action">Browse files</span>
+                    </label>
+                    <span className="admin-image-help">JPEG, PNG, or WebP · up to 10 MB.</span>
+                  </div>
+                  <div className="add-gem-form-actions">
+                    <button type="submit" className="add-gem-submit-btn">
+                      <FaUpload /> PUBLISH HERO SLIDE
+                    </button>
+                  </div>
+                </form>
+              </div>
+              <div className="site-content-list">
+                {managedHeroSlides.map((slide) => (
+                  <article className="site-content-row" key={slide.id}>
+                    <div className="site-content-row-info">
+                      <strong>{slide.alt}</strong>
+                      <span>Homepage hero slide</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="gem-delete-btn"
+                      onClick={() => handleRemoveSiteContent("hero slide", slide.id)}
+                    >
+                      <FaTrash /> Remove
+                    </button>
+                  </article>
+                ))}
+                {managedHeroSlides.length === 0 && (
+                  <p className="admin-empty-state">No additional hero slides have been uploaded.</p>
+                )}
+              </div>
+            </section>
+          )}
+
+          {activeTab === "BLOG" && (
+            <section className="admin-section">
+              <div className="admin-section-heading">
+                <div>
+                  <h2><FaFileInvoice /> Blog Management</h2>
+                  <p>Write and publish an article with a cover image to the public Blog page.</p>
+                </div>
+                <span className="admin-live-note">{managedBlogPosts.length} PUBLISHED ARTICLES</span>
+              </div>
+              <div className="add-gem-card">
+                <form className="add-gem-form" onSubmit={handleAddBlogPost}>
+                  <div className="form-group">
+                    <label htmlFor="blog-post-title">Article title</label>
+                    <input
+                      id="blog-post-title"
+                      value={newBlogPost.title}
+                      onChange={(event) => setNewBlogPost((current) => ({
+                        ...current,
+                        title: event.target.value
+                      }))}
+                      placeholder="Enter an article title"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="blog-post-category">Category</label>
+                    <select
+                      id="blog-post-category"
+                      value={newBlogPost.category}
+                      onChange={(event) => setNewBlogPost((current) => ({
+                        ...current,
+                        category: event.target.value
+                      }))}
+                    >
+                      <option>Gemstone Guide</option>
+                      <option>Gemstone Article</option>
+                      <option>Jewellery</option>
+                      <option>Company News</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <span className="admin-form-label">Article cover image</span>
+                    <label className="admin-image-picker" htmlFor="blog-post-image">
+                      <input
+                        id="blog-post-image"
+                        className="admin-image-picker-input"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={(event) => handleProductImageSelection(event, setNewBlogPost)}
+                      />
+                      <span className="admin-image-picker-icon"><FaUpload /></span>
+                      <span className="admin-image-picker-copy">
+                        <strong>{newBlogPost.image ? "Image selected" : "Choose a cover image"}</strong>
+                        <small>Browse files on this device</small>
+                      </span>
+                      <span className="admin-image-picker-action">Browse files</span>
+                    </label>
+                    <span className="admin-image-help">JPEG, PNG, or WebP · up to 10 MB.</span>
+                  </div>
+                  <div className="form-group site-content-wide-field">
+                    <label htmlFor="blog-post-excerpt">Short summary</label>
+                    <textarea
+                      id="blog-post-excerpt"
+                      value={newBlogPost.excerpt}
+                      onChange={(event) => setNewBlogPost((current) => ({
+                        ...current,
+                        excerpt: event.target.value
+                      }))}
+                      rows="3"
+                      placeholder="A short introduction shown on the Blog page"
+                      required
+                    />
+                  </div>
+                  <div className="form-group site-content-wide-field">
+                    <label htmlFor="blog-post-content">Article content</label>
+                    <textarea
+                      id="blog-post-content"
+                      value={newBlogPost.content}
+                      onChange={(event) => setNewBlogPost((current) => ({
+                        ...current,
+                        content: event.target.value
+                      }))}
+                      rows="8"
+                      placeholder="Write the article here. Separate paragraphs with a blank line."
+                      required
+                    />
+                  </div>
+                  <div className="add-gem-form-actions">
+                    <button type="submit" className="add-gem-submit-btn">
+                      <FaPlus /> PUBLISH BLOG POST
+                    </button>
+                  </div>
+                </form>
+              </div>
+              <div className="site-content-list">
+                {managedBlogPosts.map((post) => (
+                  <article className="site-content-row" key={post.id}>
+                    <div className="site-content-row-info">
+                      <strong>{post.title}</strong>
+                      <span>{post.category} · {post.date}</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="gem-delete-btn"
+                      onClick={() => handleRemoveSiteContent("blog post", post.id)}
+                    >
+                      <FaTrash /> Remove
+                    </button>
+                  </article>
+                ))}
+                {managedBlogPosts.length === 0 && (
+                  <p className="admin-empty-state">No blog posts have been added through dashboard management.</p>
+                )}
+              </div>
+            </section>
+          )}
         </div>
       </main>
 
@@ -1232,7 +2293,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
         <div className="about-footer-grid">
           <div className="footer-brand">
             <div className="footer-logo">
-              <img src="/logo.png" alt="Ceylon Royal Gemstones" />
+              <BrandLogo alt="Ceylon Royal Gemstones" />
               <div><strong>CEYLON</strong><small>ROYAL GEMSTONES</small></div>
             </div>
             <p>Discover the timeless beauty of authentic Sri Lankan gemstones, carefully sourced, crafted and presented with royal elegance.</p>
@@ -1241,7 +2302,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
             <h4>EXPLORE</h4>
             <a href="/">Home</a>
             <a href="/gemstones">Shop</a>
-            <a href="/About">Our Heritage</a>
+            <a href="/About">Our Story</a>
             <a href="/trust">Trust &amp; Certification</a>
             <a href="/reviews">Reviews</a>
             <a href="/contact">Contact</a>
@@ -1266,7 +2327,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
           </div>
         </div>
         <div className="about-footer-bottom">
-          <p>© 2026 Ceylon Royal Gemstones. All Rights Reserved.</p>
+          <p>Copyright © 2026 Powered by NETIT Technology</p>
           <span>NATURAL • AUTHENTIC • CEYLON</span>
         </div>
       </footer>
@@ -1297,7 +2358,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
           >
             <div className="order-invoice-header">
               <div className="order-invoice-header-brand">
-                <img src="/logo.png" alt="Ceylon Royal Gemstones" />
+                <BrandLogo alt="Ceylon Royal Gemstones" />
                 <div className="order-invoice-header-titles">
                   <span>DISPATCH &amp; SHIPMENT DOSSIER</span>
                   <h3 id="invoice-title">Ceylon Royal Gemstones</h3>

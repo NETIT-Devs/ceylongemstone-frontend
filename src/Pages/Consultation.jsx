@@ -9,9 +9,12 @@ import {
   FaUser,
   FaWhatsapp
 } from "react-icons/fa";
+import ShopNavDropdown from "../components/ShopNavDropdown.jsx";
+import BrandLogo from "../components/BrandLogo.jsx";
 import ConsultantBooking from "../components/ConsultantBooking.jsx";
 import CollectionDrawerPanel from "../components/CollectionDrawerPanel.jsx";
 import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
+import CustomerOrdersNavLink from "../components/CustomerOrdersNavLink.jsx";
 import SiteInquiryModal from "../components/SiteInquiryModal.jsx";
 import { useSharedCollection } from "../useSharedCollection.js";
 import { useState } from "react";
@@ -28,19 +31,20 @@ const Consultation = () => {
     <div className="consultation-page">
       <nav className="about-navbar consultation-navbar">
         <a href="/" className="about-navbar-logo">
-          <img src="/logo.png" alt="Ceylon Royal Gemstones" />
+          <BrandLogo alt="Ceylon Royal Gemstones" />
           <div className="about-logo-text"><span>CEYLON</span><small>ROYAL GEMSTONES</small></div>
         </a>
         <MobileSiteMenu />
         <div className="about-nav-links">
           <a href="/">Home</a>
-          <a href="/gemstones">Shop</a>
-          <a href="/About">Heritage</a>
+          <ShopNavDropdown />
+          <a href="/About">Our Story</a>
           <a href="/trust">Certification</a>
           <a href="/reviews">Reviews</a>
           <a href="/contact">Contact</a>
           <a href="/blog">Blog</a>
           <InternationalNavEntry />
+          <CustomerOrdersNavLink />
         </div>
         <div className="about-nav-actions">
           <InternationalNavEntry mobile />
@@ -109,7 +113,7 @@ const Consultation = () => {
         <div className="about-footer-grid">
           <div className="footer-brand">
             <div className="footer-logo">
-              <img src="/logo.png" alt="Ceylon Royal Gemstones" />
+              <BrandLogo alt="Ceylon Royal Gemstones" />
               <div><strong>CEYLON</strong><small>ROYAL GEMSTONES</small></div>
             </div>
             <p>Discover the timeless beauty of authentic Sri Lankan gemstones, carefully sourced, crafted and presented with royal elegance.</p>
@@ -118,7 +122,7 @@ const Consultation = () => {
             <h4>EXPLORE</h4>
             <a href="/">Home</a>
             <a href="/gemstones">Shop</a>
-            <a href="/About">Our Heritage</a>
+            <a href="/About">Our Story</a>
             <a href="/trust">Trust &amp; Certification</a>
             <a href="/reviews">Reviews</a>
             <a href="/contact">Contact</a>
@@ -144,7 +148,7 @@ const Consultation = () => {
             </div>
           </div>
         </div>
-        <div className="about-footer-bottom"><p>© 2026 Ceylon Royal Gemstones. All Rights Reserved.</p><span>NATURAL • AUTHENTIC • CEYLON</span></div>
+        <div className="about-footer-bottom"><p>Copyright © 2026 Powered by NETIT Technology</p><span>NATURAL • AUTHENTIC • CEYLON</span></div>
       </footer>
       <CollectionDrawerPanel
         activeDrawer={activeDrawer}

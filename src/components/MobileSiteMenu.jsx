@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { FaBars, FaTimes } from "react-icons/fa";
+import { FaBars, FaChevronDown, FaTimes } from "react-icons/fa";
 import { hasAdminAccess, readAdminSession } from "../adminAccess.js";
 import SiteInquiryModal from "./SiteInquiryModal.jsx";
 
 const baseLinks = [
   { label: "Home", href: "/" },
   { label: "Shop", href: "/gemstones#collection" },
-  { label: "Our heritage", href: "/About" },
+  { label: "Our Story", href: "/About" },
   { label: "Certification", href: "/trust" },
   { label: "Client reviews", href: "/reviews" },
   { label: "Contact", href: "/contact" },
@@ -29,7 +29,10 @@ const readInternationalMode = () => {
 const isSignedInCustomer = () => {
   try {
     const customer = JSON.parse(window.localStorage.getItem("ceylon-user") || "null");
-    return customer?.loggedIn === true && !hasAdminAccess("/admin");
+    if (customer?.loggedIn === true) return true;
+    const admin = JSON.parse(window.localStorage.getItem("ceylon-admin-session") || "null");
+    if (admin?.accountId) return true;
+    return false;
   } catch {
     return false;
   }
@@ -37,8 +40,10 @@ const isSignedInCustomer = () => {
 
 export default function MobileSiteMenu({ onInquire }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isShopOpen, setIsShopOpen] = useState(false);
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
   const [isInternationalEnabled, setIsInternationalEnabled] = useState(readInternationalMode);
+  const [isCustomerSignedIn, setIsCustomerSignedIn] = useState(isSignedInCustomer);
   const adminSession = readAdminSession();
   const hasAdminSession = hasAdminAccess("/admin");
 
@@ -53,6 +58,17 @@ export default function MobileSiteMenu({ onInquire }) {
     };
   }, []);
 
+  useEffect(() => {
+    const syncCustomer = () => setIsCustomerSignedIn(isSignedInCustomer());
+
+    window.addEventListener("storage", syncCustomer);
+    window.addEventListener("ceylon-user-auth-change", syncCustomer);
+    return () => {
+      window.removeEventListener("storage", syncCustomer);
+      window.removeEventListener("ceylon-user-auth-change", syncCustomer);
+    };
+  }, []);
+
   const openDrawer = () => {
     setIsInternationalEnabled(readInternationalMode());
     setIsOpen(true);
@@ -61,7 +77,7 @@ export default function MobileSiteMenu({ onInquire }) {
   const links = [
     ...baseLinks,
     ...(isInternationalEnabled ? [{ label: "International clients", href: "/international" }] : []),
-    ...(isSignedInCustomer() ? [{ label: "My orders", href: "/my-orders" }] : []),
+    ...(isCustomerSignedIn ? [{ label: "My Orders", href: "/my-orders" }] : []),
     ...(hasAdminSession
       ? [{
           label: adminSession?.role === "super-admin" ? "Super Admin Portal" : "Admin Portal",
@@ -121,7 +137,25 @@ export default function MobileSiteMenu({ onInquire }) {
             </button>
           </div>
           <div className="mobile-site-menu-links">
-            {links.map(({ label, href }) => (
+            {links.map(({ label, href }) => label === "Shop" ? (
+              <div className="mobile-site-menu-shop" key={href}>
+                <button
+                  type="button"
+                  className="mobile-site-menu-shop-trigger"
+                  aria-expanded={isShopOpen}
+                  onClick={() => setIsShopOpen((open) => !open)}
+                >
+                  <span>Shop</span>
+                  <FaChevronDown aria-hidden="true" />
+                </button>
+                {isShopOpen && (
+                  <div className="mobile-site-menu-shop-options">
+                    <a href="/gemstones" onClick={() => setIsOpen(false)}>Gems</a>
+                    <a href="/jewellery" onClick={() => setIsOpen(false)}>Jewellery</a>
+                  </div>
+                )}
+              </div>
+            ) : (
               <a key={href} href={href} onClick={() => setIsOpen(false)}>
                 {label}
               </a>

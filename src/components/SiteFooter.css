@@ -195,6 +195,47 @@
   padding: 16px 0;
 }
 
+.about-footer .about-footer-grid p,
+.contact-footer .contact-footer-grid p,
+.gem-footer .gem-footer-grid p,
+.gem-detail-footer .gem-detail-footer-grid p {
+  font-size: 13px;
+}
+
+.about-footer .about-footer-grid > div:not(.footer-brand) > a,
+.contact-footer .contact-footer-column > a,
+.gem-footer .gem-footer-grid > div:not(.gem-footer-brand) > a,
+.gem-detail-footer .gem-detail-footer-links > a,
+.gem-detail-footer .gem-detail-footer-links > span {
+  font-size: 13px;
+}
+
+.about-footer .about-footer-grid h4,
+.contact-footer .contact-footer-grid h4,
+.gem-footer .gem-footer-grid h4,
+.gem-detail-footer .gem-detail-footer-links h2 {
+  font-size: 15px;
+}
+
+.about-footer .about-footer-bottom,
+.contact-footer .contact-footer-bottom,
+.gem-footer .gem-footer-bottom,
+.gem-detail-footer .gem-detail-footer-bottom {
+  font-size: 12px;
+}
+
+.about-footer .about-footer-bottom p,
+.about-footer .about-footer-bottom span,
+.contact-footer .contact-footer-bottom p,
+.contact-footer .contact-footer-bottom span,
+.gem-footer .gem-footer-bottom p,
+.gem-footer .gem-footer-bottom span,
+.gem-detail-footer .gem-detail-footer-bottom p,
+.gem-detail-footer .gem-detail-footer-bottom span {
+  font-size: 12px;
+  color: #ffffff;
+}
+
 @media (max-width: 900px) {
   .about-footer-grid,
   .contact-footer-grid,
