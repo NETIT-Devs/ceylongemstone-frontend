@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { API_BASE_URL, apiGet, apiPost } from '../services/api.js';
-import { apiGet, apiPost } from '../services/api.js';
-import { useRef, useState } from 'react';
 import ShopNavDropdown from "../components/ShopNavDropdown.jsx";
 import BrandLogo from "../components/BrandLogo.jsx";
 
@@ -38,7 +36,6 @@ import { withActiveProductOffer } from '../productOffers.js';
 
 const GemstoneDetail = ({ gem }) => {
   const [currency] = useState(getCurrentCurrency);
-  const viewLabels = ['Front', 'Back', 'Right', 'Left'];
   const resolveMediaUrl = (url) => {
     if (typeof url !== 'string' || !url) return '';
     if (/^(?:https?:)?\/\//i.test(url) || /^(?:data|blob):/i.test(url)) return url;
@@ -83,11 +80,9 @@ const GemstoneDetail = ({ gem }) => {
     .map((view, index) => typeof view === 'string'
       ? { label: viewLabels[index] || `View ${index + 1}`, url: resolveMediaUrl(view) }
       : {
-          label: view.label || viewLabels[index] || `View ${index + 1}`,
+          label: view.label || legacyViewLabels[index] || viewLabels[index] || `View ${index + 1}`,
           url: resolveMediaUrl(view.url || view.src)
         })
-      ? { label: legacyViewLabels[index] || viewLabels[index] || `View ${index + 1}`, url: view }
-      : { label: view.label || legacyViewLabels[index] || viewLabels[index] || `View ${index + 1}`, url: view.url || view.src })
     .filter((view) => view.url);
   const suppliedRotationFrames = Array.isArray(gem?.rotationFrames)
     ? gem.rotationFrames

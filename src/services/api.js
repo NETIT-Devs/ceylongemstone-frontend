@@ -1,7 +1,10 @@
 const configuredBaseUrl =
   import.meta.env.VITE_API_URL?.trim() || "http://localhost:5000";
 
-export const API_BASE_URL = configuredBaseUrl.replace(/\/+$/, "");
+export const API_BASE_URL = configuredBaseUrl
+  .replace(/\/+$/, "")
+  .replace(/(?:\/api)+$/i, "")
+  .replace(/\/+$/, "");
 
 // ─── Auth Token Helpers ──────────────────────────────────────────────────────
 

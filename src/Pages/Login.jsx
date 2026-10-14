@@ -33,7 +33,7 @@ const getPostLoginDestination = () => "/";
 
 const REGISTERED_USERS_KEY = "ceylon-registered-users";
 
-export const getRegisteredUsers = () => {
+const getRegisteredUsers = () => {
   try {
     const raw = window.localStorage.getItem(REGISTERED_USERS_KEY);
     return raw ? JSON.parse(raw) : [];
@@ -42,7 +42,7 @@ export const getRegisteredUsers = () => {
   }
 };
 
-export const saveRegisteredUser = (user) => {
+const saveRegisteredUser = (user) => {
   try {
     const users = getRegisteredUsers();
     const existingIndex = users.findIndex(
@@ -119,43 +119,11 @@ const Login = () => {
       return;
     }
 
-    // Require created account before login
-    const registeredUsers = getRegisteredUsers();
-    const foundUser = registeredUsers.find(
-      (u) => u.email.toLowerCase() === inputEmail
-    );
-
-    if (!foundUser) {
-      setLoginError("No account found with this email. Please create an account first.");
-      return;
-    }
-
-    if (foundUser.password !== inputPassword) {
-      setLoginError("Incorrect password. Please verify your password and try again.");
-      return;
-    }
-
-    // Standard verified customer login
-    const userSession = {
-      email: foundUser.email,
-      name: foundUser.name || foundUser.email.split("@")[0] || "Royal Collector",
-      phone: foundUser.phone || "",
-      verified: true,
-      loggedIn: true,
-    };
-    window.localStorage.setItem("ceylon-user", JSON.stringify(userSession));
-    window.dispatchEvent(new Event("ceylon-user-auth-change"));
-    setSuccessNote("Welcome back to Ceylon Royal Gemstones.");
-    setIsSubmitted(true);
-    setTimeout(() => {
-      window.location.href = getPostLoginDestination();
-    }, 1200);
-    // ── 2. Standard customer login via backend API ──
     setIsLoading(true);
     try {
       const res = await apiPost("/api/auth/login", {
-        email: loginForm.email,
-        password: loginForm.password,
+        email: inputEmail,
+        password: inputPassword,
       });
       const data = await res.json();
 
@@ -255,34 +223,46 @@ const Login = () => {
       return;
     }
 
-    const registeredUsers = getRegisteredUsers();
-    if (registeredUsers.some((u) => u.email.toLowerCase() === regEmail)) {
-      setLoginError("An account with this email already exists. Please sign in.");
-      setIsLoginMode(true);
-      return;
+    setIsLoading(true);
+    try {
+      const response = await apiPost("/api/auth/register", {
+        name: registerForm.name.trim(),
+        email: regEmail,
+        phone: registerForm.phone.trim(),
+        password: registerForm.password,
+        role: "CUSTOMER",
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        setLoginError(data.message || "Registration failed. Please try again.");
+        return;
+      }
+
+      endAdminSession();
+      setCustomerToken(data.token);
+      const userSession = {
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.name || registerForm.name.trim(),
+        phone: data.user.phone,
+        role: data.user.role,
+        loggedIn: true,
+      };
+      window.localStorage.setItem("ceylon-user", JSON.stringify(userSession));
+      window.localStorage.setItem("ceylon-user-id", String(data.user.id));
+      window.dispatchEvent(new Event("ceylon-user-auth-change"));
+
+      setSuccessNote("Your account has been created successfully.");
+      setIsSubmitted(true);
+      setTimeout(() => {
+        window.location.href = getPostLoginDestination();
+      }, 1200);
+    } catch {
+      setLoginError("Unable to connect to server. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
-
-    const newUser = {
-      name: registerForm.name.trim() || "Royal Collector",
-      email: regEmail,
-      phone: registerForm.phone.trim(),
-      password: registerForm.password,
-      verified: true,
-      createdAt: new Date().toISOString(),
-    };
-    saveRegisteredUser(newUser);
-
-    // After creating account, switch to Sign In mode and prompt user to login
-    setLoginForm({ email: regEmail, password: "" });
-    setIsLoginMode(true);
-    setSuccessNote("Account created successfully! Please sign in with your email and password.");
-    setRegisterForm({
-      name: "",
-      email: "",
-      phone: "",
-      password: "",
-      confirmPassword: "",
-    });
   };
 
   const handleFacebookLogin = () => {
@@ -322,48 +302,6 @@ const Login = () => {
     setTimeout(() => {
       window.location.href = getPostLoginDestination();
     }, 1200);
-    // ── Register via backend API ──
-    setIsLoading(true);
-    try {
-      const res = await apiPost("/api/auth/register", {
-        name: registerForm.name,
-        email: registerForm.email,
-        phone: registerForm.phone,
-        password: registerForm.password,
-        role: "CUSTOMER",
-      });
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        setLoginError(data.message || "Registration failed. Please try again.");
-        return;
-      }
-
-      // Clear any previous admin session and save customer session
-      endAdminSession();
-      setCustomerToken(data.token);
-      const userSession = {
-        id: data.user.id,
-        email: data.user.email,
-        name: data.user.name || registerForm.name,
-        phone: data.user.phone,
-        role: data.user.role,
-        loggedIn: true,
-      };
-      window.localStorage.setItem("ceylon-user", JSON.stringify(userSession));
-      window.localStorage.setItem("ceylon-user-id", String(data.user.id));
-      window.dispatchEvent(new Event("ceylon-user-auth-change"));
-
-      setSuccessNote("Your account has been created successfully.");
-      setIsSubmitted(true);
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 1200);
-    } catch {
-      setLoginError("Unable to connect to server. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   return (

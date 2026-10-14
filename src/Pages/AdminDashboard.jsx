@@ -267,6 +267,14 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       }
       setBackendGems(data.data);
       return true;
+    } catch (error) {
+      setGemstonesError(error instanceof Error ? error.message : "Unable to load gemstones.");
+      return false;
+    } finally {
+      setGemsLoading(false);
+    }
+  };
+
   const [editingJewelleryId, setEditingJewelleryId] = useState(null);
   const [managedHeroSlides, setManagedHeroSlides] = useHomeHeroSlides();
   const [managedBlogPosts, setManagedBlogPosts] = useManagedBlogPosts();
@@ -562,11 +570,13 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleAddGem = (e) => {
+  const handleAddGem = async (e) => {
     e.preventDefault();
     const form = e.currentTarget;
     if (!newGem.name.trim() || !newGem.category_id) {
       showCustomAlert("Gemstone name and category are required.", "Validation Error", "warning");
+      return;
+    }
     if (!newGem.name || !newGem.price) return;
     if (newGem.discountRate && (!newGem.offerStartDate || !newGem.offerEndDate)) {
       showCustomAlert("Choose both offer start and end dates.", "Offer Dates Required", "warning");
@@ -622,6 +632,8 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       return;
     }
     if (!hasValidGemNumbers(editGem)) {
+      return;
+    }
 
     const normalizedPrice = Number(newGem.price);
     const normalizedDiscountRate = Number(newGem.discountRate);
@@ -1890,17 +1902,6 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                       style={{ width: "100%", padding: "0.6rem", borderRadius: "6px", border: "1px solid #d4b96a", resize: "vertical" }}
                     />
                   </div>
-                  <button type="submit" className="add-gem-submit-btn" disabled={gemSaving}>
-                    {gemSaving ? "Saving…" : <><FaPlus /> ADD GEMSTONE TO INVENTORY</>}
-                  </button>
-                </form>
-              </div>
-
-              <section className="admin-section" style={{ marginTop: "2rem" }}>
-                <div className="admin-section-heading">
-                  <div>
-                    <h2><FaFileInvoice /> Gemstone Certificate Management</h2>
-                    <p>Add, review, and update certificates for gemstones in your inventory.</p>
                   <div className="site-content-wide-field">
                     <h3 className="gem-detail-upload-heading">View Details Gallery</h3>
                     <p className="admin-image-help">
@@ -1987,11 +1988,28 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                     />
                   </div>
                   <div className="add-gem-form-actions">
-                    <button type="submit" className="add-gem-submit-btn">
-                      <FaPlus /> {editingGemId ? "UPDATE GEMSTONE" : "ADD GEMSTONE TO INVENTORY"}
+                    <button type="submit" className="add-gem-submit-btn" disabled={gemSaving}>
+                      {gemSaving
+                        ? "Saving…"
+                        : <><FaPlus /> {editingGemId ? "UPDATE GEMSTONE" : "ADD GEMSTONE TO INVENTORY"}</>}
                     </button>
-                  </p>
-                ) : !certificatesLoaded ? (
+                    {editingGemId && (
+                      <button type="button" className="add-gem-cancel-btn" onClick={resetGemForm}>
+                        <FaTimes /> Cancel Edit
+                      </button>
+                    )}
+                  </div>
+                </form>
+              </div>
+
+              <section className="admin-section" style={{ marginTop: "2rem" }}>
+                <div className="admin-section-heading">
+                  <div>
+                    <h2><FaFileInvoice /> Gemstone Certificate Management</h2>
+                    <p>Add, review, and update certificates for gemstones in your inventory.</p>
+                  </div>
+                </div>
+                {!certificatesLoaded ? (
                   <p className="admin-empty-state" style={{ padding: "1rem", textAlign: "center" }}>
                     Loading gemstone certificates…
                   </p>
@@ -2085,13 +2103,6 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                 </div>
                 {gemsLoading && <span className="admin-live-note">LOADING…</span>}
                 {!gemsLoading && <span className="admin-live-note">{backendGems.length} GEMS IN DB</span>}
-                    {editingGemId && (
-                      <button type="button" className="add-gem-cancel-btn" onClick={resetGemForm}>
-                        <FaTimes /> Cancel Edit
-                      </button>
-                    )}
-                  </div>
-                </form>
               </div>
 
               {/* GEMS INVENTORY LIST */}
@@ -2305,6 +2316,17 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                     />
                   </div>
                   <div className="form-group">
+                    <label htmlFor="jewellery-offer-end-date">Offer End Date</label>
+                    <input
+                      id="jewellery-offer-end-date"
+                      type="date"
+                      value={newJewellery.offerEndDate}
+                      onChange={(event) => setNewJewellery({ ...newJewellery, offerEndDate: event.target.value })}
+                      min={newJewellery.offerStartDate || undefined}
+                      required={Boolean(newJewellery.discountRate)}
+                    />
+                  </div>
+                  <div className="form-group">
                     <label>Stock</label>
                     <input type="number" min="0" step="1" value={editGem.stock} onChange={(e) => setEditGem({ ...editGem, stock: e.target.value })} />
                   </div>
@@ -2346,14 +2368,6 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                       value={editGem.description}
                       onChange={(e) => setEditGem({ ...editGem, description: e.target.value })}
                       style={{ width: "100%", padding: "0.6rem", borderRadius: "6px", border: "1px solid #d4b96a", resize: "vertical" }}
-                    <label htmlFor="jewellery-offer-end-date">Offer End Date</label>
-                    <input
-                      id="jewellery-offer-end-date"
-                      type="date"
-                      value={newJewellery.offerEndDate}
-                      onChange={(event) => setNewJewellery({ ...newJewellery, offerEndDate: event.target.value })}
-                      min={newJewellery.offerStartDate || undefined}
-                      required={Boolean(newJewellery.discountRate)}
                     />
                   </div>
                   <div className="add-gem-form-actions">

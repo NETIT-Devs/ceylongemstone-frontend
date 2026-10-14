@@ -1887,9 +1887,9 @@ function Gemstones() {
                           >
                             VIEW DETAILS
                           </button>
-                        </button>
 
                       </div>
+                    </div>
 
                       <div className="product-info">
 

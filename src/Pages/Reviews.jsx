@@ -1,4 +1,3 @@
-import { useState } from "react";
 import ShopNavDropdown from "../components/ShopNavDropdown.jsx";
 import BrandLogo from "../components/BrandLogo.jsx";
 import { useEffect, useState } from "react";
