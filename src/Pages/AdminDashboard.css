@@ -319,6 +319,38 @@
   color: #041d1a;
 }
 
+.certificate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.certificate-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid #d9a6ac;
+  background: #fff7f7;
+  color: #a33342;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.certificate-delete-btn:hover:not(:disabled) {
+  border-color: #a33342;
+  background: #a33342;
+  color: #ffffff;
+}
+
+.certificate-delete-btn:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 /* ADD GEM CARD & FORM */
 .add-gem-card {
   background: #ffffff;

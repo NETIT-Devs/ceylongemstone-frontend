@@ -1,4 +1,5 @@
-const configuredBaseUrl = import.meta.env.VITE_API_URL?.trim() || "";
+const configuredBaseUrl =
+  import.meta.env.VITE_API_URL?.trim() || "http://localhost:5000";
 
 export const API_BASE_URL = configuredBaseUrl.replace(/\/+$/, "");
 
