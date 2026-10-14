@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { API_BASE_URL, apiGet, apiPost } from '../services/api.js';
+import { apiGet, apiPost, resolveMediaUrl } from '../services/api.js';
 import ShopNavDropdown from "../components/ShopNavDropdown.jsx";
 import BrandLogo from "../components/BrandLogo.jsx";
 
@@ -32,19 +32,13 @@ import {
   normalizeCollectionItem,
   useSharedCollection
 } from '../useSharedCollection.js';
-import { withActiveProductOffer } from '../productOffers.js';
+import {
+  formatProductOfferEndDate,
+  withActiveProductOffer
+} from '../productOffers.js';
 
 const GemstoneDetail = ({ gem }) => {
   const [currency] = useState(getCurrentCurrency);
-  const resolveMediaUrl = (url) => {
-    if (typeof url !== 'string' || !url) return '';
-    if (/^(?:https?:)?\/\//i.test(url) || /^(?:data|blob):/i.test(url)) return url;
-    if (url.startsWith('/uploads/')) {
-      const serverOrigin = API_BASE_URL.replace(/\/api\/?$/, '');
-      return `${serverOrigin}${url}`;
-    }
-    return url;
-  };
   const namedGalleryViews = [
     { label: 'Front', url: gem?.main_image || gem?.image },
     { label: 'Back', url: gem?.back_view_image },
@@ -52,9 +46,11 @@ const GemstoneDetail = ({ gem }) => {
     { label: 'Left', url: gem?.left_view_image },
   ].filter((view) => view.url);
   const originalGemPrice = Number(gem.basePriceUSD ?? gem.price ?? gem.priceUSD ?? 0);
-  const activeDiscountRate = Number(
-    withActiveProductOffer(gem).discountRate
-  );
+  const activeOffer = withActiveProductOffer(gem);
+  const activeDiscountRate = Number(activeOffer.discountRate);
+  const offerEndDate = activeDiscountRate > 0
+    ? formatProductOfferEndDate(activeOffer)
+    : "";
   const currentGemPrice = activeDiscountRate > 0
     ? Math.round(originalGemPrice * (1 - activeDiscountRate / 100))
     : originalGemPrice;
@@ -112,10 +108,11 @@ const GemstoneDetail = ({ gem }) => {
     certificateLaboratory ||
     certificateUrl
   );
+  const firstImageUrl = galleryViews[0]?.url || resolveMediaUrl(gem?.image) || '';
 
   const [activeMedia, setActiveMedia] = useState({
     type: 'image',
-    url: galleryViews[0]?.url || resolveMediaUrl(gem?.image) || ''
+    url: firstImageUrl
   });
   const [activeTab, setActiveTab] = useState('specs');
   const detailSectionRef = useRef(null);
@@ -123,6 +120,12 @@ const GemstoneDetail = ({ gem }) => {
   const [rotationIndex, setRotationIndex] = useState(0);
   const [zoomLevel, setZoomLevel] = useState(1);
   const dragStartX = useRef(null);
+
+  useEffect(() => {
+    setActiveMedia({ type: 'image', url: firstImageUrl });
+    setIs360Mode(false);
+    setZoomLevel(1);
+  }, [firstImageUrl, gem?.id]);
 
   const handleRotationPointerDown = (event) => {
     if (!is360Mode || !hasRotationFrames) return;
@@ -568,7 +571,7 @@ const GemstoneDetail = ({ gem }) => {
                 <span>VIDEO</span>
               </button>
             )}
-            {!gem.videoUrl && (
+            {!videoUrl && (
               <button type="button" className="thumb-card video-card unavailable" disabled>
                 <FaPlay className="play-icon" />
                 <span>VIDEO<small>CLIP NEEDED</small></span>
@@ -594,6 +597,11 @@ const GemstoneDetail = ({ gem }) => {
               <del className="product-original-price">
                 {formatCurrencyPrice(originalGemPrice, currency)}
               </del>
+            )}
+            {activeDiscountRate > 0 && (
+              <span className="detail-offer-badge">
+                {activeDiscountRate}% OFF{offerEndDate ? ` · Ends ${offerEndDate}` : ""}
+              </span>
             )}
           </div>
 

@@ -6,6 +6,18 @@ export const API_BASE_URL = configuredBaseUrl
   .replace(/(?:\/api)+$/i, "")
   .replace(/\/+$/, "");
 
+export const resolveMediaUrl = (value) => {
+  if (typeof value !== "string" || !value.trim()) return "";
+
+  const mediaPath = value.trim().replace(/\\/g, "/");
+  if (/^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(mediaPath)) return mediaPath;
+
+  const normalizedPath = mediaPath.startsWith("/") ? mediaPath : `/${mediaPath}`;
+  return normalizedPath.startsWith("/uploads/")
+    ? `${API_BASE_URL}${normalizedPath}`
+    : mediaPath;
+};
+
 // ─── Auth Token Helpers ──────────────────────────────────────────────────────
 
 /** Returns the JWT token stored for the current customer session */

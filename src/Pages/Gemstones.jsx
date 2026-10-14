@@ -37,9 +37,9 @@ import { hasAdminAccess } from "../adminAccess.js";
 import { useGemInventory } from "../useGemInventory.js";
 import { useGemProductOverrides } from "../useGemProductOverrides.js";
 import { useGemSubmissions } from "../useGemSubmissions.js";
-import { API_BASE_URL, apiGet } from "../services/api.js";
+import { apiGet, resolveMediaUrl } from "../services/api.js";
 import { normalizeTreatment, TREATMENT_OPTIONS } from "../treatments.js";
-import { withActiveProductOffer } from "../productOffers.js";
+import { formatProductOfferEndDate, withActiveProductOffer } from "../productOffers.js";
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const products = [
@@ -813,11 +813,6 @@ function Gemstones() {
           throw new Error(result.message || "Unable to load gemstones from inventory.");
         }
 
-        const serverOrigin = API_BASE_URL.replace(/\/api\/?$/, "");
-        const resolveMediaUrl = (url) =>
-          typeof url === "string" && url.startsWith("/uploads/")
-            ? `${serverOrigin}${url}`
-            : url;
         const inventoryProducts = result.data
           .filter((gemstone) => Number(gemstone.status) !== 0)
           .map((gemstone) => {
@@ -863,14 +858,12 @@ function Gemstones() {
     () => [
       ...products.map((product) => ({
         ...product,
-        treatment: normalizeTreatment(product.treatment),
+        ...gemProductOverrides[String(product.id)],
+        treatment: normalizeTreatment(
+          gemProductOverrides[String(product.id)]?.treatment ?? product.treatment
+        ),
       })),
       ...backendGemstones,
-      ...products.map((product) => ({
-        ...product,
-        ...gemProductOverrides[String(product.id)],
-        category: product.category
-      })),
       ...gemSubmissions
         .filter((submission) => submission.status === "approved")
         .map((submission) => ({
@@ -878,8 +871,7 @@ function Gemstones() {
           treatment: normalizeTreatment(submission.gem.treatment),
         }))
     ],
-    [backendGemstones, gemSubmissions]
-    [gemProductOverrides, gemSubmissions]
+    [backendGemstones, gemProductOverrides, gemSubmissions]
   );
   const shopMaxCaratValue = Math.max(
     maxCaratValue,
@@ -1821,6 +1813,9 @@ function Gemstones() {
                   const originalPrice = Number(offerProduct.basePriceUSD ?? offerProduct.price);
                   const discountRate = Number(offerProduct.discountRate);
                   const hasDiscount = discountRate > 0 && discountRate <= 100;
+                  const offerEndDate = hasDiscount
+                    ? formatProductOfferEndDate(offerProduct)
+                    : "";
                   const offerPrice = hasDiscount
                     ? Math.round(originalPrice * (1 - discountRate / 100))
                     : originalPrice;
@@ -1839,12 +1834,8 @@ function Gemstones() {
                       <div className="product-image-box">
 
                         <img
-                          src={product.image}
+                          src={resolveMediaUrl(product.image)}
                           alt={product.name}
-                          onError={(e) => {
-                            e.currentTarget.src =
-                              "/logo.png";
-                          }}
                         />
 
                         <span className="product-treatment">
@@ -1900,7 +1891,9 @@ function Gemstones() {
                         <h3>
                           <a
                             className="product-name-link"
-                            href={`/gemstones/${product.id}`}
+                            href={product.inventoryId
+                              ? `/gemstones/inventory/${product.inventoryId}`
+                              : `/gemstones/${product.id}`}
                           >
                           {product.name}
                           </a>
@@ -1939,7 +1932,11 @@ function Gemstones() {
                             type="button"
                             className="product-view-details"
                             onClick={() =>
-                              window.location.assign(`/gemstones/${product.id}`)
+                              window.location.assign(
+                                product.inventoryId
+                                  ? `/gemstones/inventory/${product.inventoryId}`
+                                  : `/gemstones/${product.id}`
+                              )
                             }
                           >
                             VIEW DETAILS
@@ -1957,6 +1954,9 @@ function Gemstones() {
                             <strong>
                               {formatCurrencyPrice(offerPrice, currency)}
                             </strong>
+                            {offerEndDate && (
+                              <span className="product-offer-end-date">Offer ends {offerEndDate}</span>
+                            )}
                           </div>
 
                           <button

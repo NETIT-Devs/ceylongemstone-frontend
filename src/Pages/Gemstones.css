@@ -1508,6 +1508,12 @@
   font-size: 17px;
 }
 
+.product-offer-end-date {
+  color: #8a6a2b;
+  font-size: 10px;
+  font-weight: 600;
+}
+
 .product-prices.has-discount > strong {
   color: #9D7625;
 }
