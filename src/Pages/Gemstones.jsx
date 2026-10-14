@@ -37,6 +37,8 @@ import { hasAdminAccess } from "../adminAccess.js";
 import { useGemInventory } from "../useGemInventory.js";
 import { useGemProductOverrides } from "../useGemProductOverrides.js";
 import { useGemSubmissions } from "../useGemSubmissions.js";
+import { API_BASE_URL, apiGet } from "../services/api.js";
+import { normalizeTreatment, TREATMENT_OPTIONS } from "../treatments.js";
 import { withActiveProductOffer } from "../productOffers.js";
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -685,6 +687,58 @@ export const categories = [
   "Alexandrite"
 ];
 
+const matchesGemstoneCategory = (product, selectedCategory) => {
+  if (selectedCategory === "All Gemstones") return true;
+
+  const normalize = (value) =>
+    String(value ?? "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+  const fields = [
+    product.category,
+    product.category_name,
+    product.name,
+    product.color,
+    product.sub_category,
+    product.subcategory,
+    product.subCategory,
+    product.sub_category_name,
+    product.subcategory_name,
+    product.gemstone_type
+  ].map(normalize);
+  const contains = (...terms) =>
+    fields.some((field) => terms.some((term) => field.includes(term)));
+  const selected = normalize(selectedCategory);
+
+  switch (selected) {
+    case "blue sapphire":
+      return contains("blue sapphire") || (contains("sapphire") && contains("blue"));
+    case "yellow sapphire":
+      return (
+        contains("yellow sapphire") ||
+        (contains("sapphire") && contains("yellow", "golden"))
+      );
+    case "green gemstone":
+      return contains("green gemstone", "emerald", "green");
+    case "padparadscha sapphire":
+      return (
+        contains("padparadscha") ||
+        (contains("sapphire") && contains("pink", "orange", "salmon"))
+      );
+    case "ruby":
+      return contains("ruby");
+    case "star sapphire":
+      return contains("star sapphire") || (contains("sapphire") && contains("star"));
+    case "cat s eye":
+      return contains("cat s eye", "cat eye", "chrysoberyl");
+    case "alexandrite":
+      return contains("alexandrite");
+    default:
+      return fields.includes(selected);
+  }
+};
+
 const maxCaratValue = Math.ceil(Math.max(...products.map((product) => product.carat)));
 const maxPriceValue = Math.ceil(Math.max(...products.map((product) => product.price)) / 5000) * 5000;
 const PRODUCTS_PER_PAGE = 15;
@@ -727,12 +781,7 @@ const cuts = [
   "Cabochon"
 ];
 
-const treatments = [
-  "All Treatments",
-  "Untreated",
-  "Heated",
-  "Natural"
-];
+const treatments = ["All Treatments", ...TREATMENT_OPTIONS];
 
 function Gemstones() {
   const [currency, setCurrency] = useState(getCurrentCurrency);
@@ -740,8 +789,83 @@ function Gemstones() {
   const currencyRef = useRef(null);
   const [gemProductOverrides] = useGemProductOverrides();
   const [gemSubmissions] = useGemSubmissions();
+  const [backendGemstones, setBackendGemstones] = useState([]);
+  const [backendGemstonesError, setBackendGemstonesError] = useState("");
+  const [selectedTreatment, setSelectedTreatment] = useState("All Treatments");
+
+  useEffect(() => {
+    let isCurrent = true;
+    const query = new URLSearchParams();
+    if (selectedTreatment !== "All Treatments") {
+      query.set("treatment", selectedTreatment);
+    }
+    const queryString = query.toString();
+
+    apiGet(`/api/gemstones${queryString ? `?${queryString}` : ""}`)
+      .then(async (response) => {
+        let result;
+        try {
+          result = await response.json();
+        } catch {
+          throw new Error("The gemstone inventory returned an invalid response.");
+        }
+        if (!response.ok || result.success !== true || !Array.isArray(result.data)) {
+          throw new Error(result.message || "Unable to load gemstones from inventory.");
+        }
+
+        const serverOrigin = API_BASE_URL.replace(/\/api\/?$/, "");
+        const resolveMediaUrl = (url) =>
+          typeof url === "string" && url.startsWith("/uploads/")
+            ? `${serverOrigin}${url}`
+            : url;
+        const inventoryProducts = result.data
+          .filter((gemstone) => Number(gemstone.status) !== 0)
+          .map((gemstone) => {
+            const galleryViews = (gemstone.galleryViews || []).map((view) => ({
+              ...view,
+              url: resolveMediaUrl(view.url),
+            }));
+            const image = resolveMediaUrl(
+              gemstone.main_image || gemstone.image || galleryViews[0]?.url || ""
+            );
+            return {
+              ...gemstone,
+              id: Number(gemstone.id),
+              inventoryId: Number(gemstone.id),
+              productKey: `inventory-gemstone-${gemstone.id}`,
+              category: gemstone.category_name || "Gemstone",
+              treatment: normalizeTreatment(gemstone.treatment_status),
+              stockQuantity: Number(gemstone.stock) || 0,
+              image,
+              galleryViews,
+              videoUrl: resolveMediaUrl(gemstone.videoUrl || gemstone.video_url),
+            };
+          });
+
+        if (isCurrent) {
+          setBackendGemstones(inventoryProducts);
+          setBackendGemstonesError("");
+        }
+      })
+      .catch((error) => {
+        console.error("Unable to load gemstones from inventory:", error);
+        if (isCurrent) {
+          setBackendGemstonesError(error.message || "Unable to load inventory gemstones.");
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [selectedTreatment]);
+
   const shopProducts = useMemo(
     () => [
+      ...products.map((product) => ({
+        ...product,
+        treatment: normalizeTreatment(product.treatment),
+      })),
+      ...backendGemstones,
       ...products.map((product) => ({
         ...product,
         ...gemProductOverrides[String(product.id)],
@@ -749,8 +873,12 @@ function Gemstones() {
       })),
       ...gemSubmissions
         .filter((submission) => submission.status === "approved")
-        .map((submission) => submission.gem)
+        .map((submission) => ({
+          ...submission.gem,
+          treatment: normalizeTreatment(submission.gem.treatment),
+        }))
     ],
+    [backendGemstones, gemSubmissions]
     [gemProductOverrides, gemSubmissions]
   );
   const shopMaxCaratValue = Math.max(
@@ -831,9 +959,6 @@ function Gemstones() {
 
   const [selectedCut, setSelectedCut] =
     useState("All Cuts");
-
-  const [selectedTreatment, setSelectedTreatment] =
-    useState("All Treatments");
 
   const [minPrice, setMinPrice] = useState(0);
   const [userMaxPrice, setUserMaxPrice] = useState(null);
@@ -946,9 +1071,7 @@ function Gemstones() {
 
   const filteredProducts = useMemo(() => {
     return shopProducts.filter((product) => {
-      const categoryMatch =
-        selectedCategory === "All Gemstones" ||
-        product.category === selectedCategory;
+      const categoryMatch = matchesGemstoneCategory(product, selectedCategory);
 
       const searchMatch =
         searchTerm.trim() === "" ||
@@ -987,7 +1110,7 @@ function Gemstones() {
 
       const treatmentMatch =
         selectedTreatment === "All Treatments" ||
-        product.treatment === selectedTreatment;
+        normalizeTreatment(product.treatment) === selectedTreatment;
 
       const minPriceMatch =
         product.price >= minPrice;
@@ -1402,6 +1525,11 @@ function Gemstones() {
               {filteredProducts.length !== 1 ? "s" : ""}
               {" "}available
             </p>
+            {backendGemstonesError && (
+              <p role="status" className="admin-empty-state">
+                Inventory gemstones could not be loaded: {backendGemstonesError}
+              </p>
+            )}
           </div>
 
           <div className="gem-collection-heading-actions">
@@ -1705,7 +1833,7 @@ function Gemstones() {
                   return (
                     <article
                       className="gem-product-card"
-                      key={product.id}
+                      key={product.productKey || product.id}
                     >
 
                       <div className="product-image-box">
@@ -1744,6 +1872,21 @@ function Gemstones() {
                           }
                         >
                           <FaHeart />
+                        </button>
+
+                        <div className="product-overlay">
+
+                          <button
+                            onClick={() =>
+                              window.location.assign(
+                                product.inventoryId
+                                  ? `/gemstones/inventory/${product.inventoryId}`
+                                  : `/gemstones/${product.id}`
+                              )
+                            }
+                          >
+                            VIEW DETAILS
+                          </button>
                         </button>
 
                       </div>

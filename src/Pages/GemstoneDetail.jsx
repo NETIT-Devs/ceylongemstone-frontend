@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { API_BASE_URL, apiGet, apiPost } from '../services/api.js';
 import { apiGet, apiPost } from '../services/api.js';
 import { useRef, useState } from 'react';
 import ShopNavDropdown from "../components/ShopNavDropdown.jsx";
@@ -37,6 +38,22 @@ import { withActiveProductOffer } from '../productOffers.js';
 
 const GemstoneDetail = ({ gem }) => {
   const [currency] = useState(getCurrentCurrency);
+  const viewLabels = ['Front', 'Back', 'Right', 'Left'];
+  const resolveMediaUrl = (url) => {
+    if (typeof url !== 'string' || !url) return '';
+    if (/^(?:https?:)?\/\//i.test(url) || /^(?:data|blob):/i.test(url)) return url;
+    if (url.startsWith('/uploads/')) {
+      const serverOrigin = API_BASE_URL.replace(/\/api\/?$/, '');
+      return `${serverOrigin}${url}`;
+    }
+    return url;
+  };
+  const namedGalleryViews = [
+    { label: 'Front', url: gem?.main_image || gem?.image },
+    { label: 'Back', url: gem?.back_view_image },
+    { label: 'Right', url: gem?.right_view_image },
+    { label: 'Left', url: gem?.left_view_image },
+  ].filter((view) => view.url);
   const originalGemPrice = Number(gem.basePriceUSD ?? gem.price ?? gem.priceUSD ?? 0);
   const activeDiscountRate = Number(
     withActiveProductOffer(gem).discountRate
@@ -57,17 +74,24 @@ const GemstoneDetail = ({ gem }) => {
     ? gem.galleryViews
     : Array.isArray(gem?.images) && gem.images.length > 0
       ? gem.images
+      : namedGalleryViews.length > 0
+        ? namedGalleryViews
       : gem?.image
         ? [gem.image]
         : [];
   const galleryViews = rawGalleryViews
     .map((view, index) => typeof view === 'string'
+      ? { label: viewLabels[index] || `View ${index + 1}`, url: resolveMediaUrl(view) }
+      : {
+          label: view.label || viewLabels[index] || `View ${index + 1}`,
+          url: resolveMediaUrl(view.url || view.src)
+        })
       ? { label: legacyViewLabels[index] || viewLabels[index] || `View ${index + 1}`, url: view }
       : { label: view.label || legacyViewLabels[index] || viewLabels[index] || `View ${index + 1}`, url: view.url || view.src })
     .filter((view) => view.url);
   const suppliedRotationFrames = Array.isArray(gem?.rotationFrames)
     ? gem.rotationFrames
-        .map((frame) => typeof frame === 'string' ? frame : frame.url)
+        .map((frame) => resolveMediaUrl(typeof frame === 'string' ? frame : frame.url))
         .filter(Boolean)
     : [];
   const clockwiseViewLabels = ['Front', 'Right', 'Back', 'Left'];
@@ -82,10 +106,21 @@ const GemstoneDetail = ({ gem }) => {
       ? galleryRotationFrames
       : galleryViews.map((view) => view.url);
   const hasRotationFrames = rotationFrames.length > 1;
+  const videoUrl = resolveMediaUrl(gem?.videoUrl || gem?.video_url);
+  const certificateNumber = gem?.certificate_number || gem?.certificateNumber;
+  const certificateLaboratory = gem?.laboratory || gem?.certification;
+  const certificateUrl = resolveMediaUrl(gem?.certificate_url || gem?.certImage);
+  const certificateStatus = gem?.verification_status || gem?.verificationStatus;
+  const hasCertificateRecord = Boolean(
+    gem?.certificate_id ||
+    certificateNumber ||
+    certificateLaboratory ||
+    certificateUrl
+  );
 
   const [activeMedia, setActiveMedia] = useState({
     type: 'image',
-    url: galleryViews[0]?.url || gem?.image || ''
+    url: galleryViews[0]?.url || resolveMediaUrl(gem?.image) || ''
   });
   const [activeTab, setActiveTab] = useState('specs');
   const detailSectionRef = useRef(null);
@@ -422,7 +457,7 @@ const GemstoneDetail = ({ gem }) => {
             ) : (
               <video
                 src={activeMedia.url}
-                poster={gem.image}
+                poster={galleryViews[0]?.url || resolveMediaUrl(gem.image)}
                 controls
                 autoPlay
                 muted
@@ -524,14 +559,14 @@ const GemstoneDetail = ({ gem }) => {
               );
             })}
 
-            {gem.videoUrl && (
+            {videoUrl && (
               <button
                 type="button"
-                className={`thumb-card video-card ${activeMedia.url === gem.videoUrl && activeMedia.type === 'video' ? 'active' : ''}`}
+                className={`thumb-card video-card ${activeMedia.url === videoUrl && activeMedia.type === 'video' ? 'active' : ''}`}
                 onClick={() => {
                   setIs360Mode(false);
                   setZoomLevel(1);
-                  setActiveMedia({ type: 'video', url: gem.videoUrl });
+                  setActiveMedia({ type: 'video', url: videoUrl });
                 }}
               >
                 <FaPlay className="play-icon" />
@@ -700,22 +735,43 @@ const GemstoneDetail = ({ gem }) => {
             </div>
           ) : (
             <div className="cert-display-area">
-              {gem.certImage && gem.certification ? (
+              {hasCertificateRecord ? (
                 <div className="cert-card">
                   <div className="cert-header-info">
                     <h3>Gemstone Authenticity Report</h3>
-                    <p><strong>Certificate / Store ID:</strong> {gem.certificateNumber}</p>
-                    <p><strong>Certificate Details:</strong> {gem.certification}</p>
+                    <p><strong>Certificate Number:</strong> {certificateNumber || 'Not provided'}</p>
+                    <p><strong>Laboratory:</strong> {certificateLaboratory || 'Not provided'}</p>
+                    {certificateStatus && (
+                      <p><strong>Verification Status:</strong> {certificateStatus}</p>
+                    )}
+                    {gem.issue_date && (
+                      <p><strong>Issue Date:</strong> {String(gem.issue_date).slice(0, 10)}</p>
+                    )}
                   </div>
-                  <div className="cert-image-frame">
-                    <img src={gem.certImage} alt="Official Lab Certificate" />
-                  </div>
+                  {certificateUrl ? (
+                    certificateUrl.toLowerCase().split('?')[0].endsWith('.pdf') ? (
+                      <a
+                        className="cert-image-frame"
+                        href={certificateUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        View laboratory certificate (PDF)
+                      </a>
+                    ) : (
+                      <div className="cert-image-frame">
+                        <img src={certificateUrl} alt="Official Lab Certificate" />
+                      </div>
+                    )
+                  ) : (
+                    <p>The certificate record is available, but its report file has not been uploaded.</p>
+                  )}
                 </div>
               ) : (
                 <div className="empty-cert-box">
                   <div className="empty-icon">📜</div>
                   <h4>Laboratory Certificate Pending</h4>
-                  <p><strong>Store ID:</strong> {gem.certificateNumber}</p>
+                  <p><strong>Store ID:</strong> {certificateNumber || gem.gemstone_id || gem.id}</p>
                   <p>The official certification report for this piece is currently being processed or pending upload.</p>
                 </div>
               )}

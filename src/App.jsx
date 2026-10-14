@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Home from './Pages/Home.jsx';
 import About from './Pages/About.jsx';
 import Contact from './Pages/contact.jsx';
@@ -18,9 +18,63 @@ import JoinWithUs from './Pages/JoinWithUs.jsx';
 import { getApprovedGems } from './useGemSubmissions.js';
 import { useGemProductOverrides } from './useGemProductOverrides.js';
 import { hasAdminAccess } from './adminAccess.js';
+import { apiGet } from './services/api.js';
 import './components/SiteFooter.css';
 import './components/SiteHeader.css';
 import './components/InquiryModal.css';
+
+function InventoryGemstoneRoute({ gemstoneId }) {
+  const [gemstone, setGemstone] = useState(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    apiGet(`/api/gemstones/${gemstoneId}`)
+      .then(async (response) => {
+        let result;
+        try {
+          result = await response.json();
+        } catch {
+          throw new Error('The gemstone service returned an invalid response.');
+        }
+        if (!response.ok || result.success !== true || !result.data) {
+          throw new Error(result.message || 'Unable to load this gemstone.');
+        }
+
+        if (isCurrent) {
+          setGemstone({
+            ...result.data,
+            category: result.data.category_name || 'Gemstone',
+            treatment: result.data.treatment_status,
+            stockQuantity: Number(result.data.stock) || 0,
+            videoUrl: result.data.videoUrl || result.data.video_url,
+          });
+        }
+      })
+      .catch((requestError) => {
+        console.error('Unable to load inventory gemstone:', requestError);
+        if (isCurrent) {
+          setError(requestError.message || 'Unable to load this gemstone.');
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [gemstoneId]);
+
+  if (gemstone) return <GemstoneDetails gem={gemstone} />;
+  if (error) {
+    return (
+      <main role="alert">
+        <p>Unable to load this gemstone: {error}</p>
+        <a href="/gemstones">Return to the gemstone collection</a>
+      </main>
+    );
+  }
+  return <main aria-live="polite">Loading gemstone…</main>;
+}
 
 // Ensure initial default currency is USD and international mode enabled for foreign currencies
 if (typeof window !== 'undefined') {
@@ -137,6 +191,11 @@ function App() {
   // Trust & Certification Page
   if (currentPage === '/trust' || currentPage === '/trust-certification' || currentHash === '#trust') {
     return <TrustPage />;
+  }
+
+  const inventoryGemstoneMatch = currentPage.match(/^\/gemstones\/inventory\/(\d+)$/);
+  if (inventoryGemstoneMatch) {
+    return <InventoryGemstoneRoute gemstoneId={inventoryGemstoneMatch[1]} />;
   }
 
   const gemstoneDetailMatch = currentPage.match(/^\/gemstones\/(\d+)$/);

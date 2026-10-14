@@ -54,6 +54,7 @@ import {
 } from "../imageUpload.js";
 import { useHomeHeroSlides, useManagedBlogPosts } from "../useSiteContent.js";
 import { useCustomerReviews } from "../useCustomerReviews.js";
+import { normalizeTreatment, TREATMENT_OPTIONS } from "../treatments.js";
 import {
   endAdminSession,
   hashAdminPassword,
@@ -61,6 +62,7 @@ import {
   readAdminSession,
   writeAdminAccounts
 } from "../adminAccess.js";
+import { API_BASE_URL, apiGet, apiPut, apiDelete, apiRequest } from "../services/api.js";
 import "./AdminDashboard.css";
 import "./About.css";
 import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
@@ -247,6 +249,24 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     offerStartDate: "",
     offerEndDate: ""
   });
+  const [editGem, setEditGem] = useState(null); // gem being edited
+  const [gemSaving, setGemSaving] = useState(false);
+  const [editCertificate, setEditCertificate] = useState(null);
+  const [certificateSaving, setCertificateSaving] = useState(false);
+  const [certificateDeleting, setCertificateDeleting] = useState(null);
+
+  // helper – re-fetch gems list
+  const refreshGems = async () => {
+    setGemsLoading(true);
+    setGemstonesError("");
+    try {
+      const response = await apiGet("/api/gemstones");
+      const data = await readGemApiResponse(response, "Unable to load gemstones.");
+      if (!Array.isArray(data.data)) {
+        throw new Error("The gemstone service returned an invalid inventory.");
+      }
+      setBackendGems(data.data);
+      return true;
   const [editingJewelleryId, setEditingJewelleryId] = useState(null);
   const [managedHeroSlides, setManagedHeroSlides] = useHomeHeroSlides();
   const [managedBlogPosts, setManagedBlogPosts] = useManagedBlogPosts();
@@ -544,6 +564,9 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
 
   const handleAddGem = (e) => {
     e.preventDefault();
+    const form = e.currentTarget;
+    if (!newGem.name.trim() || !newGem.category_id) {
+      showCustomAlert("Gemstone name and category are required.", "Validation Error", "warning");
     if (!newGem.name || !newGem.price) return;
     if (newGem.discountRate && (!newGem.offerStartDate || !newGem.offerEndDate)) {
       showCustomAlert("Choose both offer start and end dates.", "Offer Dates Required", "warning");
@@ -556,6 +579,49 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       showCustomAlert("Offer end date must be on or after the start date.", "Invalid Offer Dates", "warning");
       return;
     }
+    setGemSaving(true);
+    try {
+      const payload = buildGemstonePayload(newGem, (name) => name.trim().toUpperCase());
+      const formData = new FormData();
+      Object.entries(payload).forEach(([key, value]) => {
+        formData.append(key, value == null ? "" : String(value));
+      });
+      ["mainImage", "backViewImage", "rightViewImage", "leftViewImage", "videoClip"]
+        .forEach((fieldName) => {
+          const file = form.elements.namedItem(fieldName)?.files?.[0];
+          if (file) formData.append(fieldName, file);
+        });
+
+      const res = await apiRequest("/api/gemstones", {
+        method: "POST",
+        body: formData,
+      });
+      await readGemApiResponse(res, "Failed to add gemstone.");
+      showCustomAlert(`Gemstone "${payload.name}" added successfully!`, "Gemstone Added", "success");
+      form.reset();
+      setNewGem({
+        name: "", category_id: "", color: "", carat: "",
+        length: "", width: "", height: "",
+        origin: "Ratnapura, Sri Lanka", price: "", stock: "1",
+        clarity: "", cut: "", shape: "", treatment_status: "Unheated",
+        description: "", status: "available"
+      });
+      await Promise.all([refreshGems(), refreshLowStock()]);
+    } catch (error) {
+      showCustomAlert(error.message || "Failed to add gemstone.", "Error", "danger");
+    } finally {
+      setGemSaving(false);
+    }
+  };
+
+  const handleEditGemSave = async (e) => {
+    e.preventDefault();
+    if (!editGem) return;
+    if (!editGem.name.trim() || !editGem.category_id) {
+      showCustomAlert("Gemstone name and category are required.", "Validation Error", "warning");
+      return;
+    }
+    if (!hasValidGemNumbers(editGem)) {
 
     const normalizedPrice = Number(newGem.price);
     const normalizedDiscountRate = Number(newGem.discountRate);
@@ -779,6 +845,35 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
           ? { ...submission, status, reviewedAt: new Date().toISOString() }
           : submission
       )
+    );
+  };
+
+  const handleDeleteCertificate = (certificate, gemstoneName) => {
+    showCustomConfirm(
+      `Permanently delete the certificate for "${gemstoneName}"? This will also remove its uploaded file when it is stored on this server.`,
+      async () => {
+        setCertificateDeleting(certificate.id);
+        try {
+          const response = await apiDelete(`/api/certificates/${certificate.id}`);
+          await readGemApiResponse(response, "Failed to delete gemstone certificate.");
+          setCertificatesByGemstone((previous) => {
+            const gemstoneId = String(certificate.gemstone_id);
+            if (previous[gemstoneId]?.id !== certificate.id) {
+              return previous;
+            }
+            const updated = { ...previous };
+            delete updated[gemstoneId];
+            return updated;
+          });
+          showCustomAlert("Certificate removed successfully.", "Certificate Deleted", "success");
+        } catch (error) {
+          showCustomAlert(error.message || "Failed to delete gemstone certificate.", "Error", "danger");
+        } finally {
+          setCertificateDeleting(null);
+        }
+      },
+      "Delete Certificate",
+      "danger"
     );
   };
 
@@ -1748,6 +1843,64 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                     </label>
                     <span className="admin-image-help">JPEG, PNG, or WebP · up to 10 MB · works on desktop, tablet, and mobile.</span>
                   </div>
+                  <div className="form-group">
+                    <label>Cut</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Mixed Cut"
+                      value={newGem.cut}
+                      onChange={(e) => setNewGem({ ...newGem, cut: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Treatment</label>
+                    <select
+                      value={newGem.treatment_status}
+                      onChange={(e) => setNewGem({ ...newGem, treatment_status: e.target.value })}
+                    >
+                      {TREATMENT_OPTIONS.map((treatment) => (
+                        <option key={treatment}>{treatment}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {[
+                    { name: "mainImage", label: "Main Gemstone Image", accept: "image/jpeg,image/png,image/webp" },
+                    { name: "backViewImage", label: "Back View Photo", accept: "image/jpeg,image/png,image/webp" },
+                    { name: "rightViewImage", label: "Right View Photo", accept: "image/jpeg,image/png,image/webp" },
+                    { name: "leftViewImage", label: "Left View Photo", accept: "image/jpeg,image/png,image/webp" },
+                    { name: "videoClip", label: "Gemstone Video Clip", accept: "video/mp4,video/webm,video/quicktime" },
+                  ].map(({ name, label, accept }) => (
+                    <div className="form-group" key={name}>
+                      <label htmlFor={`gem-${name}`}>{label}</label>
+                      <input
+                        id={`gem-${name}`}
+                        name={name}
+                        type="file"
+                        accept={accept}
+                      />
+                    </div>
+                  ))}
+                  <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+                    <label>Description</label>
+                    <textarea
+                      placeholder="Brief description of this gemstone..."
+                      rows={3}
+                      value={newGem.description}
+                      onChange={(e) => setNewGem({ ...newGem, description: e.target.value })}
+                      style={{ width: "100%", padding: "0.6rem", borderRadius: "6px", border: "1px solid #d4b96a", resize: "vertical" }}
+                    />
+                  </div>
+                  <button type="submit" className="add-gem-submit-btn" disabled={gemSaving}>
+                    {gemSaving ? "Saving…" : <><FaPlus /> ADD GEMSTONE TO INVENTORY</>}
+                  </button>
+                </form>
+              </div>
+
+              <section className="admin-section" style={{ marginTop: "2rem" }}>
+                <div className="admin-section-heading">
+                  <div>
+                    <h2><FaFileInvoice /> Gemstone Certificate Management</h2>
+                    <p>Add, review, and update certificates for gemstones in your inventory.</p>
                   <div className="site-content-wide-field">
                     <h3 className="gem-detail-upload-heading">View Details Gallery</h3>
                     <p className="admin-image-help">
@@ -1837,6 +1990,101 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                     <button type="submit" className="add-gem-submit-btn">
                       <FaPlus /> {editingGemId ? "UPDATE GEMSTONE" : "ADD GEMSTONE TO INVENTORY"}
                     </button>
+                  </p>
+                ) : !certificatesLoaded ? (
+                  <p className="admin-empty-state" style={{ padding: "1rem", textAlign: "center" }}>
+                    Loading gemstone certificates…
+                  </p>
+                ) : backendGems.length === 0 ? (
+                  <p className="admin-empty-state" style={{ padding: "1rem", textAlign: "center" }}>
+                    Add a gemstone to inventory before attaching its certificate.
+                  </p>
+                ) : (
+                  <div className="admin-table-wrapper">
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th>Gemstone</th>
+                          <th>Certificate Number</th>
+                          <th>Laboratory</th>
+                          <th>Verification</th>
+                          <th>Certificate File</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {backendGems.map((gem) => {
+                          const certificate = certificatesByGemstone[String(gem.id)];
+                          return (
+                            <tr key={gem.id}>
+                              <td><strong>{gem.name}</strong></td>
+                              <td>{certificate?.certificate_number || "Not added"}</td>
+                              <td>{certificate?.laboratory || "—"}</td>
+                              <td>{certificate?.verification_status || "—"}</td>
+                              <td>
+                                {certificate?.certificate_url ? (
+                                  <a
+                                    href={/^https?:\/\//i.test(certificate.certificate_url)
+                                      ? certificate.certificate_url
+                                      : `${API_BASE_URL}${certificate.certificate_url}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                  >
+                                    View file
+                                  </a>
+                                ) : "—"}
+                              </td>
+                              <td>
+                                <div className="certificate-actions">
+                                  <button
+                                    type="button"
+                                    className="admin-action-btn"
+                                    onClick={() => setEditCertificate({
+                                      id: certificate?.id || null,
+                                      gemstone_id: gem.id,
+                                      gemstone_name: gem.name,
+                                      certificate_number: certificate?.certificate_number || "",
+                                      laboratory: certificate?.laboratory || "",
+                                      certificate_url: certificate?.certificate_url || "",
+                                      certificate_file: null,
+                                      verification_status: String(certificate?.verification_status || "pending").toLowerCase(),
+                                      issue_date: certificate?.issue_date
+                                        ? String(certificate.issue_date).slice(0, 10)
+                                        : ""
+                                    })}
+                                  >
+                                    <FaFileInvoice /> {certificate ? "Edit Certificate" : "Add Certificate"}
+                                  </button>
+                                  {certificate && (
+                                    <button
+                                      type="button"
+                                      className="certificate-delete-btn"
+                                      aria-label={`Delete certificate for ${gem.name}`}
+                                      disabled={certificateDeleting === certificate.id}
+                                      onClick={() => handleDeleteCertificate(certificate, gem.name)}
+                                    >
+                                      <FaTrash /> {certificateDeleting === certificate.id ? "Deleting…" : "Delete"}
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+
+              {/* GEMS INVENTORY LIST */}
+              <div className="admin-section-heading" style={{ marginTop: "2rem" }}>
+                <div>
+                  <h2><FaGem /> Live Gemstones Inventory ({backendGems.length})</h2>
+                  <p>All gemstones are fetched live from the database. Click Edit to modify or Remove to delete.</p>
+                </div>
+                {gemsLoading && <span className="admin-live-note">LOADING…</span>}
+                {!gemsLoading && <span className="admin-live-note">{backendGems.length} GEMS IN DB</span>}
                     {editingGemId && (
                       <button type="button" className="add-gem-cancel-btn" onClick={resetGemForm}>
                         <FaTimes /> Cancel Edit
@@ -1885,6 +2133,53 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                       <div className="admin-gem-actions">
                         <button
                           type="button"
+                          className="admin-action-btn"
+                          style={{ marginRight: "6px" }}
+                          disabled={!certificatesLoaded}
+                          onClick={() => {
+                            const certificate = certificatesByGemstone[String(gem.id)];
+                            setEditCertificate({
+                              id: certificate?.id || null,
+                              gemstone_id: gem.id,
+                              gemstone_name: gem.name,
+                              certificate_number: certificate?.certificate_number || "",
+                              laboratory: certificate?.laboratory || "",
+                              certificate_url: certificate?.certificate_url || "",
+                              certificate_file: null,
+                              verification_status: String(certificate?.verification_status || "pending").toLowerCase(),
+                              issue_date: certificate?.issue_date
+                                ? String(certificate.issue_date).slice(0, 10)
+                                : ""
+                            });
+                          }}
+                        >
+                          <FaFileInvoice /> {certificatesLoaded
+                            ? certificatesByGemstone[String(gem.id)] ? "Edit Certificate" : "Add Certificate"
+                            : "Loading Certificate…"}
+                        </button>
+                        <button
+                          type="button"
+                          className="admin-action-btn"
+                          style={{ marginRight: "6px" }}
+                          onClick={() => setEditGem({
+                            id: gem.id,
+                            name: gem.name,
+                            category_id: gem.category_id,
+                            color: gem.color || "",
+                            carat: gem.carat ?? "",
+                            length: gem.length ?? "",
+                            width: gem.width ?? "",
+                            height: gem.height ?? "",
+                            origin: gem.origin || "",
+                            price: gem.price || "",
+                            stock: gem.stock ?? 0,
+                            clarity: gem.clarity || "",
+                            cut: gem.cut || "",
+                            shape: gem.shape || "",
+                            treatment_status: normalizeTreatment(gem.treatment_status || "Unheated"),
+                            description: gem.description || "",
+                            status: isGemstoneActive(gem.status) ? "available" : "inactive"
+                          })}
                           className="gem-edit-btn"
                           onClick={() => handleEditGem(gem)}
                         >
@@ -2010,6 +2305,47 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                     />
                   </div>
                   <div className="form-group">
+                    <label>Stock</label>
+                    <input type="number" min="0" step="1" value={editGem.stock} onChange={(e) => setEditGem({ ...editGem, stock: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label>Origin</label>
+                    <input value={editGem.origin} onChange={(e) => setEditGem({ ...editGem, origin: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label>Shape</label>
+                    <input value={editGem.shape} onChange={(e) => setEditGem({ ...editGem, shape: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label>Clarity</label>
+                    <input value={editGem.clarity} onChange={(e) => setEditGem({ ...editGem, clarity: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label>Cut</label>
+                    <input value={editGem.cut} onChange={(e) => setEditGem({ ...editGem, cut: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label>Treatment</label>
+                    <select value={editGem.treatment_status} onChange={(e) => setEditGem({ ...editGem, treatment_status: e.target.value })}>
+                      {TREATMENT_OPTIONS.map((treatment) => (
+                        <option key={treatment}>{treatment}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Status</label>
+                    <select value={editGem.status} onChange={(e) => setEditGem({ ...editGem, status: e.target.value })}>
+                      <option value="available">Available (Active)</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                  </div>
+                  <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+                    <label>Description</label>
+                    <textarea
+                      rows={3}
+                      value={editGem.description}
+                      onChange={(e) => setEditGem({ ...editGem, description: e.target.value })}
+                      style={{ width: "100%", padding: "0.6rem", borderRadius: "6px", border: "1px solid #d4b96a", resize: "vertical" }}
                     <label htmlFor="jewellery-offer-end-date">Offer End Date</label>
                     <input
                       id="jewellery-offer-end-date"
