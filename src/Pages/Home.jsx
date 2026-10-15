@@ -43,6 +43,7 @@ import { useJewelleryProductOverrides } from "../useJewelleryProductOverrides.js
 import { useJewellerySubmissions } from "../useJewellerySubmissions.js";
 import { withActiveProductOffer } from "../productOffers.js";
 import { useHomeHeroSlides } from "../useSiteContent.js";
+import { apiGet, resolveMediaUrl } from "../services/api.js";
 import {
   currencyRates,
   formatCurrencyPrice,
@@ -223,6 +224,23 @@ const Home = () => {
   const [gemProductOverrides] = useGemProductOverrides();
   const [jewellerySubmissions] = useJewellerySubmissions();
   const [jewelleryProductOverrides] = useJewelleryProductOverrides();
+  const [backendJewellery, setBackendJewellery] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    apiGet("/api/jewellery")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (isMounted && Array.isArray(data?.data)) {
+          setBackendJewellery(data.data);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const [inventory] = useGemInventory(gemstonesProducts);
   const homeShopProducts = useMemo(
     () => [
@@ -239,6 +257,24 @@ const Home = () => {
   );
   const homeJewelleryProducts = useMemo(
     () => [
+      ...backendJewellery
+        .filter((item) => item.status !== "inactive" && item.status !== "draft" && item.status !== "rejected")
+        .map((item) => ({
+          id: item.id,
+          productKey: item.product_code || `jewellery-db-${item.id}`,
+          product_code: item.product_code,
+          name: item.product_name,
+          category: item.jewellery_type || "Other",
+          color: item.color || "Other",
+          shape: item.gemstone_type ? `${item.gemstone_type} ${item.jewellery_type || ""}`.trim() : (item.jewellery_type || "Jewellery"),
+          cut: Number(item.is_handcrafted) === 1 ? "Handcrafted" : "Precision Crafted",
+          treatment: Number(item.is_handcrafted) === 1 ? "Handcrafted" : "Fine Jewellery",
+          material: item.material || "18K Gold",
+          price: Number(item.price) || 0,
+          currency: item.currency || "USD",
+          image: resolveMediaUrl(item.image_url) || "/BlueBracelete.jpg",
+          status: item.status
+        })),
       ...jewelleryProducts
         .map((product) => ({
           ...product,
@@ -249,7 +285,7 @@ const Home = () => {
         .filter((submission) => submission.status === "approved")
         .map((submission) => submission.jewellery)
     ],
-    [jewelleryProductOverrides, jewellerySubmissions]
+    [backendJewellery, jewelleryProductOverrides, jewellerySubmissions]
   );
   const featuredJewellery = useMemo(
     () => featuredJewelleryIds

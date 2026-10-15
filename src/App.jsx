@@ -184,7 +184,7 @@ function App() {
     return <Consultation />;
   }
 
-  if (currentPage === '/jewellery' || currentPage === '/jewelry') {
+  if (currentPage === '/jewellery' || currentPage === '/jewelry' || currentPage === '/juwellery') {
     return <Jewellery />;
   }
 

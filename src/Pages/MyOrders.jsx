@@ -19,13 +19,14 @@ import {
   FaMapMarkerAlt,
   FaInstagram,
   FaFacebookF,
-  FaUser
+  FaUser,
+  FaBan
 } from "react-icons/fa";
 import CollectionDrawerPanel from "../components/CollectionDrawerPanel.jsx";
 import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
 import SiteInquiryModal from "../components/SiteInquiryModal.jsx";
 import { useSharedCollection } from "../useSharedCollection.js";
-import { apiGet, clearCustomerToken } from "../services/api.js";
+import { apiGet, apiPut, clearCustomerToken } from "../services/api.js";
 import "./MyOrders.css";
 import "./About.css";
 import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
@@ -143,14 +144,17 @@ const MyOrders = () => {
           // Map backend order format to frontend display format
           const backendOrders = data.data.map((o) => ({
             id: o.order_number || `ORD-${o.id}`,
+            dbId: o.id,
             date: o.created_at ? String(o.created_at).slice(0, 10) : "",
             status: o.order_status || "PROCESSING",
             statusColor:
               o.order_status === "DELIVERED" ? "status-delivered" :
-              o.order_status === "DISPATCHED" ? "status-dispatched" : "status-dispatched",
+              o.order_status === "CANCELLED" ? "status-cancelled" :
+              o.order_status === "DISPATCHED" || o.order_status === "SHIPPED" ? "status-dispatched" : "status-dispatched",
             statusText:
               o.order_status === "DELIVERED" ? "Delivered & Signed by Recipient" :
-              o.order_status === "DISPATCHED" ? "In Transit" : "Order received and being prepared",
+              o.order_status === "CANCELLED" ? "Order has been cancelled" :
+              o.order_status === "DISPATCHED" || o.order_status === "SHIPPED" ? "In Transit via Priority Air Courier" : "Order received and being prepared",
             paymentStatus: `${o.payment_status} ($${Number(o.total_amount || 0).toLocaleString()})`,
             trackingNumber: o.tracking_number || "Tracking details pending",
             estimatedDelivery: o.estimated_delivery || "To be confirmed",
@@ -167,8 +171,8 @@ const MyOrders = () => {
             })),
             timeline: [
               { step: "Order Placed & Confirmed", date: o.created_at ? String(o.created_at).slice(0, 16) : "", completed: true },
-              { step: "Gemological Lab Verification", date: "Pending", completed: o.order_status !== "PENDING" },
-              { step: "Packaging & Dispatch", date: "Pending", completed: o.order_status === "DISPATCHED" || o.order_status === "DELIVERED" },
+              { step: "Gemological Lab Verification", date: "Pending", completed: o.order_status !== "PENDING" && o.order_status !== "CANCELLED" },
+              { step: "Packaging & Dispatch", date: "Pending", completed: o.order_status === "DISPATCHED" || o.order_status === "SHIPPED" || o.order_status === "DELIVERED" },
               { step: "Delivery", date: "Pending", completed: o.order_status === "DELIVERED" },
             ],
           }));
@@ -199,6 +203,47 @@ const MyOrders = () => {
     window.localStorage.removeItem("ceylon-admin-session");
     window.dispatchEvent(new Event("ceylon-user-auth-change"));
     window.location.href = "/login";
+  };
+
+  const handleCancelCustomerOrder = async (order) => {
+    if (order.status === "DELIVERED") {
+      alert("Delivered orders cannot be cancelled.");
+      return;
+    }
+    if (order.status === "CANCELLED") {
+      alert("This order is already cancelled.");
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to cancel order ${order.id}?`)) {
+      return;
+    }
+
+    if (order.dbId) {
+      try {
+        const res = await apiPut(`/api/orders/${order.dbId}/cancel`);
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.message || "Failed to cancel order");
+        }
+      } catch (err) {
+        alert(err.message || "Failed to cancel order");
+        return;
+      }
+    }
+
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === order.id
+          ? {
+              ...o,
+              status: "CANCELLED",
+              statusColor: "status-cancelled",
+              statusText: "Order has been cancelled"
+            }
+          : o
+      )
+    );
+    alert(`Order ${order.id} has been cancelled successfully.`);
   };
 
   const filteredOrders = orders.filter((order) => {
@@ -486,6 +531,17 @@ const MyOrders = () => {
                       >
                         <FaEnvelope /> Support Inquiry
                       </button>
+
+                      {order.status !== "DELIVERED" && order.status !== "CANCELLED" && (
+                        <button
+                          type="button"
+                          className="btn-order-action outline"
+                          style={{ borderColor: "#dc2626", color: "#dc2626" }}
+                          onClick={() => handleCancelCustomerOrder(order)}
+                        >
+                          <FaBan /> Cancel Order
+                        </button>
+                      )}
                     </div>
                   </div>
                 </article>

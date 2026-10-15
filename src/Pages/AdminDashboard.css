@@ -429,13 +429,27 @@
   white-space: nowrap;
 }
 
-.gem-database-status.active {
+.gem-database-status.active,
+.gem-database-status.approved {
   border-color: #c9dfcf;
   background: #eff8f1;
   color: #28643d;
 }
 
-.gem-database-status.inactive {
+.gem-database-status.pending {
+  border-color: #fce8b2;
+  background: #fef8e7;
+  color: #925400;
+}
+
+.gem-database-status.rejected {
+  border-color: #f5c2c7;
+  background: #f8d7da;
+  color: #842029;
+}
+
+.gem-database-status.inactive,
+.gem-database-status.draft {
   border-color: #e5d8c8;
   background: #f7f2eb;
   color: #76634d;
@@ -1053,6 +1067,58 @@
 .gem-review-status.status-rejected {
   background: #fcebed;
   color: #a33342;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.status-pill.status-pending {
+  background: #fff8e6;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.status-pill.status-processing {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.status-pill.status-shipped,
+.status-pill.status-dispatched,
+.status-pill.status-in_transit {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.status-pill.status-delivered {
+  background: #fdfbf3;
+  color: #927027;
+  border: 1px solid #e9d79b;
+}
+
+.status-pill.status-cancelled,
+.status-pill.status-failed {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.status-pill.status-paid,
+.status-pill.status-settled {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
 }
 
 .super-admin-profile {

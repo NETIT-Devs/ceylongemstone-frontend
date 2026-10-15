@@ -40,6 +40,7 @@ import { hasAdminAccess } from "../adminAccess.js";
 import { useJewelleryProductOverrides } from "../useJewelleryProductOverrides.js";
 import { useJewellerySubmissions } from "../useJewellerySubmissions.js";
 import { withActiveProductOffer } from "../productOffers.js";
+import { apiGet, resolveMediaUrl } from "../services/api.js";
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const products = [
@@ -213,8 +214,58 @@ function Juwellery() {
   const currencyRef = useRef(null);
   const [jewelleryProductOverrides] = useJewelleryProductOverrides();
   const [jewellerySubmissions] = useJewellerySubmissions();
+  const [backendJewellery, setBackendJewellery] = useState([]);
+  const [backendJewelleryLoading, setBackendJewelleryLoading] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchJewellery = async () => {
+      setBackendJewelleryLoading(true);
+      try {
+        const response = await apiGet("/api/jewellery");
+        if (response.ok) {
+          const result = await response.json();
+          if (isMounted && Array.isArray(result?.data)) {
+            setBackendJewellery(result.data);
+          }
+        }
+      } catch (err) {
+        console.warn("Unable to load jewellery from API:", err);
+      } finally {
+        if (isMounted) setBackendJewelleryLoading(false);
+      }
+    };
+    fetchJewellery();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const shopProducts = useMemo(
     () => [
+      ...backendJewellery
+        .filter((item) => item.status !== "inactive" && item.status !== "draft" && item.status !== "rejected")
+        .map((item) => ({
+          id: `db-${item.id}`,
+          rawId: item.id,
+          productKey: item.product_code || `jewellery-db-${item.id}`,
+          product_code: item.product_code,
+          name: item.product_name,
+          category: item.jewellery_type || "Other",
+          color: item.color || "Other",
+          shape: item.gemstone_type ? `${item.gemstone_type} ${item.jewellery_type || ""}`.trim() : (item.jewellery_type || "Jewellery"),
+          cut: Number(item.is_handcrafted) === 1 ? "Handcrafted" : "Precision Crafted",
+          treatment: Number(item.is_handcrafted) === 1 ? "Handcrafted" : "Fine Jewellery",
+          material: item.material || "18K Gold",
+          gemstone_type: item.gemstone_type || "",
+          description: item.description || "",
+          price: Number(item.price) || 0,
+          currency: item.currency || "USD",
+          stock_quantity: item.stock_quantity ?? 1,
+          is_handcrafted: Number(item.is_handcrafted) === 1,
+          image: resolveMediaUrl(item.image_url) || "/BlueBracelete.jpg",
+          status: item.status
+        })),
       ...products
         .map((product) => ({
           ...product,
@@ -225,7 +276,7 @@ function Juwellery() {
         .filter((submission) => submission.status === "approved")
         .map((submission) => submission.jewellery)
     ],
-    [jewelleryProductOverrides, jewellerySubmissions]
+    [backendJewellery, jewelleryProductOverrides, jewellerySubmissions]
   );
   const shopMaxPriceValue = Math.ceil(
     Math.max(maxPriceValue, ...shopProducts.map((product) => Number(product.price) || 0)) /
@@ -296,7 +347,7 @@ function Juwellery() {
   const [activeDrawer, setActiveDrawer] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(() => {
     const productId = new URLSearchParams(window.location.search).get("product");
-    return shopProducts.find((product) => product.id === Number(productId)) || null;
+    return shopProducts.find((product) => String(product.id) === String(productId) || String(product.rawId) === String(productId)) || null;
   });
   const [inquiryProduct, setInquiryProduct] = useState(null);
 
@@ -421,7 +472,8 @@ function Juwellery() {
     return shopProducts.filter((product) => {
       const categoryMatch =
         selectedCategory === "All Jewellery" ||
-        product.category === selectedCategory;
+        product.category?.toLowerCase() === selectedCategory?.toLowerCase() ||
+        String(product.category || "").toLowerCase().includes(selectedCategory.toLowerCase());
 
       const searchMatch =
         searchTerm.trim() === "" ||
@@ -441,7 +493,8 @@ function Juwellery() {
 
       const colorMatch =
         selectedColor === "All Colors" ||
-        product.color === selectedColor;
+        product.color?.toLowerCase() === selectedColor?.toLowerCase() ||
+        String(product.color || "").toLowerCase().includes(selectedColor.toLowerCase());
 
       const minPriceMatch =
         product.price >= minPrice;
