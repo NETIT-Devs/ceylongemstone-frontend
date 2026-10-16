@@ -62,7 +62,8 @@
   font-weight: 600;
 }
 
-.checkout-fields input {
+.checkout-fields input,
+.checkout-fields select {
   width: 100%;
   min-height: 42px;
   padding: 10px 12px;

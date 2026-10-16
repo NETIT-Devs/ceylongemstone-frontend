@@ -31,67 +31,20 @@ import "./MyOrders.css";
 import "./About.css";
 import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
 
-// Sample luxury gemstone orders for initial view / fallback
-const sampleOrders = [
-  {
-    id: "CRG-94821",
-    date: "2026-09-28",
-    status: "DISPATCHED",
-    statusColor: "status-dispatched",
-    statusText: "In Transit via FedEx International Priority",
-    paymentStatus: "PAID ($12,500)",
-    trackingNumber: "FEX-9920184712-LK",
-    estimatedDelivery: "2026-10-04",
-    items: [
-      {
-        name: "ROYAL BLUE SAPPHIRE",
-        carat: "4.52 Ct",
-        cut: "Cushion Cut",
-        origin: "Ratnapura, Sri Lanka",
-        certificateId: "GIC-2026-8891",
-        price: 12500,
-        image: "/blueGem.jpg",
-        tag: "CERTIFIED NATURAL"
-      }
-    ],
-    timeline: [
-      { step: "Order Placed & Confirmed", date: "2026-09-28 10:30 AM", completed: true },
-      { step: "Gemological Lab Verification (GIC)", date: "2026-09-28 03:15 PM", completed: true },
-      { step: "Royal Vault Vaulting & Packaging", date: "2026-09-29 09:00 AM", completed: true },
-      { step: "Dispatched / Customs Cleared", date: "2026-09-29 06:45 PM", completed: true },
-      { step: "In Transit to Destination", date: "Estimated Oct 04, 2026", completed: false }
-    ]
-  },
-  {
-    id: "CRG-88231",
-    date: "2026-09-14",
-    status: "DELIVERED",
-    statusColor: "status-delivered",
-    statusText: "Delivered & Signed by Recipient",
-    paymentStatus: "PAID ($18,900)",
-    trackingNumber: "FEX-8817290123-LK",
-    estimatedDelivery: "2026-09-18",
-    items: [
-      {
-        name: "CEYLON PADPARADSCHA SAPPHIRE",
-        carat: "3.18 Ct",
-        cut: "Oval Master Cut",
-        origin: "Elahera, Sri Lanka",
-        certificateId: "GRS-2026-7734",
-        price: 18900,
-        image: "/PADPARADSCHAgem2.jpg",
-        tag: "RARE COLLECTOR"
-      }
-    ],
-    timeline: [
-      { step: "Order Placed & Confirmed", date: "2026-09-14 02:20 PM", completed: true },
-      { step: "Gemological Lab Verification (GRS)", date: "2026-09-14 05:40 PM", completed: true },
-      { step: "Royal Vault Vaulting & Packaging", date: "2026-09-15 11:00 AM", completed: true },
-      { step: "Dispatched / Customs Cleared", date: "2026-09-15 04:30 PM", completed: true },
-      { step: "Delivered Safely", date: "2026-09-18 11:15 AM", completed: true }
-    ]
-  }
-];
+const formatEstimatedDelivery = (value) => {
+  const datePart = String(value || "").match(/^\d{4}-\d{2}-\d{2}/)?.[0];
+  if (!datePart) return value || "To be confirmed";
+
+  const date = new Date(`${datePart}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC"
+  }).format(date);
+};
 
 const MyOrders = () => {
   const [wishlist, setWishlist] = useSharedCollection("ceylon-wishlist");
@@ -111,87 +64,99 @@ const MyOrders = () => {
     }
   });
 
-  // ── Orders: start from localStorage (from Checkout), then enrich from backend ──
-  const [orders, setOrders] = useState(() => {
-    try {
-      const userEmail = user?.email;
-      if (!userEmail) return [];
-      const userOrdersKey = `ceylon-orders-${userEmail}`;
-      const savedOrders = window.localStorage.getItem(userOrdersKey);
-      if (savedOrders) {
-        const parsed = JSON.parse(savedOrders);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    } catch {
-      // Fallback to empty
-    }
-    return [];
-  });
+  const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState("");
 
-  // Fetch orders from backend when user is logged in
   useEffect(() => {
     const userId = user?.id || window.localStorage.getItem("ceylon-user-id");
-    if (!userId) return;
+    if (!userId) {
+      return undefined;
+    }
 
-    setOrdersLoading(true);
-    apiGet(`/api/orders/user/${userId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
-          // Map backend order format to frontend display format
-          const backendOrders = data.data.map((o) => ({
-            id: o.order_number || `ORD-${o.id}`,
-            dbId: o.id,
-            date: o.created_at ? String(o.created_at).slice(0, 10) : "",
-            status: o.order_status || "PROCESSING",
+    let isActive = true;
+    const fetchOrders = async () => {
+      setOrdersLoading(true);
+      setOrdersError("");
+      try {
+        const response = await apiGet(`/api/orders/user/${encodeURIComponent(userId)}`);
+        let data;
+        try {
+          data = await response.json();
+        } catch {
+          throw new Error("The orders service returned an invalid response.");
+        }
+        if (!response.ok || data?.success !== true || !Array.isArray(data?.data)) {
+          throw new Error(data?.message || "Unable to load your orders.");
+        }
+
+        const fetchedOrders = data.data.map((order) => {
+          const status = order.order_status || "PENDING";
+          const currency = order.currency || "USD";
+          const statusIsInTransit = ["DISPATCHED", "SHIPPED"].includes(status);
+
+          return {
+            id: order.order_number || `ORD-${order.id}`,
+            dbId: order.id,
+            date: order.created_at ? String(order.created_at).slice(0, 10) : "",
+            status,
             statusColor:
-              o.order_status === "DELIVERED" ? "status-delivered" :
-              o.order_status === "CANCELLED" ? "status-cancelled" :
-              o.order_status === "DISPATCHED" || o.order_status === "SHIPPED" ? "status-dispatched" : "status-dispatched",
+              status === "DELIVERED" ? "status-delivered" :
+              status === "CANCELLED" ? "status-cancelled" : "status-dispatched",
             statusText:
-              o.order_status === "DELIVERED" ? "Delivered & Signed by Recipient" :
-              o.order_status === "CANCELLED" ? "Order has been cancelled" :
-              o.order_status === "DISPATCHED" || o.order_status === "SHIPPED" ? "In Transit via Priority Air Courier" : "Order received and being prepared",
-            paymentStatus: `${o.payment_status} ($${Number(o.total_amount || 0).toLocaleString()})`,
-            trackingNumber: o.tracking_number || "Tracking details pending",
-            estimatedDelivery: o.estimated_delivery || "To be confirmed",
-            shippingAddress: o.shipping_address || "",
-            items: (o.items || []).map((item) => ({
+              status === "DELIVERED" ? "Delivered & Signed by Recipient" :
+              status === "CANCELLED" ? "Order has been cancelled" :
+              statusIsInTransit ? "In Transit via Priority Air Courier" :
+              "Order received and being prepared",
+            paymentStatus: `${order.payment_status || "PENDING"} (${Number(order.final_total ?? order.total_amount ?? 0).toLocaleString()} ${currency})`,
+            trackingNumber: order.tracking_number || order.shipment?.tracking_number || "Tracking details pending",
+            estimatedDelivery: order.estimated_delivery || order.shipment?.estimated_delivery || "To be confirmed",
+            courier: order.courier || order.shipment?.courier || "",
+            shippingAddress: order.shipping_address || "",
+            items: (Array.isArray(order.items) ? order.items : []).map((item) => ({
               name: item.gemstone_name || item.name || "Gemstone",
-              carat: item.carat ? `${item.carat} Ct` : "",
-              cut: item.cut || item.shape || "",
-              origin: item.origin || "Sri Lanka",
-              certificateId: item.certificate_number || "Certification pending",
+              carat: item.carat ? `${item.carat} Ct` : "Not provided",
+              cut: item.cut || item.shape || "Not provided",
+              origin: item.origin || "Not provided",
+              certificateId: item.certificate_number || "",
               price: Number(item.price || 0),
+              currency: item.currency || currency,
               image: item.image_url || "/blueGem.jpg",
-              tag: "CERTIFIED NATURAL",
+              tag: "ORDER ITEM",
             })),
             timeline: [
-              { step: "Order Placed & Confirmed", date: o.created_at ? String(o.created_at).slice(0, 16) : "", completed: true },
-              { step: "Gemological Lab Verification", date: "Pending", completed: o.order_status !== "PENDING" && o.order_status !== "CANCELLED" },
-              { step: "Packaging & Dispatch", date: "Pending", completed: o.order_status === "DISPATCHED" || o.order_status === "SHIPPED" || o.order_status === "DELIVERED" },
-              { step: "Delivery", date: "Pending", completed: o.order_status === "DELIVERED" },
+              { step: "Order Placed & Confirmed", date: order.created_at ? String(order.created_at).slice(0, 16) : "", completed: true },
+              { step: "Gemological Lab Verification", date: "Pending", completed: !["PENDING", "CANCELLED"].includes(status) },
+              { step: "Packaging & Dispatch", date: "Pending", completed: statusIsInTransit || status === "DELIVERED" },
+              { step: "Delivery", date: "Pending", completed: status === "DELIVERED" },
             ],
-          }));
-          // Merge: backend orders first, then local sample orders
-          const localOrders = (() => {
-            try {
-              const saved = JSON.parse(window.localStorage.getItem("ceylon-orders") || "[]");
-              return Array.isArray(saved) ? saved : [];
-            } catch { return []; }
-          })();
-          setOrders([...localOrders, ...backendOrders, ...sampleOrders]);
+          };
+        });
+
+        if (isActive) setOrders(fetchedOrders);
+      } catch (error) {
+        if (isActive) {
+          setOrders([]);
+          setOrdersError(error instanceof Error ? error.message : "Unable to load your orders.");
         }
-      })
-      .catch(() => {
-        // Keep existing orders on API failure
-      })
-      .finally(() => setOrdersLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+      } finally {
+        if (isActive) setOrdersLoading(false);
+      }
+    };
+
+    fetchOrders();
+    window.addEventListener("focus", fetchOrders);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") fetchOrders();
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      isActive = false;
+      window.removeEventListener("focus", fetchOrders);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [user?.id]);
 
   const [activeTab, setActiveTab] = useState("ALL");
   const [selectedOrderTracking, setSelectedOrderTracking] = useState(null);
@@ -404,10 +369,14 @@ const MyOrders = () => {
 
           {/* ORDER CARDS LIST */}
           <div className="orders-list">
-            {filteredOrders.length === 0 ? (
+            {ordersLoading ? (
+              <p className="empty-orders-card" role="status">Loading your orders…</p>
+            ) : ordersError ? (
+              <p className="empty-orders-card" role="alert">{ordersError}</p>
+            ) : filteredOrders.length === 0 ? (
               <div className="empty-orders-card">
                 <FaBoxOpen className="empty-icon" />
-                <h3>No orders found in this category</h3>
+                <h3>{orders.length === 0 ? "No orders yet" : "No orders found in this category"}</h3>
                 <p>Browse our handpicked natural Ceylon sapphires, rubies, and emeralds.</p>
                 <a href="/gemstones" className="about-inquire-btn">
                   EXPLORE GEMSTONES
@@ -444,6 +413,7 @@ const MyOrders = () => {
 
                   {/* ITEMS LIST IN ORDER */}
                   <div className="order-items-list">
+                    {order.items.length === 0 && <p>Item details are not available for this order.</p>}
                     {order.items.map((item, idx) => (
                       <div key={idx} className="order-item-row">
                         <img
@@ -469,7 +439,7 @@ const MyOrders = () => {
                         </div>
                         <div className="order-item-pricing">
                           <span className="order-item-price">
-                            ${Number(item.price).toLocaleString("en-US")} USD
+                            {Number(item.price).toLocaleString("en-US")} {item.currency}
                           </span>
                           <span className="shipping-note">Free Insured Courier Shipping</span>
                         </div>
@@ -501,20 +471,30 @@ const MyOrders = () => {
                   {/* CARD ACTIONS FOOTER */}
                   <div className="order-card-footer">
                     <div className="tracking-code-info">
-                      <span>Airway Bill / Tracking: </span>
-                      <strong>{order.trackingNumber}</strong>
+                      <div className="tracking-detail">
+                        <span>Airway Bill / Tracking</span>
+                        <strong>{order.trackingNumber}</strong>
+                      </div>
+                      {order.courier && (
+                        <div className="tracking-detail tracking-courier">
+                          <span>Courier</span>
+                          <strong>{order.courier}</strong>
+                        </div>
+                      )}
                     </div>
 
                     <div className="order-action-buttons">
-                      <button
-                        type="button"
-                        className="btn-order-action secondary"
-                        onClick={() =>
-                          alert(`Downloading Gemological Certificate ${order.items[0].certificateId}...`)
-                        }
-                      >
-                        <FaDownload /> Certificate (PDF)
-                      </button>
+                      {order.items[0]?.certificateId && (
+                        <button
+                          type="button"
+                          className="btn-order-action secondary"
+                          onClick={() =>
+                            alert(`Downloading Gemological Certificate ${order.items[0].certificateId}...`)
+                          }
+                        >
+                          <FaDownload /> Certificate (PDF)
+                        </button>
+                      )}
 
                       <button
                         type="button"
@@ -571,7 +551,7 @@ const MyOrders = () => {
               <div className="modal-tracking-summary">
                 <div>
                   <span>Courier Service</span>
-                  <strong>FedEx International Priority</strong>
+                  <strong>{selectedOrderTracking.courier || "Courier not assigned"}</strong>
                 </div>
                 <div>
                   <span>Tracking Number</span>
@@ -579,7 +559,9 @@ const MyOrders = () => {
                 </div>
                 <div>
                   <span>Estimated Delivery</span>
-                  <strong>{selectedOrderTracking.estimatedDelivery}</strong>
+                  <strong className="tracking-summary-value">
+                    {formatEstimatedDelivery(selectedOrderTracking.estimatedDelivery)}
+                  </strong>
                 </div>
               </div>
 

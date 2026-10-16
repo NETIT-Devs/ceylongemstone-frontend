@@ -30,6 +30,7 @@ import {
   useSharedCollection
 } from "../useSharedCollection.js";
 import { apiPost } from "../services/api.js";
+import { useCustomerCart } from "../services/customerCart.js";
 
 
 /* =========================================================
@@ -80,6 +81,12 @@ const Contact = () => {
   const [wishlist, setWishlist] = useSharedCollection("ceylon-wishlist");
   const [cart, setCart] = useSharedCollection("ceylon-cart");
   const [activeDrawer, setActiveDrawer] = useState(null);
+  const {
+    isLoading: customerCartLoading,
+    error: customerCartError,
+    deletingCartIds,
+    removeCartItem
+  } = useCustomerCart(activeDrawer === "cart", setCart);
   const [selectedGem, setSelectedGem] = useState(null);
 
   const [formData, setFormData] = useState({
@@ -1150,6 +1157,12 @@ const Contact = () => {
 
 
             <div className="about-drawer-body">
+              {activeDrawer === "cart" && customerCartLoading && (
+                <p role="status">Loading your saved cart...</p>
+              )}
+              {activeDrawer === "cart" && customerCartError && (
+                <p role="alert">{customerCartError}</p>
+              )}
 
               {activeItems.length === 0 ? (
                 <div className="drawer-empty">
@@ -1174,12 +1187,10 @@ const Contact = () => {
                     <button
                       type="button"
                       aria-label={`Remove ${gem.name}`}
+                      disabled={Boolean(gem.cartId && deletingCartIds.includes(gem.cartId))}
                       onClick={() => {
                         if (activeDrawer === "cart") {
-                          const productKey = getCollectionItemKey(gem);
-                          setCart((current) => current.filter(
-                            (item) => getCollectionItemKey(item) !== productKey
-                          ));
+                          void removeCartItem(gem);
                         } else {
                           toggleWishlist(gem);
                         }

@@ -31,6 +31,7 @@ import {
   normalizeCollectionItem,
   useSharedCollection
 } from '../useSharedCollection.js';
+import { persistCustomerCartItem, useCustomerCart } from "../services/customerCart.js";
 
 const JewelleryDetail = ({ gem }) => {
   const [currency] = useState(getCurrentCurrency);
@@ -94,24 +95,16 @@ const JewelleryDetail = ({ gem }) => {
     dragStartX.current = event.clientX;
   };
 
-  // Customer Reviews State
-  const [reviews, setReviews] = useState([
-    {
-      id: 1,
-      name: 'Alexander Wright',
-      rating: 5,
-      date: 'September 12, 2026',
-      comment: 'An exquisite Royal Blue Sapphire. The clarity and cut exceed expectations. Truly a masterpiece.',
-      photo: null
-    }
-  ]);
-  const [newRating, setNewRating] = useState(5);
-  const [newComment, setNewComment] = useState('');
-  const [newPhoto, setNewPhoto] = useState(null);
   const [wishlist, setWishlist] = useSharedCollection('ceylon-wishlist');
   const [cart, setCart] = useSharedCollection('ceylon-cart');
   const [addedToCart, setAddedToCart] = useState(false);
   const [activeDrawer, setActiveDrawer] = useState(null);
+  const {
+    isLoading: customerCartLoading,
+    error: customerCartError,
+    deletingCartIds,
+    removeCartItem
+  } = useCustomerCart(activeDrawer === 'cart', setCart);
   const [showPaymentNotice, setShowPaymentNotice] = useState(false);
   const [showInquiryForm, setShowInquiryForm] = useState(false);
 
@@ -123,25 +116,45 @@ const JewelleryDetail = ({ gem }) => {
     (item) => getCollectionItemKey(item) === gemProductKey
   );
 
-  const addProductToCart = (product) => {
+  const addProductToCart = async (product) => {
     const productKey = getCollectionItemKey(product);
+    const cartItem = cart.find((item) => getCollectionItemKey(item) === productKey);
+
+    let savedCartItem;
+    try {
+      savedCartItem = await persistCustomerCartItem(
+        "jewellery",
+        product.rawId || product.id,
+        cartItem?.quantity || 1
+      );
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Unable to save this jewellery item to your cart.");
+      return;
+    }
 
     setCart((current) => {
       const alreadyInCart = current.some(
         (item) => getCollectionItemKey(item) === productKey
       );
 
-      if (alreadyInCart) return current;
+      if (alreadyInCart) {
+        return current.map((item) => getCollectionItemKey(item) === productKey
+          ? { ...item, quantity: savedCartItem.quantity }
+          : item);
+      }
 
       return [
         ...current,
-        normalizeCollectionItem({ ...product, quantity: 1 })
+        {
+          ...normalizeCollectionItem(product),
+          quantity: savedCartItem.quantity
+        }
       ];
     });
   };
 
-  const addGemToCart = () => {
-    addProductToCart(gem);
+  const addGemToCart = async () => {
+    await addProductToCart(gem);
     setAddedToCart(true);
     setActiveDrawer('cart');
   };
@@ -167,12 +180,6 @@ const JewelleryDetail = ({ gem }) => {
     });
   };
 
-  const handleImageChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setNewPhoto(URL.createObjectURL(e.target.files[0]));
-    }
-  };
-
   const handleInquirySubmit = (e) => {
     e.preventDefault();
     alert('Your inquiry has been sent successfully!');
@@ -182,24 +189,6 @@ const JewelleryDetail = ({ gem }) => {
   const showDetailsTab = (tab) => {
     setActiveTab(tab);
     detailSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  const handleReviewSubmit = (e) => {
-    e.preventDefault();
-    if (!newComment.trim()) return;
-
-    const reviewObj = {
-      id: Date.now(),
-      name: 'Private Collector',
-      rating: newRating,
-      date: 'Just now',
-      comment: newComment,
-      photo: newPhoto
-    };
-
-    setReviews([reviewObj, ...reviews]);
-    setNewComment('');
-    setNewPhoto(null);
   };
 
   if (!gem) {
@@ -613,81 +602,6 @@ const JewelleryDetail = ({ gem }) => {
         </div>
       </div>
 
-      {/* Premium Reviews & Client Photographs */}
-      <div className="reviews-section">
-        <div className="reviews-header">
-          <h2>CLIENT REVIEWS & GALLERY</h2>
-          <p>Verified testimonials from jewellery collectors and enthusiasts.</p>
-        </div>
-
-        {/* Add Review Form */}
-        <form className="luxury-review-form" onSubmit={handleReviewSubmit}>
-          <h3>Share Your Experience</h3>
-          
-          <div className="form-row">
-            <div className="input-group">
-              <label>Rating</label>
-              <select value={newRating} onChange={(e) => setNewRating(Number(e.target.value))}>
-                <option value="5">★★★★★ Exceptional (5/5)</option>
-                <option value="4">★★★★☆ Excellent (4/5)</option>
-                <option value="3">★★★☆☆ Good (3/5)</option>
-              </select>
-            </div>
-
-            <div className="input-group">
-              <label>Upload Photograph (Optional)</label>
-              <input type="file" accept="image/*" onChange={handleImageChange} className="file-input" />
-            </div>
-          </div>
-
-          <div className="input-group">
-            <label>Review Remarks</label>
-            <textarea 
-              rows="3" 
-              placeholder="Describe your jewellery purchasing experience..."
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              required
-            ></textarea>
-          </div>
-
-          {newPhoto && (
-            <div className="photo-preview-box">
-              <p>Image Preview:</p>
-              <img src={newPhoto} alt="Upload Preview" />
-            </div>
-          )}
-
-          <button type="submit" className="submit-gold-btn">SUBMIT TESTIMONIAL</button>
-        </form>
-
-        {/* Reviews Feed */}
-        <div className="reviews-feed">
-          {reviews.map((rev) => (
-            <div key={rev.id} className="review-card-luxury">
-              <div className="review-top">
-                <div className="reviewer-info">
-                  <div className="avatar-circle">{rev.name.charAt(0)}</div>
-                  <div>
-                    <span className="reviewer-name">{rev.name}</span>
-                    <span className="review-date">{rev.date}</span>
-                  </div>
-                </div>
-                <div className="star-rating">{'★'.repeat(rev.rating)}</div>
-              </div>
-
-              <p className="review-text">{rev.comment}</p>
-
-              {rev.photo && (
-                <div className="review-photo-frame">
-                  <img src={rev.photo} alt="Client Jewellery" />
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
       <footer className="gem-detail-footer">
         <div className="gem-detail-footer-grid">
           <div className="gem-detail-footer-brand">
@@ -831,6 +745,12 @@ const JewelleryDetail = ({ gem }) => {
               >×</button>
             </div>
 
+            {activeDrawer === 'cart' && customerCartLoading && (
+              <p role="status">Loading your saved cart...</p>
+            )}
+            {activeDrawer === 'cart' && customerCartError && (
+              <p role="alert">{customerCartError}</p>
+            )}
             {drawerItems.length === 0 ? (
               <p className="detail-cart-empty">
                 Your {activeDrawer === 'wishlist' ? 'wishlist' : 'cart'} is currently empty.
@@ -846,14 +766,21 @@ const JewelleryDetail = ({ gem }) => {
                       <div className="detail-cart-item-info">
                         <strong>{itemName}</strong>
                         <span>{formatCurrencyPrice(item.price, currency)}</span>
-                        <span>Qty 1</span>
+                        <span>Qty {Number(item.quantity) || 1}</span>
                       </div>
                       <button
                         type="button"
                         className="detail-cart-remove"
-                        onClick={() => (activeDrawer === 'wishlist' ? setWishlist : setCart)(
-                          (current) => current.filter((entry) => getCollectionItemKey(entry) !== productKey)
-                        )}
+                        disabled={Boolean(item.cartId && deletingCartIds.includes(item.cartId))}
+                        onClick={() => {
+                          if (activeDrawer === 'wishlist') {
+                            setWishlist((current) => current.filter(
+                              (entry) => getCollectionItemKey(entry) !== productKey
+                            ));
+                          } else {
+                            void removeCartItem(item);
+                          }
+                        }}
                         aria-label={`Remove ${itemName}`}
                       >×</button>
                     </div>

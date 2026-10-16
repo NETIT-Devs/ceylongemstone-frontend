@@ -7,13 +7,14 @@ export const getCollectionItemKey = (item) =>
 
 export const normalizeCollectionItem = (item) => {
   const price = Number(item.price ?? item.basePriceUSD ?? 0);
+  const quantity = Number(item.quantity);
 
   return {
     ...item,
     productKey: getCollectionItemKey(item),
     price,
     basePriceUSD: Number(item.basePriceUSD ?? price),
-    quantity: 1
+    quantity: Number.isSafeInteger(quantity) && quantity > 0 ? quantity : 1
   };
 };
 

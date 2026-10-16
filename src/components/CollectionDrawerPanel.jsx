@@ -1,5 +1,6 @@
 import { FaGem, FaTimes, FaTrash } from "react-icons/fa";
 import { getCollectionItemKey } from "../useSharedCollection.js";
+import { useCustomerCart } from "../services/customerCart.js";
 import CollectionDrawerActions from "./CollectionDrawerActions.jsx";
 
 const CollectionDrawerPanel = ({
@@ -10,14 +11,25 @@ const CollectionDrawerPanel = ({
   cart,
   setCart
 }) => {
+  const {
+    isLoading,
+    error: cartError,
+    deletingCartIds,
+    removeCartItem
+  } = useCustomerCart(activeDrawer === "cart", setCart);
+
   if (!activeDrawer) return null;
 
   const items = activeDrawer === "wishlist" ? wishlist : cart;
 
-  const removeItem = (productKey) => {
-    const setItems = activeDrawer === "wishlist" ? setWishlist : setCart;
-    setItems((current) => current.filter(
-      (item) => getCollectionItemKey(item) !== productKey
+  const removeItem = (item) => {
+    if (activeDrawer === "cart") {
+      void removeCartItem(item);
+      return;
+    }
+
+    setWishlist((current) => current.filter(
+      (entry) => getCollectionItemKey(entry) !== getCollectionItemKey(item)
     ));
   };
 
@@ -44,11 +56,19 @@ const CollectionDrawerPanel = ({
         </div>
 
         <div className="gem-drawer-body">
+          {activeDrawer === "cart" && isLoading && (
+            <p role="status">Loading your saved cart...</p>
+          )}
+          {activeDrawer === "cart" && cartError && (
+            <p role="alert">{cartError}</p>
+          )}
           {items.length === 0 ? (
+            activeDrawer === "cart" && isLoading ? null : (
             <div className="drawer-empty">
               <FaGem />
               <p>Your {activeDrawer} is empty.</p>
             </div>
+            )
           ) : (
             items.map((item) => {
               const key = getCollectionItemKey(item);
@@ -58,14 +78,15 @@ const CollectionDrawerPanel = ({
                   <img src={item.image} alt={item.name} />
                   <div className="gem-drawer-item-info">
                     <h4>{item.name}</h4>
-                    <p>{item.carat} Ct</p>
+                    {item.carat ? <p>{item.carat} Ct</p> : null}
                     <strong>${Number(item.price || 0).toLocaleString("en-US")}</strong>
-                    <p>Qty 1</p>
+                    <p>Qty {Number(item.quantity) || 1}</p>
                   </div>
                   <button
                     type="button"
                     aria-label={`Remove ${item.name}`}
-                    onClick={() => removeItem(key)}
+                    disabled={Boolean(item.cartId && deletingCartIds.includes(item.cartId))}
+                    onClick={() => removeItem(item)}
                   >
                     <FaTrash />
                   </button>

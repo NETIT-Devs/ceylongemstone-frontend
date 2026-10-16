@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { API_BASE_URL, apiGet } from '../services/api.js';
 import BrandLogo from "./BrandLogo.jsx";
-import { products } from '../Pages/Gemstones.jsx';
 
 const TrustAndCertification = ({ inquiryOpen, onInquiryClose }) => {
   // State variables for certificate search and report viewing modal

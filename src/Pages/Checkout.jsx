@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ShopNavDropdown from "../components/ShopNavDropdown.jsx";
 import BrandLogo from "../components/BrandLogo.jsx";
 import {
@@ -22,7 +22,7 @@ import {
 import { useGemInventory } from "../useGemInventory.js";
 import { products } from "./Gemstones.jsx";
 import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
-import { apiPost } from "../services/api.js";
+import { apiGet, apiPost } from "../services/api.js";
 import "./Checkout.css";
 import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
 
@@ -30,7 +30,7 @@ const formatPrice = (price) =>
   Number(price || 0).toLocaleString("en-US", {
     style: "currency",
     currency: "USD",
-    maximumFractionDigits: 0
+    maximumFractionDigits: 2
   });
 
 const Checkout = () => {
@@ -50,15 +50,159 @@ const Checkout = () => {
   const [notice, setNotice] = useState("");
   const [isInquiryOpen, setIsInquiryOpen] = useState(false);
   const [placedOrderId, setPlacedOrderId] = useState("");
+  const [shippingMethods, setShippingMethods] = useState([]);
+  const [shippingMethodsLoading, setShippingMethodsLoading] = useState(true);
+  const [shippingMethodsError, setShippingMethodsError] = useState("");
+  const [selectedShippingMethodId, setSelectedShippingMethodId] = useState("");
+  const [shippingCostConversion, setShippingCostConversion] = useState(null);
   const orderSubmitted = useRef(false);
-  const total = cart.reduce(
+  const itemTotal = cart.reduce(
     (sum, item) => sum + Number(item.price || 0) * (Number(item.quantity) || 1),
     0
   );
+  const selectedShippingMethod = shippingMethods.find(
+    (method) => String(method.id) === String(selectedShippingMethodId)
+  );
+  const selectedShippingAmount = Number(selectedShippingMethod?.shipping_cost);
+  const selectedShippingCurrency = String(selectedShippingMethod?.currency || "USD").toUpperCase();
+  const isFreeShipping =
+    selectedShippingMethod?.free_shipping === true ||
+    Number(selectedShippingMethod?.free_shipping) === 1;
+  const needsShippingConversion =
+    selectedShippingMethod &&
+    !isFreeShipping &&
+    Number.isFinite(selectedShippingAmount) &&
+    selectedShippingAmount > 0 &&
+    selectedShippingCurrency !== "USD";
+  const currentShippingConversion =
+    shippingCostConversion?.methodId === String(selectedShippingMethod?.id)
+      ? shippingCostConversion
+      : null;
+  const shippingCostLoading =
+    Boolean(needsShippingConversion) &&
+    (!currentShippingConversion || currentShippingConversion.status === "loading");
+  const shippingCostError =
+    selectedShippingMethod && (!Number.isFinite(selectedShippingAmount) || selectedShippingAmount < 0)
+      ? "The selected shipping method has an invalid shipping cost."
+      : currentShippingConversion?.status === "error"
+        ? currentShippingConversion.error
+        : "";
+  const shippingCostUsd = !selectedShippingMethod || isFreeShipping || selectedShippingAmount === 0
+    ? 0
+    : selectedShippingCurrency === "USD"
+      ? selectedShippingAmount
+      : currentShippingConversion?.status === "success"
+        ? currentShippingConversion.amount
+        : 0;
+  const shippingCostIsCurrent =
+    selectedShippingMethod &&
+    !shippingCostLoading &&
+    !shippingCostError;
+  const total = itemTotal + (shippingCostIsCurrent ? shippingCostUsd : 0);
+
+  useEffect(() => {
+    let isActive = true;
+    const loadShippingMethods = async () => {
+      setShippingMethodsLoading(true);
+      setShippingMethodsError("");
+      try {
+        const response = await apiGet("/api/shipping-methods");
+        let data;
+        try {
+          data = await response.json();
+        } catch {
+          throw new Error("The shipping service returned an invalid response.");
+        }
+        if (!response.ok || data?.success !== true || !Array.isArray(data.shipping_methods)) {
+          throw new Error(data?.message || "Unable to load shipping methods.");
+        }
+
+        const activeMethods = data.shipping_methods.filter(
+          (method) => Number(method.status) === 1
+        );
+        if (isActive) {
+          setShippingMethods(activeMethods);
+          setSelectedShippingMethodId((currentId) =>
+            activeMethods.some((method) => String(method.id) === String(currentId))
+              ? currentId
+              : String(activeMethods[0]?.id || "")
+          );
+        }
+      } catch (error) {
+        if (isActive) {
+          setShippingMethods([]);
+          setSelectedShippingMethodId("");
+          setShippingMethodsError(error instanceof Error ? error.message : "Unable to load shipping methods.");
+        }
+      } finally {
+        if (isActive) setShippingMethodsLoading(false);
+      }
+    };
+
+    loadShippingMethods();
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!needsShippingConversion) {
+      return undefined;
+    }
+
+    let isActive = true;
+    const convertShippingCost = async () => {
+      const methodId = String(selectedShippingMethod.id);
+      setShippingCostConversion({ methodId, status: "loading", amount: 0, error: "" });
+      try {
+        const query = new URLSearchParams({
+          from: selectedShippingCurrency,
+          to: "USD",
+          amount: String(selectedShippingAmount)
+        });
+        const response = await apiGet(`/api/currency/convert?${query}`);
+        let data;
+        try {
+          data = await response.json();
+        } catch {
+          throw new Error("The currency service returned an invalid response.");
+        }
+        if (!response.ok || data?.success !== true || !Number.isFinite(Number(data.converted_amount))) {
+          throw new Error(data?.message || "Unable to convert the shipping cost to USD.");
+        }
+        if (isActive) {
+          setShippingCostConversion({
+            methodId,
+            status: "success",
+            amount: Number(data.converted_amount),
+            error: ""
+          });
+        }
+      } catch (error) {
+        if (isActive) {
+          setShippingCostConversion({
+            methodId,
+            status: "error",
+            amount: 0,
+            error: error instanceof Error ? error.message : "Unable to convert the shipping cost to USD."
+          });
+        }
+      }
+    };
+
+    convertShippingCost();
+    return () => {
+      isActive = false;
+    };
+  }, [needsShippingConversion, selectedShippingAmount, selectedShippingCurrency, selectedShippingMethod]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (orderSubmitted.current) return;
+    if (!selectedShippingMethod || shippingMethodsError || shippingCostError || !shippingCostIsCurrent) {
+      setNotice(shippingMethodsError || shippingCostError || "Please select an available shipping method.");
+      return;
+    }
 
     const unavailableItem = cart.find(
       (item) =>
@@ -92,6 +236,9 @@ const Checkout = () => {
       statusColor: "status-dispatched",
       statusText: "Order received and being prepared",
       paymentStatus: `PENDING (${formatPrice(total)})`,
+      totalAmount: total,
+      shippingCost: shippingCostUsd,
+      shippingMethod: selectedShippingMethod.shipping_method,
       trackingNumber: "Tracking details pending",
       estimatedDelivery: "To be confirmed",
       customerName: String(formData.get("name") || ""),
@@ -148,8 +295,8 @@ const Checkout = () => {
         await apiPost("/api/orders", {
           user_id: user.id,
           order_number: orderId,
-          total_amount: total,
-          shipping_cost: 0,
+          total_amount: itemTotal,
+          shipping_cost: shippingCostUsd,
           currency: "USD",
           shipping_address: shippingAddress,
         });
@@ -292,11 +439,47 @@ const Checkout = () => {
                 <label>Email address<input name="email" type="email" autoComplete="email" required /></label>
                 <label>Phone<input name="phone" type="tel" autoComplete="tel" required /></label>
                 <label>Country<input name="country" autoComplete="country-name" required defaultValue="Sri Lanka" /></label>
+                <label className="checkout-field-wide">
+                  Shipping method
+                  <select
+                    name="shipping_method_id"
+                    value={selectedShippingMethodId}
+                    onChange={(event) => setSelectedShippingMethodId(event.target.value)}
+                    disabled={shippingMethodsLoading || shippingMethods.length === 0}
+                    required
+                  >
+                    <option value="">
+                      {shippingMethodsLoading ? "Loading shipping methods…" : "Select a shipping method"}
+                    </option>
+                    {shippingMethods.map((method) => (
+                      <option key={method.id} value={method.id}>
+                        {method.shipping_method} — {method.country} — {method.free_shipping === true || Number(method.free_shipping) === 1
+                          ? "Free shipping"
+                          : `${Number(method.shipping_cost).toLocaleString()} ${method.currency || "USD"}`}
+                        {method.estimated_days ? ` — ${method.estimated_days} days` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  {shippingMethodsError && <span role="alert">{shippingMethodsError}</span>}
+                  {!shippingMethodsLoading && !shippingMethodsError && shippingMethods.length === 0 && (
+                    <span role="alert">No active shipping methods are available.</span>
+                  )}
+                  {shippingCostLoading && <span role="status">Calculating shipping cost…</span>}
+                  {shippingCostError && <span role="alert">{shippingCostError}</span>}
+                </label>
                 <label className="checkout-field-wide">Street address<input name="address" autoComplete="street-address" required /></label>
                 <label>City<input name="city" autoComplete="address-level2" required /></label>
                 <label>Postal code<input name="postal" autoComplete="postal-code" required /></label>
               </div>
-              <button className="checkout-pay" type="submit">
+              <button
+                className="checkout-pay"
+                type="submit"
+                disabled={
+                  shippingMethodsLoading ||
+                  !selectedShippingMethod ||
+                  !shippingCostIsCurrent
+                }
+              >
                 <FaLock /> PLACE ORDER
               </button>
             </form>
@@ -323,7 +506,24 @@ const Checkout = () => {
               <b>{formatPrice(Number(item.price || 0) * (Number(item.quantity) || 1))}</b>
             </div>
           ))}
-          <div className="checkout-total"><span>Total</span><strong>{formatPrice(total)}</strong></div>
+          <div className="checkout-total">
+            <span>Items subtotal</span>
+            <strong>{formatPrice(itemTotal)}</strong>
+          </div>
+          <div className="checkout-total">
+            <span>Shipping{selectedShippingMethod ? ` · ${selectedShippingMethod.shipping_method}` : ""}</span>
+            <strong>
+              {shippingCostLoading
+                ? "Calculating…"
+                : selectedShippingMethod
+                  ? formatPrice(shippingCostIsCurrent ? shippingCostUsd : 0)
+                  : "Select a method"}
+            </strong>
+          </div>
+          <div className="checkout-total">
+            <span>Total</span>
+            <strong>{formatPrice(total)}</strong>
+          </div>
           <p className="checkout-secure"><FaLock /> Your details are kept private.</p>
         </aside>
       </main>

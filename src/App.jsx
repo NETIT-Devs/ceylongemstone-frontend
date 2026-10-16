@@ -3,7 +3,7 @@ import Home from './Pages/Home.jsx';
 import About from './Pages/About.jsx';
 import Contact from './Pages/contact.jsx';
 import GemstoneDetails from './Pages/GemstoneDetail.jsx';
-import Gemstones, { products } from './Pages/Gemstones.jsx';
+import Gemstones from './Pages/Gemstones.jsx';
 import Jewellery from './Pages/Juwellery.jsx';
 import TrustPage from './Pages/TrustPage.jsx'; // Import the Trust Page
 import Checkout from './Pages/Checkout.jsx';
@@ -15,9 +15,6 @@ import Login from './Pages/Login.jsx';
 import MyOrders from './Pages/MyOrders.jsx';
 import AdminDashboard from './Pages/AdminDashboard.jsx';
 import JoinWithUs from './Pages/JoinWithUs.jsx';
-import { getApprovedGems } from './useGemSubmissions.js';
-import { useGemProductOverrides } from './useGemProductOverrides.js';
-import { hasAdminAccess } from './adminAccess.js';
 import { apiGet } from './services/api.js';
 import './components/SiteFooter.css';
 import './components/SiteHeader.css';
@@ -45,9 +42,15 @@ function InventoryGemstoneRoute({ gemstoneId }) {
         if (isCurrent) {
           setGemstone({
             ...result.data,
+            id: Number(result.data.id),
+            inventoryId: Number(result.data.id),
+            productKey: `inventory-gemstone-${result.data.id}`,
             category: result.data.category_name || 'Gemstone',
             treatment: result.data.treatment_status,
-            stockQuantity: Number(result.data.stock) || 0,
+            basePriceUSD: Number(result.data.price) || 0,
+            stockQuantity: Number.isSafeInteger(Number(result.data.stock))
+              ? Math.max(0, Number(result.data.stock))
+              : 0,
             videoUrl: result.data.videoUrl || result.data.video_url,
           });
         }
@@ -94,7 +97,6 @@ if (typeof window !== 'undefined') {
 }
 
 function App() {
-  const [gemProductOverrides] = useGemProductOverrides();
   const currentPage = window.location.pathname.toLowerCase();
   const currentHash = window.location.hash.toLowerCase();
 
@@ -201,14 +203,7 @@ function App() {
   const gemstoneDetailMatch = currentPage.match(/^\/gemstones\/(\d+)$/);
 
   if (gemstoneDetailMatch) {
-    const sourceGem = [...products, ...getApprovedGems()].find(
-      (product) => product.id === Number(gemstoneDetailMatch[1])
-    );
-    const gem = sourceGem
-      ? { ...sourceGem, ...gemProductOverrides[String(sourceGem.id)] }
-      : null;
-
-    return gem ? <GemstoneDetails gem={gem} /> : <Home />;
+    return <InventoryGemstoneRoute gemstoneId={gemstoneDetailMatch[1]} />;
   }
 
   // Gemstones (Home/Shop) Page

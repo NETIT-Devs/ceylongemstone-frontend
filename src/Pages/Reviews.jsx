@@ -1,6 +1,6 @@
 import ShopNavDropdown from "../components/ShopNavDropdown.jsx";
 import BrandLogo from "../components/BrandLogo.jsx";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   FaEnvelope,
   FaFacebookF,
@@ -32,76 +32,55 @@ const Reviews = () => {
   const [reviewForm, setReviewForm] = useState({ name: "", email: "", rating: 5, comment: "" });
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
-  const [customerReviews, setCustomerReviews] = useCustomerReviews();
-
-  // Fetch approved reviews from backend on load
-  useEffect(() => {
-    apiGet("/api/reviews")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
-          const backendReviews = data.data
-            .filter((r) => r.status === "APPROVED")
-            .map((r) => ({
-              id: r.id,
-              name: `Customer #${r.user_id}`,
-              location: "Verified Purchase",
-              rating: Number(r.rating),
-              comment: r.comment,
-              avatar: null,
-              gemstone: r.gemstone_name || "",
-              createdAt: r.created_at,
-            }));
-          if (backendReviews.length > 0) {
-            setCustomerReviews((prev) => [...backendReviews, ...prev]);
-          }
-        }
-      })
-      .catch(() => {
-        // Keep existing localStorage reviews on API failure
-      });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const [reviewError, setReviewError] = useState("");
+  const {
+    reviews: customerReviews,
+    loading: reviewsLoading,
+    error: reviewsError,
+    refreshReviews,
+  } = useCustomerReviews();
 
   // Handle review form submission
   const handleReviewSubmit = async (e) => {
     e.preventDefault();
+    setReviewError("");
     setReviewSubmitting(true);
 
-    // Get user info from session
     const user = (() => {
       try { return JSON.parse(window.localStorage.getItem("ceylon-user") || "null"); }
       catch { return null; }
     })();
 
-    const newReview = {
-      ...reviewForm,
-      id: `review-${Date.now()}`,
-      name: reviewForm.name.trim(),
-      email: reviewForm.email.trim(),
-      location: "Collector submission",
-      avatar: "",
-      createdAt: new Date().toISOString(),
-    };
-
-    // Optimistically add to UI
-    setCustomerReviews((previous) => [newReview, ...previous]);
+    if (!user?.id) {
+      setReviewError("Please log in before submitting a review so it can be saved for admin review.");
+      setReviewSubmitting(false);
+      return;
+    }
 
     try {
-      if (user?.id) {
-        // Post to backend if logged in
-        await apiPost("/api/reviews", {
-          user_id: user.id,
-          gemstone_id: 1, // General review fallback
-          rating: reviewForm.rating,
-          comment: reviewForm.comment,
-        });
+      const response = await apiPost("/api/reviews", {
+        user_id: user.id,
+        rating: reviewForm.rating,
+        comment: reviewForm.comment.trim(),
+      });
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error("The review service returned an invalid response.");
       }
-    } catch {
-      // Review saved to localStorage via setCustomerReviews above
+      if (!response.ok || data.success !== true) {
+        throw new Error(data.message || "Failed to submit your review.");
+      }
+
+      await refreshReviews();
+      setReviewSubmitted(true);
+    } catch (error) {
+      setReviewError(
+        error instanceof Error ? error.message : "Unable to submit your review. Please try again."
+      );
     } finally {
       setReviewSubmitting(false);
-      setReviewSubmitted(true);
     }
   };
 
@@ -205,6 +184,11 @@ const Reviews = () => {
           </div>
 
           <div className="reviews-page-grid">
+            {reviewsLoading && <p role="status">Loading customer reviews...</p>}
+            {reviewsError && <p className="review-submit-error" role="alert">{reviewsError}</p>}
+            {!reviewsLoading && !reviewsError && customerReviews.length === 0 && (
+              <p>No approved customer reviews yet.</p>
+            )}
             {customerReviews.map((review) => (
               <article className="reviews-page-card" key={review.id}>
                 <div className="reviews-page-card-top">
@@ -224,7 +208,7 @@ const Reviews = () => {
                     )}
                   <div>
                     <strong>{review.name}</strong>
-                    <span><FaMapMarkerAlt /> {review.location}</span>
+                    {review.location && <span><FaMapMarkerAlt /> {review.location}</span>}
                   </div>
                 </div>
               </article>
@@ -263,12 +247,13 @@ const Reviews = () => {
                 <div className="review-success-message">
                   <FaStar />
                   <h3>Thank You!</h3>
-                  <p>Your review has been submitted successfully.</p>
+                  <p>Your review has been submitted and is awaiting admin review.</p>
                   <button
                     type="button"
                     className="review-submit-btn"
                     onClick={() => {
                       setReviewSubmitted(false);
+                      setReviewError("");
                       setReviewForm({ name: "", email: "", rating: 5, comment: "" });
                     }}
                   >
@@ -280,6 +265,7 @@ const Reviews = () => {
                   className="review-form"
                   onSubmit={handleReviewSubmit}
                 >
+                  {reviewError && <p className="review-submit-error" role="alert">{reviewError}</p>}
                   <div className="review-form-group">
                     <label htmlFor="review-name">Your Name</label>
                     <input

@@ -37,167 +37,14 @@ import {
 } from "../useSharedCollection.js";
 import { currencyRates, formatCurrencyPrice, getCurrentCurrency } from "../currency.js";
 import { hasAdminAccess } from "../adminAccess.js";
-import { useJewelleryProductOverrides } from "../useJewelleryProductOverrides.js";
-import { useJewellerySubmissions } from "../useJewellerySubmissions.js";
-import { withActiveProductOffer } from "../productOffers.js";
+import { formatProductOfferEndDate, withActiveProductOffer } from "../productOffers.js";
 import { apiGet, resolveMediaUrl } from "../services/api.js";
+import { persistCustomerCartItem, useCustomerCart } from "../services/customerCart.js";
 
 // eslint-disable-next-line react-refresh/only-export-components
-export const products = [
-  {
-    id: 1,
-    productKey: "ceylon-blue-gem-bracelet",
-    name: "Blue Gem Bracelet",
-    category: "Bracelets",
-    color: "Blue",
-    shape: "Gemstone Bracelet",
-    cut: "Handcrafted",
-    treatment: "Handcrafted",
-    price: 12500,
-    image: "/BlueBracelete.jpg",
-  },
-  {
-    id: 2,
-    productKey: "pink-gem-necklace",
-    name: "Pink Gem Necklace",
-    category: "Necklaces",
-    color: "Pink",
-    shape: "Pendant Necklace",
-    cut: "Handcrafted",
-    treatment: "Handcrafted",
-    price: 9800,
-    image: "/pinkNecklece.jpg",
-  },
-  {
-    id: 3,
-    productKey: "purple-gem-necklace",
-    name: "Purple Gem Necklace",
-    category: "Necklaces",
-    color: "Purple",
-    shape: "Pendant Necklace",
-    cut: "Handcrafted",
-    treatment: "Handcrafted",
-    price: 16500,
-    image: "/purpleNECKlece.jpg",
-  },
-  {
-    id: 4,
-    productKey: "blue-heart-pendant-necklace",
-    name: "Blue Heart Pendant Necklace",
-    category: "Necklaces",
-    color: "Blue",
-    shape: "Heart Pendant Necklace",
-    cut: "Handcrafted",
-    treatment: "Handcrafted",
-    price: 14200,
-    image: "/blueNecklece.jpg",
-  },
-  {
-    id: 5,
-    productKey: "purple-gemstone-ring",
-    name: "Purple Gemstone Ring",
-    category: "Rings",
-    color: "Purple",
-    shape: "Gemstone Ring",
-    cut: "Handcrafted",
-    treatment: "Handcrafted",
-    price: 11800,
-    image: "/purpleRing.jpg",
-  },
-  {
-    id: 6,
-    productKey: "ruby-gemstone-ring",
-    name: "Red Gemstone Ring",
-    category: "Rings",
-    color: "Red",
-    shape: "Gemstone Ring",
-    cut: "Handcrafted",
-    treatment: "Handcrafted",
-    price: 8500,
-    image: "/redRing.jpg",
-  },
-  {
-    id: 7,
-    productKey: "red-gem-necklace",
-    name: "Red Gem Necklace",
-    category: "Necklaces",
-    color: "Red",
-    shape: "Pendant Necklace",
-    cut: "Handcrafted",
-    treatment: "Handcrafted",
-    price: 7200,
-    image: "/redNecklece.jpg",
-  },
-  {
-    id: 8,
-    productKey: "blue-sapphire-ring",
-    name: "Blue Sapphire Ring",
-    category: "Rings",
-    color: "Blue",
-    shape: "Gemstone Ring",
-    cut: "Handcrafted",
-    treatment: "Handcrafted",
-    price: 12500,
-    image: "/blueRing.jpg",
-  },
-  {
-    id: 9,
-    productKey: "blue-sapphire-drop-earrings",
-    name: "Blue Gem Drop Earrings",
-    category: "Earrings",
-    color: "Blue",
-    shape: "Drop Earrings",
-    cut: "Handcrafted",
-    treatment: "Handcrafted",
-    price: 6900,
-    image: "/blueEaring.jpg",
-  },
-  {
-    id: 10,
-    productKey: "blue-gem-necklace",
-    name: "Blue Gem Pendant Necklace",
-    category: "Necklaces",
-    color: "Blue",
-    shape: "Pendant Necklace",
-    cut: "Handcrafted",
-    treatment: "Handcrafted",
-    price: 8500,
-    image: "/goldBluenecklece.jpg",
-  },
-  {
-    id: 11,
-    productKey: "green-gem-bracelet",
-    name: "Green Gem Bracelet",
-    category: "Bracelets",
-    color: "Green",
-    shape: "Gemstone Bracelet",
-    cut: "Handcrafted",
-    treatment: "Handcrafted",
-    price: 9800,
-    image: "/greenbracelet.jpg",
-  },
-];
+export const products = [];
 
-// eslint-disable-next-line react-refresh/only-export-components
-export const categories = [
-  "All Jewellery",
-  "Necklaces",
-  "Bracelets",
-  "Rings",
-  "Earrings"
-];
-
-const maxPriceValue = Math.ceil(Math.max(...products.map((product) => product.price)) / 5000) * 5000;
 const PRODUCTS_PER_PAGE = 15;
-
-const colors = [
-  "All Colors",
-  "Blue",
-  "Pink",
-  "Purple",
-  "Red",
-  "Green"
-];
 
 const colorSwatches = {
   "All Colors": "#ffffff",
@@ -212,25 +59,32 @@ function Juwellery() {
   const [currency, setCurrency] = useState(getCurrentCurrency);
   const [currencyOpen, setCurrencyOpen] = useState(false);
   const currencyRef = useRef(null);
-  const [jewelleryProductOverrides] = useJewelleryProductOverrides();
-  const [jewellerySubmissions] = useJewellerySubmissions();
   const [backendJewellery, setBackendJewellery] = useState([]);
-  const [backendJewelleryLoading, setBackendJewelleryLoading] = useState(false);
+  const [backendJewelleryLoading, setBackendJewelleryLoading] = useState(true);
+  const [backendJewelleryError, setBackendJewelleryError] = useState("");
 
   useEffect(() => {
     let isMounted = true;
     const fetchJewellery = async () => {
-      setBackendJewelleryLoading(true);
       try {
         const response = await apiGet("/api/jewellery");
-        if (response.ok) {
-          const result = await response.json();
-          if (isMounted && Array.isArray(result?.data)) {
-            setBackendJewellery(result.data);
-          }
+        let result;
+        try {
+          result = await response.json();
+        } catch {
+          throw new Error("The jewellery inventory returned an invalid response.");
         }
-      } catch (err) {
-        console.warn("Unable to load jewellery from API:", err);
+        if (!response.ok || result.success !== true || !Array.isArray(result.data)) {
+          throw new Error(result.message || "Unable to load jewellery from inventory.");
+        }
+        if (isMounted) {
+          setBackendJewellery(result.data);
+        }
+      } catch (error) {
+        console.error("Unable to load jewellery from API:", error);
+        if (isMounted) {
+          setBackendJewelleryError(error.message || "Unable to load jewellery from inventory.");
+        }
       } finally {
         if (isMounted) setBackendJewelleryLoading(false);
       }
@@ -242,45 +96,76 @@ function Juwellery() {
   }, []);
 
   const shopProducts = useMemo(
-    () => [
-      ...backendJewellery
-        .filter((item) => item.status !== "inactive" && item.status !== "draft" && item.status !== "rejected")
-        .map((item) => ({
+    () => backendJewellery
+      .filter((item) => ["approved", "active"].includes(item.status))
+      .map((item) => {
+        const stockQuantity = Number(item.stock_quantity);
+        const rawPrice = Number(item.price);
+        const sourceCurrency = item.currency || "USD";
+        const sourceRate = currencyRates[sourceCurrency]?.rate || 1;
+        const price = Number.isFinite(rawPrice) ? rawPrice / sourceRate : 0;
+        return {
+          ...item,
           id: `db-${item.id}`,
           rawId: item.id,
           productKey: item.product_code || `jewellery-db-${item.id}`,
-          product_code: item.product_code,
           name: item.product_name,
           category: item.jewellery_type || "Other",
           color: item.color || "Other",
-          shape: item.gemstone_type ? `${item.gemstone_type} ${item.jewellery_type || ""}`.trim() : (item.jewellery_type || "Jewellery"),
+          shape: item.gemstone_type
+            ? `${item.gemstone_type} ${item.jewellery_type || ""}`.trim()
+            : (item.jewellery_type || "Jewellery"),
           cut: Number(item.is_handcrafted) === 1 ? "Handcrafted" : "Precision Crafted",
           treatment: Number(item.is_handcrafted) === 1 ? "Handcrafted" : "Fine Jewellery",
           material: item.material || "18K Gold",
           gemstone_type: item.gemstone_type || "",
           description: item.description || "",
-          price: Number(item.price) || 0,
-          currency: item.currency || "USD",
-          stock_quantity: item.stock_quantity ?? 1,
+          price,
+          basePriceUSD: price,
+          currency: sourceCurrency,
+          stockQuantity: Number.isSafeInteger(stockQuantity)
+            ? Math.max(0, stockQuantity)
+            : 0,
           is_handcrafted: Number(item.is_handcrafted) === 1,
-          image: resolveMediaUrl(item.image_url) || "/BlueBracelete.jpg",
-          status: item.status
-        })),
-      ...products
-        .map((product) => ({
-          ...product,
-          ...jewelleryProductOverrides[String(product.id)]
-        }))
-        .filter((product) => !product.deleted),
-      ...jewellerySubmissions
-        .filter((submission) => submission.status === "approved")
-        .map((submission) => submission.jewellery)
+          image: resolveMediaUrl(item.image_url),
+          discountRate: item.discountRate ?? item.offer_rate,
+          offerStartDate: item.offerStartDate ?? item.offer_start_date,
+          offerEndDate: item.offerEndDate ?? item.offer_end_date,
+          offer_rate: item.offer_rate,
+          offer_start_date: item.offer_start_date,
+          offer_end_date: item.offer_end_date,
+        };
+      }),
+    [backendJewellery]
+  );
+  const [selectedProductId, setSelectedProductId] = useState(
+    () => new URLSearchParams(window.location.search).get("product")
+  );
+  const selectedProduct = useMemo(
+    () =>
+      shopProducts.find(
+        (product) =>
+          String(product.id) === selectedProductId ||
+          String(product.rawId) === selectedProductId
+      ) || null,
+    [shopProducts, selectedProductId]
+  );
+  const categories = useMemo(
+    () => [
+      "All Jewellery",
+      ...new Set(shopProducts.map((product) => product.category).filter(Boolean))
     ],
-    [backendJewellery, jewelleryProductOverrides, jewellerySubmissions]
+    [shopProducts]
+  );
+  const colors = useMemo(
+    () => [
+      "All Colors",
+      ...new Set(shopProducts.map((product) => product.color).filter(Boolean))
+    ],
+    [shopProducts]
   );
   const shopMaxPriceValue = Math.ceil(
-    Math.max(maxPriceValue, ...shopProducts.map((product) => Number(product.price) || 0)) /
-      5000
+    Math.max(5000, ...shopProducts.map((product) => Number(product.price) || 0)) / 5000
   ) * 5000;
 
   const readMyOrdersLinkStatus = () => {
@@ -312,12 +197,7 @@ function Juwellery() {
     try {
       const params = new URLSearchParams(window.location.search);
       const cat = params.get("category");
-      if (cat) {
-        const found = categories.find(
-          (c) => c.toLowerCase() === cat.toLowerCase().trim()
-        );
-        if (found) return found;
-      }
+      if (cat) return cat;
     } catch { /* URL parsing unsupported */ }
     return "All Jewellery";
   });
@@ -345,10 +225,12 @@ function Juwellery() {
   const [wishlist, setWishlist] = useSharedCollection("ceylon-wishlist");
   const [cart, setCart] = useSharedCollection("ceylon-cart");
   const [activeDrawer, setActiveDrawer] = useState(null);
-  const [selectedProduct, setSelectedProduct] = useState(() => {
-    const productId = new URLSearchParams(window.location.search).get("product");
-    return shopProducts.find((product) => String(product.id) === String(productId) || String(product.rawId) === String(productId)) || null;
-  });
+  const {
+    isLoading: customerCartLoading,
+    error: customerCartError,
+    deletingCartIds,
+    removeCartItem
+  } = useCustomerCart(activeDrawer === "cart", setCart);
   const [inquiryProduct, setInquiryProduct] = useState(null);
 
   const maxPrice = userMaxPrice !== null ? userMaxPrice : shopMaxPriceValue;
@@ -377,7 +259,7 @@ function Juwellery() {
 
   const handleSelectCategory = (cat) => {
     setSelectedCategory(cat);
-    setSelectedProduct(null);
+    setSelectedProductId(null);
     try {
       const url = new URL(window.location.href);
       url.searchParams.delete("product");
@@ -391,14 +273,14 @@ function Juwellery() {
   };
 
   const openProductDetails = (product) => {
-    setSelectedProduct(product);
+    setSelectedProductId(String(product.id));
     const url = new URL(window.location.href);
     url.searchParams.set("product", String(product.id));
     window.history.pushState({}, "", url.toString());
   };
 
   const closeProductDetails = () => {
-    setSelectedProduct(null);
+    setSelectedProductId(null);
     const url = new URL(window.location.href);
     url.searchParams.delete("product");
     window.history.pushState({}, "", url.toString());
@@ -414,24 +296,19 @@ function Juwellery() {
         const params = new URLSearchParams(window.location.search);
         const cat = params.get("category");
         if (cat) {
-          const found = categories.find(
-            (c) => c.toLowerCase() === cat.toLowerCase().trim()
-          );
-          if (found) setSelectedCategory(found);
+          setSelectedCategory(cat);
         } else {
           setSelectedCategory("All Jewellery");
         }
         setSearchTerm(params.get("search") || "");
-        const productId = Number(params.get("product"));
-        setSelectedProduct(
-          shopProducts.find((product) => product.id === productId) || null
-        );
+        const productId = params.get("product");
+        setSelectedProductId(productId);
       } catch { /* ignored */ }
     };
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [shopProducts]);
+  }, []);
 
   useEffect(() => {
     try {
@@ -563,8 +440,23 @@ function Juwellery() {
     setActiveDrawer("wishlist");
   };
 
-  const addToCart = (product) => {
+  const addToCart = async (product) => {
     const productKey = getCollectionItemKey(product);
+    if (Number(product.stockQuantity) < 1) return;
+    const cartItem = cart.find((item) => getCollectionItemKey(item) === productKey);
+
+    let savedCartItem;
+    try {
+      savedCartItem = await persistCustomerCartItem(
+        "jewellery",
+        product.rawId || product.id,
+        cartItem?.quantity || 1
+      );
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Unable to save this jewellery item to your cart.");
+      return;
+    }
+
     const offerProduct = withActiveProductOffer(product);
     const originalPrice = Number(offerProduct.basePriceUSD ?? offerProduct.price);
     const discountRate = Number(offerProduct.discountRate);
@@ -578,15 +470,19 @@ function Juwellery() {
     };
 
     setCart((current) => {
-      const exists = current.some(
-        (item) => getCollectionItemKey(item) === productKey
-      );
-
-      if (exists) return current;
+      const exists = current.some((item) => getCollectionItemKey(item) === productKey);
+      if (exists) {
+        return current.map((item) => getCollectionItemKey(item) === productKey
+          ? { ...item, quantity: savedCartItem.quantity }
+          : item);
+      }
 
       return [
         ...current,
-        normalizeCollectionItem({ ...cartProduct, quantity: 1 })
+        {
+          ...normalizeCollectionItem(cartProduct),
+          quantity: savedCartItem.quantity
+        }
       ];
     });
     setActiveDrawer("cart");
@@ -607,9 +503,8 @@ function Juwellery() {
   };
 
   const removeCart = (productKey) => {
-    setCart((current) =>
-      current.filter((item) => getCollectionItemKey(item) !== productKey)
-    );
+    const item = cart.find((entry) => getCollectionItemKey(entry) === productKey);
+    if (item) void removeCartItem(item);
   };
 
   const clearFilters = () => {
@@ -624,6 +519,7 @@ function Juwellery() {
 
   if (selectedProduct) {
     const offerProduct = withActiveProductOffer(selectedProduct);
+    const selectedInStock = selectedProduct.stockQuantity > 0;
     const selectedOriginalPrice = Number(
       offerProduct.basePriceUSD ?? offerProduct.price
     );
@@ -716,7 +612,9 @@ function Juwellery() {
             <section className="luxury-info" aria-labelledby="jewellery-detail-title">
               <div className="header-meta">
                 <span className="sku-badge">REF. #CRJ-{selectedProduct.id}</span>
-                <span className="product-stock-status in-stock">AVAILABLE</span>
+                <span className={`product-stock-status ${selectedInStock ? "in-stock" : "out-of-stock"}`}>
+                  {selectedInStock ? "AVAILABLE" : "OUT OF STOCK"}
+                </span>
               </div>
 
               <h1
@@ -777,7 +675,8 @@ function Juwellery() {
               <div className="cta-button-group">
                 <button
                   type="button"
-                  className="gold-btn"
+                  className={`gold-btn ${selectedInStock ? "" : "out-of-stock"}`}
+                  disabled={!selectedInStock}
                   onClick={addedToCart
                     ? () => setActiveDrawer('cart')
                     : () => {
@@ -785,7 +684,7 @@ function Juwellery() {
                         setAddedToCartProductKey(getCollectionItemKey(selectedProduct));
                       }}
                 >
-                  <FaShoppingBag /> {addedToCart ? 'VIEW CART' : 'ADD TO CART'}
+                  <FaShoppingBag /> {selectedInStock ? (addedToCart ? 'VIEW CART' : 'ADD TO CART') : 'OUT OF STOCK'}
                 </button>
                 <button
                   type="button"
@@ -872,7 +771,7 @@ function Juwellery() {
           </div>
         </a>
 
-        <MobileSiteMenu onInquire={() => setInquiryProduct(products[0])} />
+        <MobileSiteMenu onInquire={() => setInquiryProduct(shopProducts[0] || null)} />
         <div className="about-nav-links">
           <a href="/">Home</a>
           <ShopNavDropdown current="jewellery" />
@@ -978,7 +877,7 @@ function Juwellery() {
 
           <button
             className="about-inquire-btn"
-            onClick={() => setInquiryProduct(products[0])}
+            onClick={() => setInquiryProduct(shopProducts[0] || null)}
           >
             INQUIRE NOW
           </button>
@@ -1109,6 +1008,11 @@ function Juwellery() {
               {filteredProducts.length !== 1 ? "s" : ""}
               {" "}available
             </p>
+            {backendJewelleryError && (
+              <p role="status" className="admin-empty-state">
+                Jewellery could not be loaded: {backendJewelleryError}
+              </p>
+            )}
           </div>
 
           <div className="gem-collection-heading-actions">
@@ -1223,7 +1127,7 @@ function Juwellery() {
                   >
                     <span
                       className={`color-swatch ${item === "All Colors" ? "all-colors-swatch" : ""}`}
-                      style={{ background: colorSwatches[item] }}
+                      style={{ background: colorSwatches[item] || "#b8a27a" }}
                     >
                       {item === "All Colors" ? "All" : ""}
                     </span>
@@ -1290,7 +1194,13 @@ function Juwellery() {
 
           <div className="gem-product-area" id="gem-product-results">
 
-            {filteredProducts.length > 0 ? (
+            {backendJewelleryLoading ? (
+              <div className="no-products" role="status" aria-live="polite">
+                <FaGem />
+                <h3>Loading Jewellery</h3>
+                <p>Fetching the latest jewellery inventory.</p>
+              </div>
+            ) : filteredProducts.length > 0 ? (
 
               <>
               <div className="gem-product-grid">
@@ -1298,10 +1208,14 @@ function Juwellery() {
                 {paginatedProducts.map((product) => {
 
                   const offerProduct = withActiveProductOffer(product);
+                  const inStock = product.stockQuantity > 0;
                   const productKey = getCollectionItemKey(product);
                   const originalPrice = Number(offerProduct.basePriceUSD ?? offerProduct.price);
                   const discountRate = Number(offerProduct.discountRate);
                   const hasDiscount = discountRate > 0 && discountRate <= 100;
+                  const offerEndDate = hasDiscount
+                    ? formatProductOfferEndDate(offerProduct)
+                    : "";
                   const offerPrice = hasDiscount
                     ? Math.round(originalPrice * (1 - discountRate / 100))
                     : originalPrice;
@@ -1395,11 +1309,11 @@ function Juwellery() {
                         <div className="product-card-actions">
                           <button
                             type="button"
-                            className="product-stock-status in-stock"
+                            className={`product-stock-status ${inStock ? "in-stock" : "out-of-stock"}`}
                             disabled
-                            aria-label={`${product.name} available`}
+                            aria-label={`${product.name} ${inStock ? "available" : "out of stock"}`}
                           >
-                            AVAILABLE
+                            {inStock ? "AVAILABLE" : "OUT OF STOCK"}
                           </button>
                           <button
                             type="button"
@@ -1421,12 +1335,16 @@ function Juwellery() {
                             <strong>
                               {formatCurrencyPrice(offerPrice, currency)}
                             </strong>
+                            {offerEndDate && (
+                              <span className="product-offer-end-date">Offer ends {offerEndDate}</span>
+                            )}
                           </div>
 
                           <button
                             type="button"
-                            className="add-to-cart-btn"
-                            aria-label={`Add ${product.name} to cart`}
+                            className={`add-to-cart-btn ${inStock ? "" : "out-of-stock"}`}
+                            aria-label={inStock ? `Add ${product.name} to cart` : `${product.name} is out of stock`}
+                            disabled={!inStock}
                             onClick={() =>
                               addToCart(product)
                             }
@@ -1697,6 +1615,12 @@ function Juwellery() {
             </div>
 
             <div className="gem-drawer-body">
+              {activeDrawer === "cart" && customerCartLoading && (
+                <p role="status">Loading your saved cart...</p>
+              )}
+              {activeDrawer === "cart" && customerCartError && (
+                <p role="alert">{customerCartError}</p>
+              )}
 
               {(
                 activeDrawer === "wishlist"
@@ -1743,13 +1667,14 @@ function Juwellery() {
                       </p>
 
                       <strong>{formatCurrencyPrice(item.price, currency)}</strong>
-                      <p className="drawer-item-quantity">Qty 1</p>
+                      <p className="drawer-item-quantity">Qty {Number(item.quantity) || 1}</p>
 
                     </div>
 
                     <button
                       type="button"
                       aria-label={`Remove ${item.name}`}
+                      disabled={Boolean(item.cartId && deletingCartIds.includes(item.cartId))}
                       onClick={() =>
                         activeDrawer === "wishlist"
                           ? removeWishlist(getCollectionItemKey(item))

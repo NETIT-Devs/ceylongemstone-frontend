@@ -292,6 +292,15 @@
   gap: 20px;
 }
 
+.review-submit-error {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid #dba6a6;
+  background: #fff4f4;
+  color: #8c2525;
+  font-size: 13px;
+}
+
 .review-form-group {
   display: flex;
   flex-direction: column;

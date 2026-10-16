@@ -22,6 +22,7 @@ import CollectionDrawerActions from "../components/CollectionDrawerActions.jsx";
 import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
 import CustomerOrdersNavLink from "../components/CustomerOrdersNavLink.jsx";
 import { getCollectionItemKey, useSharedCollection } from "../useSharedCollection.js";
+import { useCustomerCart } from "../services/customerCart.js";
 
 const About = () => {
 
@@ -64,6 +65,12 @@ const About = () => {
   const [wishlist, setWishlist] = useSharedCollection("ceylon-wishlist");
   const [cart, setCart] = useSharedCollection("ceylon-cart");
   const [activeDrawer, setActiveDrawer] = useState(null);
+  const {
+    isLoading: customerCartLoading,
+    error: customerCartError,
+    deletingCartIds,
+    removeCartItem
+  } = useCustomerCart(activeDrawer === "cart", setCart);
   const [selectedGem, setSelectedGem] = useState(null);
 
 
@@ -799,6 +806,12 @@ const About = () => {
 
 
             <div className="about-drawer-body">
+              {activeDrawer === "cart" && customerCartLoading && (
+                <p role="status">Loading your saved cart...</p>
+              )}
+              {activeDrawer === "cart" && customerCartError && (
+                <p role="alert">{customerCartError}</p>
+              )}
 
               {(activeDrawer === "cart"
                 ? cart
@@ -850,11 +863,18 @@ const About = () => {
 
 
                     <button
+                      type="button"
+                      aria-label={`Remove ${gem.name}`}
+                      disabled={Boolean(gem.cartId && deletingCartIds.includes(gem.cartId))}
                       onClick={() => {
                         const productKey = getCollectionItemKey(gem);
-                        (activeDrawer === "cart" ? setCart : setWishlist)((current) =>
-                          current.filter((item) => getCollectionItemKey(item) !== productKey)
-                        );
+                        if (activeDrawer === "cart") {
+                          void removeCartItem(gem);
+                        } else {
+                          setWishlist((current) => current.filter(
+                            (item) => getCollectionItemKey(item) !== productKey
+                          ));
+                        }
                       }}
                     >
                       <FaTrash />

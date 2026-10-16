@@ -30,71 +30,25 @@ import hero4Img from "/HeroNew.jpeg";
 import CollectionDrawerActions from "../components/CollectionDrawerActions.jsx";
 import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
 import { useCustomerReviews } from "../useCustomerReviews.js";
-import { hasAdminAccess } from "../adminAccess.js";
 import {
   getCollectionItemKey,
   normalizeCollectionItem,
   useSharedCollection
 } from "../useSharedCollection.js";
 import { useGemInventory } from "../useGemInventory.js";
-import { useGemProductOverrides } from "../useGemProductOverrides.js";
-import { useGemSubmissions } from "../useGemSubmissions.js";
-import { useJewelleryProductOverrides } from "../useJewelleryProductOverrides.js";
-import { useJewellerySubmissions } from "../useJewellerySubmissions.js";
-import { withActiveProductOffer } from "../productOffers.js";
+import {
+  formatProductOfferEndDate,
+  withActiveProductOffer
+} from "../productOffers.js";
 import { useHomeHeroSlides } from "../useSiteContent.js";
 import { apiGet, resolveMediaUrl } from "../services/api.js";
+import { useCustomerCart } from "../services/customerCart.js";
+import { normalizeTreatment } from "../treatments.js";
 import {
   currencyRates,
   formatCurrencyPrice,
   getCurrentCurrency
 } from "../currency.js";
-import { products as gemstonesProducts, categories } from "./Gemstones.jsx";
-import { products as jewelleryProducts } from "./Juwellery.jsx";
-
-
-// =====================================================
-// GEM DATA
-// =====================================================
-
-// Map Gemstones products → Home card format
-const categoryKeyMap = {
-  "Blue Sapphire":        "BLUE SAPPHIRE",
-  "Yellow Sapphire":      "YELLOW SAPPHIRE",
-  "Green Gemstone":       "GREEN GEMSTONE",
-  "Padparadscha Sapphire":"PADPARADSCHA SAPPHIRE",
-  "Ruby":                 "RUBY",
-  "Star Sapphire":        "STAR SAPPHIRE",
-  "Cat's Eye":            "CAT'S EYE",
-  "Alexandrite":          "ALEXANDRITE",
-};
-
-const tagMap = {
-  "Blue Sapphire":        "CERTIFIED NATURAL",
-  "Yellow Sapphire":      "UNTREATED NATURAL",
-  "Green Gemstone":       "NATURAL GREEN GEM",
-  "Padparadscha Sapphire":"RARE COLLECTOR",
-  "Ruby":                 "FINE VIVID RED",
-  "Star Sapphire":        "RARE ASTERISM",
-  "Cat's Eye":            "CHATOYANT BERYL",
-  "Alexandrite":          "COLOR CHANGE RARE",
-};
-
-const initialGems = gemstonesProducts.map((p) => ({
-  id:           p.id,
-  detailId:     p.id,
-  categoryKey:  categoryKeyMap[p.category] || p.category.toUpperCase(),
-  productKey:   p.productKey || `gem-${p.id}`,
-  name:         p.name.toUpperCase(),
-  origin:       p.origin || "Sri Lanka",
-  carat:        `${p.carat} Ct`,
-  basePriceUSD: p.price,
-  image:        p.image,
-  tag:          tagMap[p.category] || "NATURAL GEM",
-}));
-
-const featuredJewelleryIds = [2, 8, 11, 9];
-
 const getReviewInitials = (review) => {
   if (review?.initials) return review.initials;
   if (!review?.name) return "CR";
@@ -217,49 +171,105 @@ const Home = () => {
 
   const [wishlist, setWishlist] = useSharedCollection("ceylon-wishlist");
   const [cart, setCart] = useSharedCollection("ceylon-cart");
-
   const [activeDrawer, setActiveDrawer] = useState(null);
-  const [customerReviews] = useCustomerReviews();
-  const [gemSubmissions] = useGemSubmissions();
-  const [gemProductOverrides] = useGemProductOverrides();
-  const [jewellerySubmissions] = useJewellerySubmissions();
-  const [jewelleryProductOverrides] = useJewelleryProductOverrides();
+  const {
+    isLoading: customerCartLoading,
+    error: customerCartError,
+    deletingCartIds,
+    removeCartItem
+  } = useCustomerCart(activeDrawer === "cart", setCart);
+  const {
+    reviews: customerReviews,
+    loading: reviewsLoading,
+    error: reviewsError,
+  } = useCustomerReviews();
+  const [backendGemstones, setBackendGemstones] = useState([]);
+  const [backendGemstonesError, setBackendGemstonesError] = useState("");
   const [backendJewellery, setBackendJewellery] = useState([]);
 
   useEffect(() => {
     let isMounted = true;
-    apiGet("/api/jewellery")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (isMounted && Array.isArray(data?.data)) {
-          setBackendJewellery(data.data);
+    const loadGemstones = async () => {
+      try {
+        const response = await apiGet("/api/gemstones");
+        const result = await response.json();
+        if (!response.ok || result.success !== true || !Array.isArray(result.data)) {
+          throw new Error(result.message || "Unable to load gemstones.");
         }
-      })
-      .catch(() => {});
+        if (isMounted) setBackendGemstones(result.data);
+      } catch (error) {
+        console.error("Unable to load gemstones for the home page:", error);
+        if (isMounted) {
+          setBackendGemstonesError(error.message || "Unable to load gemstones.");
+        }
+      }
+    };
+    const loadJewellery = async () => {
+      try {
+        const response = await apiGet("/api/jewellery");
+        const result = await response.json();
+        if (!response.ok || result.success !== true || !Array.isArray(result.data)) {
+          throw new Error(result.message || "Unable to load jewellery.");
+        }
+        if (isMounted) setBackendJewellery(result.data);
+      } catch (error) {
+        console.error("Unable to load jewellery for the home page:", error);
+      }
+    };
+    loadGemstones();
+    loadJewellery();
     return () => {
       isMounted = false;
     };
   }, []);
 
-  const [inventory] = useGemInventory(gemstonesProducts);
   const homeShopProducts = useMemo(
-    () => [
-      ...gemstonesProducts.map((product) => ({
-        ...product,
-        ...gemProductOverrides[String(product.id)],
-        category: product.category
-      })),
-      ...gemSubmissions
-        .filter((submission) => submission.status === "approved")
-        .map((submission) => submission.gem)
-    ],
-    [gemProductOverrides, gemSubmissions]
+    () => backendGemstones
+      .filter((gemstone) =>
+        Number(gemstone.status) !== 0 &&
+        (!gemstone.approval_status || gemstone.approval_status === "approved")
+      )
+      .map((gemstone) => {
+        const price = Number(gemstone.price);
+        const stockQuantity = Number(gemstone.stock);
+        const offerRate = gemstone.discountRate ?? gemstone.offer_rate;
+        const galleryViews = (gemstone.galleryViews || []).map((view) => ({
+          ...view,
+          url: resolveMediaUrl(view.url)
+        }));
+        return {
+          ...gemstone,
+          id: Number(gemstone.id),
+          inventoryId: Number(gemstone.id),
+          productKey: `inventory-gemstone-${gemstone.id}`,
+          category: gemstone.category_name || "Gemstone",
+          treatment: normalizeTreatment(gemstone.treatment_status),
+          price: Number.isFinite(price) ? price : 0,
+          basePriceUSD: Number.isFinite(price) ? price : 0,
+          stockQuantity: Number.isSafeInteger(stockQuantity)
+            ? Math.max(0, stockQuantity)
+            : 0,
+          image: resolveMediaUrl(
+            gemstone.main_image || gemstone.image || galleryViews[0]?.url || ""
+          ),
+          galleryViews,
+          discountRate: offerRate,
+          offerStartDate: gemstone.offerStartDate ?? gemstone.offer_start_date,
+          offerEndDate: gemstone.offerEndDate ?? gemstone.offer_end_date
+        };
+      }),
+    [backendGemstones]
   );
   const homeJewelleryProducts = useMemo(
-    () => [
-      ...backendJewellery
-        .filter((item) => item.status !== "inactive" && item.status !== "draft" && item.status !== "rejected")
-        .map((item) => ({
+    () => backendJewellery
+      .filter((item) => ["approved", "active"].includes(item.status))
+      .map((item) => {
+        const rawPrice = Number(item.price);
+        const sourceCurrency = item.currency || "USD";
+        const sourceRate = currencyRates[sourceCurrency]?.rate || 1;
+        const price = Number.isFinite(rawPrice) ? rawPrice / sourceRate : 0;
+        return {
+          ...item,
           id: item.id,
           productKey: item.product_code || `jewellery-db-${item.id}`,
           product_code: item.product_code,
@@ -270,47 +280,35 @@ const Home = () => {
           cut: Number(item.is_handcrafted) === 1 ? "Handcrafted" : "Precision Crafted",
           treatment: Number(item.is_handcrafted) === 1 ? "Handcrafted" : "Fine Jewellery",
           material: item.material || "18K Gold",
-          price: Number(item.price) || 0,
-          currency: item.currency || "USD",
-          image: resolveMediaUrl(item.image_url) || "/BlueBracelete.jpg",
+          price,
+          basePriceUSD: price,
+          currency: sourceCurrency,
+          stockQuantity: Number.isSafeInteger(Number(item.stock_quantity))
+            ? Math.max(0, Number(item.stock_quantity))
+            : 0,
+          image: resolveMediaUrl(item.image_url),
+          discountRate: item.discountRate ?? item.offer_rate,
+          offerStartDate: item.offerStartDate ?? item.offer_start_date,
+          offerEndDate: item.offerEndDate ?? item.offer_end_date,
           status: item.status
-        })),
-      ...jewelleryProducts
-        .map((product) => ({
-          ...product,
-          ...jewelleryProductOverrides[String(product.id)]
-        }))
-        .filter((product) => !product.deleted),
-      ...jewellerySubmissions
-        .filter((submission) => submission.status === "approved")
-        .map((submission) => submission.jewellery)
-    ],
-    [backendJewellery, jewelleryProductOverrides, jewellerySubmissions]
+        };
+      }),
+    [backendJewellery]
   );
+  const homeGemCategories = useMemo(
+    () => [
+      "All Gemstones",
+      ...new Set(homeShopProducts.map((product) => product.category).filter(Boolean))
+    ],
+    [homeShopProducts]
+  );
+  const [inventory] = useGemInventory(homeShopProducts);
   const featuredJewellery = useMemo(
-    () => featuredJewelleryIds
-      .map((id) => homeJewelleryProducts.find((product) => product.id === id))
-      .filter(Boolean),
+    () => homeJewelleryProducts.slice(0, 4),
     [homeJewelleryProducts]
   );
   const featuredGems = useMemo(
-    () => {
-      const royalBlueSapphire = homeShopProducts.find(
-        (gem) => gem.id === 1 || gem.productKey === "royal-blue-sapphire"
-      );
-      const otherBlueSapphires = homeShopProducts.filter(
-        (gem) =>
-          gem.category === "Blue Sapphire" &&
-          gem !== royalBlueSapphire
-      );
-
-      return [
-        ...(royalBlueSapphire ? [royalBlueSapphire] : []),
-        ...otherBlueSapphires.slice(0, royalBlueSapphire ? 3 : 4),
-        ...homeShopProducts.filter((gem) => gem.category === "Ruby").slice(0, 2),
-        ...homeShopProducts.filter((gem) => gem.category === "Green Gemstone").slice(0, 2)
-      ];
-    },
+    () => homeShopProducts.slice(0, 8),
     [homeShopProducts]
   );
 
@@ -443,13 +441,7 @@ const Home = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const displayReviews = useMemo(() => {
-    if (!customerReviews || customerReviews.length === 0) return [];
-    if (customerReviews.length < 6) {
-      return [...customerReviews, ...customerReviews];
-    }
-    return customerReviews;
-  }, [customerReviews]);
+  const displayReviews = customerReviews;
 
   const maxReviewIndex = Math.max(0, displayReviews.length - cardsPerView);
 
@@ -542,6 +534,7 @@ const Home = () => {
   };
 
   const addFeaturedJewelleryToCart = (product) => {
+    if (Number(product.stockQuantity) < 1) return;
     const offerProduct = withActiveProductOffer(product);
     const originalPrice = Number(offerProduct.basePriceUSD ?? offerProduct.price);
     const discountRate = Number(offerProduct.discountRate);
@@ -820,11 +813,8 @@ const Home = () => {
 
           <button
             className="about-inquire-btn"
-            onClick={() =>
-              setSelectedGem(
-                initialGems[0]
-              )
-            }
+            disabled={!homeShopProducts.length}
+            onClick={() => setSelectedGem(homeShopProducts[0] || null)}
           >
 
             INQUIRE NOW
@@ -1112,9 +1102,7 @@ const Home = () => {
 
         <div className="gem-category-grid">
 
-          {categories
-             .filter((category) => category !== "Padparadscha Sapphire")
-            .map((category) => {
+          {homeGemCategories.map((category) => {
 
             return (
               <button
@@ -1151,7 +1139,12 @@ const Home = () => {
         <div className="gem-section-heading">
           <span>HANDPICKED FOR YOU</span>
           <h2>Featured <strong>Gemstones</strong></h2>
-          <p>Explore selected Blue Sapphires, Rubies and Green Gemstones from our collection.</p>
+          <p>Explore available gemstones from our current collection.</p>
+          {backendGemstonesError && (
+            <p role="status" className="admin-empty-state">
+              Gemstones could not be loaded: {backendGemstonesError}
+            </p>
+          )}
         </div>
 
         <div className="gem-product-grid home-shop-featured-grid">
@@ -1269,9 +1262,13 @@ const Home = () => {
         <div className="gem-product-grid home-shop-featured-grid">
           {featuredJewellery.map((item) => {
             const offerItem = withActiveProductOffer(item);
+            const inStock = item.stockQuantity > 0;
             const originalPrice = Number(offerItem.basePriceUSD ?? offerItem.price);
             const discountRate = Number(offerItem.discountRate);
             const hasDiscount = discountRate > 0 && discountRate <= 100;
+            const offerEndDate = hasDiscount
+              ? formatProductOfferEndDate(offerItem)
+              : "";
             const offerPrice = hasDiscount
               ? Math.round(originalPrice * (1 - discountRate / 100))
               : originalPrice;
@@ -1336,11 +1333,11 @@ const Home = () => {
                 <div className="product-card-actions">
                   <button
                     type="button"
-                    className="product-stock-status in-stock"
+                    className={`product-stock-status ${inStock ? "in-stock" : "out-of-stock"}`}
                     disabled
-                    aria-label={`${item.name} available`}
+                    aria-label={`${item.name} ${inStock ? "available" : "out of stock"}`}
                   >
-                    AVAILABLE
+                    {inStock ? "AVAILABLE" : "OUT OF STOCK"}
                   </button>
                   <button
                     type="button"
@@ -1358,11 +1355,17 @@ const Home = () => {
                       </del>
                     )}
                     <strong>{formatPrice(offerPrice)}</strong>
+                    {offerEndDate && (
+                      <span className="product-offer-end-date">
+                        Offer ends {offerEndDate}
+                      </span>
+                    )}
                   </div>
                   <button
                     type="button"
-                    className="add-to-cart-btn"
-                    aria-label={`Add ${item.name} to cart`}
+                    className={`add-to-cart-btn ${inStock ? "" : "out-of-stock"}`}
+                    aria-label={inStock ? `Add ${item.name} to cart` : `${item.name} is out of stock`}
+                    disabled={!inStock}
                     onClick={() => addFeaturedJewelleryToCart(item)}
                   >
                     <FaShoppingBag />
@@ -1622,6 +1625,11 @@ const Home = () => {
             onTouchStart={handleReviewTouchStart}
             onTouchEnd={handleReviewTouchEnd}
           >
+            {reviewsLoading && <p role="status">Loading customer reviews...</p>}
+            {reviewsError && <p role="alert">{reviewsError}</p>}
+            {!reviewsLoading && !reviewsError && displayReviews.length === 0 && (
+              <p>No approved customer reviews yet.</p>
+            )}
             <div className="reviews-track-viewport">
               <div
                 className="reviews-track"
@@ -1850,6 +1858,12 @@ const Home = () => {
             {/* DRAWER BODY */}
 
             <div className="about-drawer-body">
+              {activeDrawer === "cart" && customerCartLoading && (
+                <p role="status">Loading your saved cart...</p>
+              )}
+              {activeDrawer === "cart" && customerCartError && (
+                <p role="alert">{customerCartError}</p>
+              )}
 
               {(activeDrawer === "cart"
                 ? cart
@@ -1906,12 +1920,15 @@ const Home = () => {
                         {formatPrice(gem.basePriceUSD ?? gem.price)}
                       </span>
 
-                      <small>Qty 1</small>
+                      <small>Qty {Number(gem.quantity) || 1}</small>
 
                     </div>
 
 
                     <button
+                      type="button"
+                      aria-label={`Remove ${gem.name}`}
+                      disabled={Boolean(gem.cartId && deletingCartIds.includes(gem.cartId))}
                       onClick={() => {
 
                         if (
@@ -1919,10 +1936,7 @@ const Home = () => {
                           "cart"
                         ) {
 
-                          removeCollectionItem(
-                            setCart,
-                            getCollectionItemKey(gem)
-                          );
+                          void removeCartItem(gem);
 
                         } else {
 

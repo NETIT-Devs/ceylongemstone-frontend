@@ -33,659 +33,14 @@ import {
   useSharedCollection
 } from "../useSharedCollection.js";
 import { currencyRates, formatCurrencyPrice, getCurrentCurrency } from "../currency.js";
-import { hasAdminAccess } from "../adminAccess.js";
 import { useGemInventory } from "../useGemInventory.js";
-import { useGemProductOverrides } from "../useGemProductOverrides.js";
-import { useGemSubmissions } from "../useGemSubmissions.js";
 import { apiGet, resolveMediaUrl } from "../services/api.js";
-import { normalizeTreatment, TREATMENT_OPTIONS } from "../treatments.js";
+import { persistCustomerCartItem, useCustomerCart } from "../services/customerCart.js";
+import { normalizeTreatment } from "../treatments.js";
 import { formatProductOfferEndDate, withActiveProductOffer } from "../productOffers.js";
 
 // eslint-disable-next-line react-refresh/only-export-components
-export const products = [
-  {
-    id: 1,
-    productKey: "royal-blue-sapphire",
-    certificateNumber: "CRG-1001",
-    name: "Royal Blue Sapphire",
-    category: "Blue Sapphire",
-    color: "Royal Blue",
-    carat: 4.52,
-    shape: "Oval",
-    cut: "Mixed Cut",
-    treatment: "Heated",
-    price: 12500,
-    image: "/blueGem.jpg",
-    galleryViews: [
-      { label: "Front", url: "/blueGem.jpg" },
-      { label: "Back", url: "/blueGemBack.jpg" },
-      { label: "Right", url: "/blueGemRight.jpg" },
-      { label: "Left", url: "/blueGemLeft.jpg" }
-    ],
-    videoUrl: "/vedio%20blue%20gem.mp4"
-  },
-  {
-    id: 2,
-    certificateNumber: "CRG-1002",
-    name: "Ceylon Blue Sapphire",
-    category: "Blue Sapphire",
-    color: "Blue",
-    carat: 3.25,
-    shape: "Cushion",
-    cut: "Mixed Cut",
-    treatment: "Untreated",
-    price: 9800,
-    image: "/blueGem1.jpg",
-    galleryViews: [
-      { label: "Front", url: "/blueGem1.jpg" },
-      { label: "Back", url: "/blueGem2Back.jpg" },
-      { label: "Right", url: "/blueGem2Right.jpg" },
-      { label: "Left", url: "/blueGem2Left.jpg" }
-    ],
-    videoUrl: "/bluev2.mp4"
-  },
-  {
-    id: 3,
-    productKey: "royal-ceylon-sapphire",
-    certificateNumber: "CRG-1003",
-    name: "Royal Ceylon Sapphire",
-    category: "Blue Sapphire",
-    color: "Cornflower Blue",
-    carat: 5.10,
-    shape: "Oval",
-    cut: "Brilliant Cut",
-    treatment: "Untreated",
-    price: 16500,
-    image: "/sapphire2.jpg",
-    certImage: "/sapphire2Cetif.jpg",
-    certification: "GIA / GRS",
-    galleryViews: [
-      { label: "Front", url: "/sapphire2Front.jpg" },
-      { label: "Back", url: "/sapphire2Back22.jpg" },
-      { label: "Right", url: "/sapphire2Right.jpg" },
-      { label: "Left", url: "/sapphire2Left.jpg" }          
-    ],
-    videoUrl: "/blue3V.mp4"
-  },
-
-  {
-    id: 4,
-    productKey: "ceylon-padparadscha",
-    certificateNumber: "CRG-1004",
-    name: "Ceylon Padparadscha",
-    category: "Padparadscha Sapphire",
-    color: "Pink Orange",
-    carat: 3.18,
-    shape: "Oval",
-    cut: "Mixed Cut",
-    treatment: "Untreated",
-    price: 18900,
-    image: "/PADPARADSCHAgem2.jpg",
-    galleryViews: [
-      { label: "Front", url: "/PadparadschaFront.jpeg" },
-      { label: "Back", url: "/PadparadschaBack.jpeg" },
-      { label: "Right", url: "/PadparadschaRight.jpeg" },
-      { label: "Left", url: "/PadparadschaLeft.jpeg" }
-    ],
-    videoUrl: "/pinckV4.mp4"
-  },
-
-  {
-    id: 5,
-    certificateNumber: "CRG-1005",
-    name: "Ceylon Ruby",
-    category: "Ruby",
-    color: "Red",
-    carat: 2.80,
-    shape: "Oval",
-    cut: "Mixed Cut",
-    treatment: "Heated",
-    price: 8500,
-    image: "/Ruby.jpg",
-    certImage: "/RubyCeti.jpg",
-    certification: "Gemstone laboratory certificate",
-    galleryViews: [
-      { label: "Front", url: "/RubyFront.jpeg" },
-      { label: "Back", url: "/RubyBack.jpeg" },
-      { label: "Right", url: "/RubyRight.jpeg" },
-      { label: "Left", url: "/RubyLeft.jpeg" }
-    ],
-    videoUrl: "/rubyVideo.mp4"
-  },
-
-  {
-    id: 6,
-    certificateNumber: "CRG-1006",
-    name: "Ceylon Star Sapphire",
-    category: "Star Sapphire",
-    color: "Blue",
-    carat: 6.20,
-    shape: "Cabochon",
-    cut: "Cabochon",
-    treatment: "Natural",
-    price: 7200,
-    image: "/StarSapphire.jpg",
-    galleryViews: [
-      { label: "Front", url: "/StarSapphire.jpg" },
-      { label: "Back", url: "/StarBack.jpg" },
-      { label: "Right", url: "/StarRight.jpg" },
-      { label: "Left", url: "/StarLeft.jpg" }
-    ]
-  },
-
-  {
-    id: 7,
-    certificateNumber: "CRG-1007",
-    name: "Ceylon Cat's Eye",
-    category: "Cat's Eye",
-    color: "Golden",
-    carat: 4.10,
-    shape: "Oval",
-    cut: "Cabochon",
-    treatment: "Natural",
-    price: 6900,
-    image: "/Cat’sEye.jpg",
-    galleryViews: [
-      { label: "Front", url: "/Cat’sEyeFront.jpeg" },
-      { label: "Back", url: "/Cat’sEyeBack.jpeg" },
-      { label: "Right", url: "/Cat’sEyeRight.jpg" },
-      { label: "Left", url: "/Cat’sEyeLeft.jpg" }
-    ]
-  },
-
-  {
-    id: 8,     
-    productKey: "ceylon-alexandrite",
-    certificateNumber: "CRG-1008",
-    name: "Ceylon Alexandrite",
-    category: "Alexandrite",
-    color: "Green / Purple",
-    carat: 2.05,
-    shape: "Oval",
-    cut: "Mixed Cut",
-    treatment: "Untreated",
-    price: 22000,
-    image: "/Alexandrite1.jpg",
-    galleryViews: [
-      { label: "Front", url: "/Alexandrite1.jpg" },
-      { label: "Back", url: "/alexandrite1back.jpg" },
-      { label: "Right", url: "/alexandrite1right.jpg" },
-      { label: "Left", url: "/alexandrite1left.jpg" }
-    ]
-  },
-
-    {
-    id: 9,
-    productKey: "ceylon-alexandrite-2",
-    certificateNumber: "CRG-1009",
-    name: "Ceylon Alexandrite",
-    category: "Alexandrite",
-    color: "Green / Purple",
-    carat: 2.05,
-    shape: "Oval",
-    cut: "Mixed Cut",
-    treatment: "Untreated",
-    price: 22000,
-    image: "/ALEXANDRITEgem1.jpg",
-    certImage: "/ALEXANDRITEgem1Ceti.jpg",
-    certification: "Gemstone laboratory certificate",
-    galleryViews: [
-      { label: "Front", url: "/ALEXANDRITEgem1.jpg" },
-      { label: "Back", url: "/Alexandrite2Back.jpg" },
-      { label: "Right", url: "/Alexandrite2Right.jpg" },
-      { label: "Left", url: "/Alexandrite2Left.jpg" }
-    ]
-  },
-  {
-    id: 10,
-    productKey: "golden-yellow-sapphire",
-    certificateNumber: "CRG-1010",
-    name: "Golden Yellow Sapphire",
-    category: "Yellow Sapphire",
-    color: "Golden",
-    carat: 5.10,
-    shape: "Oval",
-    cut: "Mixed Cut",
-    treatment: "Untreated",
-    price: 14200,
-    image: "/yellowGem.jpg",
-    galleryViews: [
-      { label: "Front", url: "/YellowSFront.jpeg" },
-      { label: "Back", url: "/YellowSBack.jpeg" },
-      { label: "Right", url: "/YellowSRight.jpeg" },
-      { label: "Left", url: "/YellowSLeft.jpeg" }
-    ]
-  },
-  {
-    id: 11,
-    productKey: "ceylon-green-gemstone",
-    certificateNumber: "CRG-1011",
-    name: "Ceylon Green Gemstone",
-    category: "Green Gemstone",
-    color: "Green",
-    carat: 2.05,
-    shape: "Oval",
-    cut: "Mixed Cut",
-    treatment: "Natural",
-    price: 22000,
-    image: "/ALEXANDRITEgem.jpg",
-    galleryViews: [
-      { label: "Front", url: "/ALEXANDRITEgem.jpg" },
-      { label: "Back", url: "/GreenBack.jpg" },
-      { label: "Right", url: "/GreenRight.jpg" },
-      { label: "Left", url: "/GreenLeft.jpg" }
-    ],
-    videoUrl: "/greenV11.mp4"            
-  },
-
-  // ── YELLOW SAPPHIRE ──────────────────────────────────────
-  {
-    id: 12,
-    productKey: "yellow-gurugala-sapphire",
-    certificateNumber: "CRG-1012",
-    name: "Yellow Gurugala Sapphire",
-    category: "Yellow Sapphire",
-    origin: "Ratnapura, Sri Lanka",
-    color: "Yellow",
-    carat: 4.20,
-    shape: "Oval",
-    cut: "Mixed Cut",
-    treatment: "Untreated",
-    price: 11800,
-    image: "/YellowGurugala.jpg",
-    galleryViews: [
-      { label: "Front", url: "/YellowGurugala.jpg" },
-      { label: "Back", url: "/yellowgurugalaback.jpg" },
-      { label: "Right", url: "/yellowgurugalaright.jpg" },
-      { label: "Left", url: "/yellowgurugalaleft.jpg" }
-    ]
-  },
-  {
-    id: 13,
-    productKey: "yellow-king-sapphire",
-    certificateNumber: "CRG-1013",
-    name: "Yellow King Sapphire",
-    category: "Yellow Sapphire",
-    origin: "Ratnapura, Sri Lanka",
-    color: "Canary Yellow",
-    carat: 5.80,
-    shape: "Cushion",
-    cut: "Brilliant Cut",
-    treatment: "Untreated",
-    price: 16500,
-    image: "/Yellowking.jpg",
-    galleryViews: [
-      { label: "Front", url: "/Yellowking.jpg" },
-      { label: "Back", url: "/yellowkingback.jpg" },
-      { label: "Right", url: "/yellowkingright.jpg" },
-      { label: "Left", url: "/yellowkingleft.jpg" }
-    ]
-  },
-  {
-    id: 14,
-    productKey: "yellow-pushparaga-sapphire",
-    certificateNumber: "CRG-1014",
-    name: "Yellow Pushparaga Sapphire",
-    category: "Yellow Sapphire",
-    origin: "Ratnapura, Sri Lanka",
-    color: "Golden Yellow",
-    carat: 3.75,
-    shape: "Oval",
-    cut: "Mixed Cut",
-    treatment: "Untreated",
-    price: 9500,
-    image: "/yellowPushparaga.jpg",
-    galleryViews: [
-      { label: "Front", url: "/yellowPushparaga.jpg" }
-    ]
-  },
-
-  // ── STAR SAPPHIRE ─────────────────────────────────────────
-  {
-    id: 15,
-    productKey: "ceylon-star-sapphire-1",
-    certificateNumber: "CRG-1015",
-    name: "Ceylon Star Sapphire I",
-    category: "Star Sapphire",
-    color: "Blue",
-    carat: 7.40,
-    shape: "Cabochon",
-    cut: "Cabochon",
-    treatment: "Natural",
-    price: 8900,
-    image: "/Star1.jpg",
-    galleryViews: [
-      { label: "Front", url: "/Star1.jpg" }
-    ]
-  },
-  {
-    id: 16,
-    productKey: "ceylon-star-sapphire-3",
-    certificateNumber: "CRG-1016",
-    name: "Ceylon Star Sapphire III",
-    category: "Star Sapphire",
-    color: "Blue Grey",
-    carat: 5.95,
-    shape: "Cabochon",
-    cut: "Cabochon",
-    treatment: "Natural",
-    price: 6800,
-    image: "/Star3.jpg",
-    galleryViews: [
-      { label: "Front", url: "/Star3.jpg" }
-    ]
-  },
-  {
-    id: 17,
-    productKey: "ceylon-star-sapphire-2",
-    certificateNumber: "CRG-1017",
-    name: "Ceylon Star Sapphire II",
-    category: "Star Sapphire",
-    color: "Powder Blue",
-    carat: 8.10,
-    shape: "Cabochon",
-    cut: "Cabochon",
-    treatment: "Natural",
-    price: 11200,
-    image: "/star2.jpg",
-    galleryViews: [
-      { label: "Front", url: "/star2.jpg" }
-    ]
-  },
-
-  // ── RUBY ──────────────────────────────────────────────────
-  {
-    id: 18,
-    productKey: "ceylon-ruby-1",
-    certificateNumber: "CRG-1018",
-    name: "Ceylon Ruby I",
-    category: "Ruby",
-    color: "Vivid Red",
-    carat: 3.10,
-    shape: "Oval",
-    cut: "Mixed Cut",
-    treatment: "Heated",
-    price: 14500,
-    image: "/Ruby1.jpg",
-    galleryViews: [
-      { label: "Front", url: "/Ruby1.jpg" }
-    ]
-  },
-  {
-    id: 19,
-    productKey: "ceylon-ruby-2",
-    certificateNumber: "CRG-1019",
-    name: "Ceylon Ruby II",
-    category: "Ruby",
-    color: "Pigeon Blood Red",
-    carat: 2.45,
-    shape: "Cushion",
-    cut: "Mixed Cut",
-    treatment: "Untreated",
-    price: 18000,
-    image: "/Ruby2.jpg",
-    galleryViews: [
-      { label: "Front", url: "/Ruby2.jpg" }
-    ]
-  },
-  {
-    id: 20,
-    productKey: "ceylon-ruby-3",
-    certificateNumber: "CRG-1020",
-    name: "Ceylon Ruby III",
-    category: "Ruby",
-    color: "Deep Red",
-    carat: 1.85,
-    shape: "Oval",
-    cut: "Mixed Cut",
-    treatment: "Heated",
-    price: 9200,
-    image: "/Ruby3.jpg",
-    galleryViews: [
-      { label: "Front", url: "/Ruby3.jpg" }
-    ]
-  },
-
-  // ── PADPARADSCHA SAPPHIRE ─────────────────────────────────
-  {
-    id: 21,
-    productKey: "ceylon-padparadscha-3",
-    certificateNumber: "CRG-1021",
-    name: "Ceylon Padparadscha III",
-    category: "Padparadscha Sapphire",
-    color: "Salmon Pink Orange",
-    carat: 2.60,
-    shape: "Oval",
-    cut: "Mixed Cut",
-    treatment: "Untreated",
-    price: 21500,
-    image: "/Padparadscha3.jpeg",
-    galleryViews: [
-      { label: "Front", url: "/Padparadscha3.jpeg" }
-    ]
-  },
-  {
-    id: 22,
-    productKey: "ceylon-padparadscha-2",
-    certificateNumber: "CRG-1022",
-    name: "Ceylon Padparadscha II",
-    category: "Padparadscha Sapphire",
-    color: "Pink Orange",
-    carat: 3.40,
-    shape: "Cushion",
-    cut: "Mixed Cut",
-    treatment: "Untreated",
-    price: 27000,
-    image: "/Padparadscha2.jpeg",
-    galleryViews: [
-      { label: "Front", url: "/Padparadscha2.jpeg" },
-      { label: "Back", url: "/padparadscha2back.jpg" },
-      { label: "Right", url: "/padparadscha2right.jpg" },
-      { label: "Left", url: "/padparadscha2left.jpg" }
-    ]
-  },
-  {
-    id: 23,
-    productKey: "ceylon-padparadscha-1",
-    certificateNumber: "CRG-1023",
-    name: "Ceylon Padparadscha I",
-    category: "Padparadscha Sapphire",
-    color: "Pure Padparadscha",
-    carat: 4.05,
-    shape: "Oval",
-    cut: "Brilliant Cut",
-    treatment: "Untreated",
-    price: 34000,
-    image: "/Padparadscha1.jpeg",
-    galleryViews: [
-      { label: "Front", url: "/Padparadscha1.jpeg" }
-    ]
-  },
-
-  // ── GREEN GEMSTONE ────────────────────────────────────────
-  {
-    id: 24,
-    productKey: "ceylon-green-gem-2",
-    certificateNumber: "CRG-1024",
-    name: "Ceylon Green Gem II",
-    category: "Green Gemstone",
-    color: "Vivid Green",
-    carat: 2.90,
-    shape: "Oval",
-    cut: "Mixed Cut",
-    treatment: "Natural",
-    price: 19500,
-    image: "/greengem2.jpg",
-    galleryViews: [
-      { label: "Front", url: "/greengem2.jpg" }
-    ]
-  },
-  {
-    id: 25,
-    productKey: "ceylon-green-gem-1",
-    certificateNumber: "CRG-1025",
-    name: "Ceylon Green Gem I",
-    category: "Green Gemstone",
-    color: "Deep Green",
-    carat: 3.55,
-    shape: "Cushion",
-    cut: "Mixed Cut",
-    treatment: "Natural",
-    price: 24000,
-    image: "/greengem1.jpg",
-    galleryViews: [
-      { label: "Front", url: "/greengem1.jpg" },
-      { label: "Back", url: "/greengem1back.jpg" },
-      { label: "Right", url: "/greengem1right.jpg" },
-      { label: "Left", url: "/greengem1left.jpg" }
-    ]
-  },
-  {
-    id: 26,
-    productKey: "ceylon-green-gem-3",
-    certificateNumber: "CRG-1026",
-    name: "Ceylon Green Gem III",
-    category: "Green Gemstone",
-    color: "Forest Green",
-    carat: 1.75,
-    shape: "Oval",
-    cut: "Mixed Cut",
-    treatment: "Natural",
-    price: 14800,
-    image: "/greengem3.jpg",
-    galleryViews: [
-      { label: "Front", url: "/greengem3.jpg" }
-    ]
-  },
-
-  // ── CAT'S EYE ─────────────────────────────────────────────
-  {
-    id: 27,
-    productKey: "ceylon-cats-eye-3",
-    certificateNumber: "CRG-1027",
-    name: "Ceylon Cat's Eye III",
-    category: "Cat's Eye",
-    color: "Honey Golden",
-    carat: 5.20,
-    shape: "Oval",
-    cut: "Cabochon",
-    treatment: "Natural",
-    price: 9800,
-    image: "/Cat’sEye3.jpg",
-    galleryViews: [
-      { label: "Front", url: "/Cat’sEye3.jpg" }
-    ]
-  },
-  {
-    id: 28,
-    productKey: "ceylon-cats-eye-2",
-    certificateNumber: "CRG-1028",
-    name: "Ceylon Cat's Eye II",
-    category: "Cat's Eye",
-    color: "Greenish Gold",
-    carat: 3.80,
-    shape: "Oval",
-    cut: "Cabochon",
-    treatment: "Natural",
-    price: 7500,
-    image: "/Cat’sEye2.jpg",
-    galleryViews: [
-      { label: "Front", url: "/Cat’sEye2.jpg" }
-    ]
-  },
-  {
-    id: 29,
-    productKey: "ceylon-cats-eye-1",
-    certificateNumber: "CRG-1029",
-    name: "Ceylon Cat's Eye I",
-    category: "Cat's Eye",
-    color: "Chrysoberyl Golden",
-    carat: 6.40,
-    shape: "Oval",
-    cut: "Cabochon",
-    treatment: "Natural",
-    price: 13500,
-    image: "/Cat’sEye1.jpg",
-    galleryViews: [
-      { label: "Front", url: "/Cat’sEye1.jpg" }
-    ]
-  },
-
-  // ── BLUE SAPPHIRE ─────────────────────────────────────────
-  {
-    id: 30,
-    productKey: "ceylon-blue-gem-5",
-    certificateNumber: "CRG-1030",
-    name: "Ceylon Blue Sapphire V",
-    category: "Blue Sapphire",
-    color: "Royal Blue",
-    carat: 4.85,
-    shape: "Oval",
-    cut: "Mixed Cut",
-    treatment: "Heated",
-    price: 13800,
-    image: "/bluegem5.jpg",
-    galleryViews: [
-      { label: "Front", url: "/bluegem5.jpg" },
-      { label: "Back", url: "/bluegem5back.jpg" },
-      { label: "Right", url: "/bluegem5Right.jpg" },
-      { label: "Left", url: "/bluegem5left.jpg" }
-    ],
-    videoUrl: "/bluegem5V.mp4"
-  },
-
-  // ── ALEXANDRITE ───────────────────────────────────────────
-  {
-    id: 31,
-    productKey: "ceylon-alexandrite-5",
-    certificateNumber: "CRG-1031",
-    name: "Ceylon Alexandrite V",
-    category: "Alexandrite",
-    color: "Green / Purple",
-    carat: 1.45,
-    shape: "Oval",
-    cut: "Mixed Cut",
-    treatment: "Untreated",
-    price: 19800,
-    image: "/Alexandrite5.jpg",
-    galleryViews: [
-      { label: "Front", url: "/Alexandrite5.jpg" },
-      { label: "Back", url: "/alexandrite5back.jpg" },
-      { label: "Right", url: "/alexandrite5right.jpg" },
-      { label: "Left", url: "/alexandrite5left.jpg" }
-    ]
-  },
-  {
-    id: 32,
-    productKey: "ceylon-alexandrite-3",
-    certificateNumber: "CRG-1032",
-    name: "Ceylon Alexandrite III",
-    category: "Alexandrite",
-    color: "Teal / Violet",
-    carat: 2.30,
-    shape: "Cushion",
-    cut: "Mixed Cut",
-    treatment: "Untreated",
-    price: 28500,
-    image: "/Alexandrite3.jpg",
-    galleryViews: [
-      { label: "Front", url: "/Alexandrite3.jpg" }
-    ]
-  }
-];
-
-// eslint-disable-next-line react-refresh/only-export-components
-export const categories = [
-  "All Gemstones",
-  "Blue Sapphire",
-  "Yellow Sapphire",
-  "Green Gemstone",
-  "Padparadscha Sapphire",
-  "Ruby",
-  "Star Sapphire",
-  "Cat's Eye",
-  "Alexandrite"
-];
+export const products = [];
 
 const matchesGemstoneCategory = (product, selectedCategory) => {
   if (selectedCategory === "All Gemstones") return true;
@@ -739,21 +94,7 @@ const matchesGemstoneCategory = (product, selectedCategory) => {
   }
 };
 
-const maxCaratValue = Math.ceil(Math.max(...products.map((product) => product.carat)));
-const maxPriceValue = Math.ceil(Math.max(...products.map((product) => product.price)) / 5000) * 5000;
 const PRODUCTS_PER_PAGE = 15;
-
-const colors = [
-  "All Colors",
-  "Blue",
-  "Royal Blue",
-  "Cornflower Blue",
-  "Pink Orange",
-  "Red",
-  "Golden",
-  "Green",
-  "Green / Purple"
-];
 
 const colorSwatches = {
   "All Colors": "#ffffff",
@@ -767,41 +108,18 @@ const colorSwatches = {
   "Green / Purple": "linear-gradient(135deg, #43875d 0 50%, #8c5aa5 50% 100%)"
 };
 
-const shapes = [
-  "All Shapes",
-  "Oval",
-  "Cushion",
-  "Cabochon"
-];
-
-const cuts = [
-  "All Cuts",
-  "Mixed Cut",
-  "Brilliant Cut",
-  "Cabochon"
-];
-
-const treatments = ["All Treatments", ...TREATMENT_OPTIONS];
-
 function Gemstones() {
   const [currency, setCurrency] = useState(getCurrentCurrency);
   const [currencyOpen, setCurrencyOpen] = useState(false);
   const currencyRef = useRef(null);
-  const [gemProductOverrides] = useGemProductOverrides();
-  const [gemSubmissions] = useGemSubmissions();
   const [backendGemstones, setBackendGemstones] = useState([]);
+  const [backendGemstonesLoading, setBackendGemstonesLoading] = useState(true);
   const [backendGemstonesError, setBackendGemstonesError] = useState("");
   const [selectedTreatment, setSelectedTreatment] = useState("All Treatments");
 
   useEffect(() => {
     let isCurrent = true;
-    const query = new URLSearchParams();
-    if (selectedTreatment !== "All Treatments") {
-      query.set("treatment", selectedTreatment);
-    }
-    const queryString = query.toString();
-
-    apiGet(`/api/gemstones${queryString ? `?${queryString}` : ""}`)
+    apiGet("/api/gemstones")
       .then(async (response) => {
         let result;
         try {
@@ -814,7 +132,10 @@ function Gemstones() {
         }
 
         const inventoryProducts = result.data
-          .filter((gemstone) => Number(gemstone.status) !== 0)
+          .filter((gemstone) =>
+            Number(gemstone.status) !== 0 &&
+            (!gemstone.approval_status || gemstone.approval_status === "approved")
+          )
           .map((gemstone) => {
             const galleryViews = (gemstone.galleryViews || []).map((view) => ({
               ...view,
@@ -830,7 +151,10 @@ function Gemstones() {
               productKey: `inventory-gemstone-${gemstone.id}`,
               category: gemstone.category_name || "Gemstone",
               treatment: normalizeTreatment(gemstone.treatment_status),
-              stockQuantity: Number(gemstone.stock) || 0,
+              stockQuantity: Number.isSafeInteger(Number(gemstone.stock))
+                ? Math.max(0, Number(gemstone.stock))
+                : 0,
+              price: Number(gemstone.price) || 0,
               image,
               galleryViews,
               videoUrl: resolveMediaUrl(gemstone.videoUrl || gemstone.video_url),
@@ -847,39 +171,58 @@ function Gemstones() {
         if (isCurrent) {
           setBackendGemstonesError(error.message || "Unable to load inventory gemstones.");
         }
+      })
+      .finally(() => {
+        if (isCurrent) setBackendGemstonesLoading(false);
       });
 
     return () => {
       isCurrent = false;
     };
-  }, [selectedTreatment]);
+  }, []);
 
-  const shopProducts = useMemo(
+  const shopProducts = backendGemstones;
+  const categories = useMemo(
     () => [
-      ...products.map((product) => ({
-        ...product,
-        ...gemProductOverrides[String(product.id)],
-        treatment: normalizeTreatment(
-          gemProductOverrides[String(product.id)]?.treatment ?? product.treatment
-        ),
-      })),
-      ...backendGemstones,
-      ...gemSubmissions
-        .filter((submission) => submission.status === "approved")
-        .map((submission) => ({
-          ...submission.gem,
-          treatment: normalizeTreatment(submission.gem.treatment),
-        }))
+      "All Gemstones",
+      ...new Set(shopProducts.map((product) => product.category).filter(Boolean))
     ],
-    [backendGemstones, gemProductOverrides, gemSubmissions]
+    [shopProducts]
+  );
+  const colors = useMemo(
+    () => [
+      "All Colors",
+      ...new Set(shopProducts.map((product) => product.color).filter(Boolean))
+    ],
+    [shopProducts]
+  );
+  const shapes = useMemo(
+    () => [
+      "All Shapes",
+      ...new Set(shopProducts.map((product) => product.shape).filter(Boolean))
+    ],
+    [shopProducts]
+  );
+  const cuts = useMemo(
+    () => [
+      "All Cuts",
+      ...new Set(shopProducts.map((product) => product.cut).filter(Boolean))
+    ],
+    [shopProducts]
+  );
+  const treatments = useMemo(
+    () => [
+      "All Treatments",
+      ...new Set(shopProducts.map((product) => product.treatment).filter(Boolean))
+    ],
+    [shopProducts]
   );
   const shopMaxCaratValue = Math.max(
-    maxCaratValue,
+    1,
     ...shopProducts.map((product) => Number(product.carat) || 0)
   );
   const shopMaxPriceValue = Math.ceil(
-    Math.max(maxPriceValue, ...shopProducts.map((product) => Number(product.price) || 0)) /
-      5000
+    Math.max(5000, ...shopProducts.map((product) => Number(product.price) || 0)) / 5000
   ) * 5000;
 
   const readMyOrdersLinkStatus = () => {
@@ -916,12 +259,7 @@ function Gemstones() {
     try {
       const params = new URLSearchParams(window.location.search);
       const cat = params.get("category");
-      if (cat) {
-        const found = categories.find(
-          (c) => c.toLowerCase() === cat.toLowerCase().trim()
-        );
-        if (found) return found;
-      }
+      if (cat) return cat;
     } catch { /* URL parsing unsupported */ }
     return "All Gemstones";
   });
@@ -959,6 +297,12 @@ function Gemstones() {
   const [cart, setCart] = useSharedCollection("ceylon-cart");
   const [inventory] = useGemInventory(shopProducts);
   const [activeDrawer, setActiveDrawer] = useState(null);
+  const {
+    isLoading: customerCartLoading,
+    error: customerCartError,
+    deletingCartIds,
+    removeCartItem
+  } = useCustomerCart(activeDrawer === "cart", setCart);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [inquiryProduct, setInquiryProduct] = useState(null);
 
@@ -1011,10 +355,7 @@ function Gemstones() {
         const params = new URLSearchParams(window.location.search);
         const cat = params.get("category");
         if (cat) {
-          const found = categories.find(
-            (c) => c.toLowerCase() === cat.toLowerCase().trim()
-          );
-          if (found) setSelectedCategory(found);
+          setSelectedCategory(cat);
         } else {
           setSelectedCategory("All Gemstones");
         }
@@ -1192,10 +533,24 @@ function Gemstones() {
     setActiveDrawer("wishlist");
   };
 
-  const addToCart = (product) => {
+  const addToCart = async (product) => {
     const productKey = getCollectionItemKey(product);
     const stockQuantity = inventory[productKey] ?? 0;
     if (stockQuantity < 1) return;
+    const cartItem = cart.find((item) => getCollectionItemKey(item) === productKey);
+
+    let savedCartItem;
+    try {
+      savedCartItem = await persistCustomerCartItem(
+        "gemstone",
+        product.inventoryId || product.id,
+        cartItem?.quantity || 1
+      );
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Unable to save this gemstone to your cart.");
+      return;
+    }
+
     const offerProduct = withActiveProductOffer(product);
     const originalPrice = Number(offerProduct.basePriceUSD ?? offerProduct.price);
     const discountRate = Number(offerProduct.discountRate);
@@ -1209,15 +564,19 @@ function Gemstones() {
     };
 
     setCart((current) => {
-      const exists = current.some(
-        (item) => getCollectionItemKey(item) === productKey
-      );
-
-      if (exists) return current;
+      const exists = current.some((item) => getCollectionItemKey(item) === productKey);
+      if (exists) {
+        return current.map((item) => getCollectionItemKey(item) === productKey
+          ? { ...item, quantity: savedCartItem.quantity }
+          : item);
+      }
 
       return [
         ...current,
-        normalizeCollectionItem({ ...cartProduct, quantity: 1 })
+        {
+          ...normalizeCollectionItem(cartProduct),
+          quantity: savedCartItem.quantity
+        }
       ];
     });
     setActiveDrawer("cart");
@@ -1238,9 +597,8 @@ function Gemstones() {
   };
 
   const removeCart = (productKey) => {
-    setCart((current) =>
-      current.filter((item) => getCollectionItemKey(item) !== productKey)
-    );
+    const item = cart.find((entry) => getCollectionItemKey(entry) === productKey);
+    if (item) void removeCartItem(item);
   };
 
   const clearFilters = () => {
@@ -1251,9 +609,13 @@ function Gemstones() {
     setMaxCarat(shopMaxCaratValue);
     setSelectedShape("All Shapes");
     setSelectedCut("All Cuts");
-    setSelectedTreatment("All Treatments");
+    handleTreatmentChange("All Treatments");
     setMinPrice(0);
     setMaxPrice(shopMaxPriceValue);
+  };
+
+  const handleTreatmentChange = (treatment) => {
+    setSelectedTreatment(treatment);
   };
 
   return (
@@ -1279,7 +641,7 @@ function Gemstones() {
           </div>
         </a>
 
-        <MobileSiteMenu onInquire={() => setInquiryProduct(products[0])} />
+        <MobileSiteMenu onInquire={() => setInquiryProduct(shopProducts[0] || null)} />
         <div className="about-nav-links">
           <a href="/">Home</a>
           <ShopNavDropdown current="gems" />
@@ -1385,7 +747,7 @@ function Gemstones() {
 
           <button
             className="about-inquire-btn"
-            onClick={() => setInquiryProduct(products[0])}
+            onClick={() => setInquiryProduct(shopProducts[0] || null)}
           >
             INQUIRE NOW
           </button>
@@ -1638,7 +1000,7 @@ function Gemstones() {
                   >
                     <span
                       className={`color-swatch ${item === "All Colors" ? "all-colors-swatch" : ""}`}
-                      style={{ background: colorSwatches[item] }}
+                      style={{ background: colorSwatches[item] || "#b8a27a" }}
                     >
                       {item === "All Colors" ? "All" : ""}
                     </span>
@@ -1729,7 +1091,7 @@ function Gemstones() {
               <select
                 value={selectedTreatment}
                 onChange={(e) =>
-                  setSelectedTreatment(e.target.value)
+                  handleTreatmentChange(e.target.value)
                 }
               >
                 {treatments.map((item) => (
@@ -1799,7 +1161,13 @@ function Gemstones() {
 
           <div className="gem-product-area" id="gem-product-results">
 
-            {filteredProducts.length > 0 ? (
+            {backendGemstonesLoading ? (
+              <div className="no-products" role="status" aria-live="polite">
+                <FaGem />
+                <h3>Loading Gemstones</h3>
+                <p>Fetching the latest gemstone inventory.</p>
+              </div>
+            ) : filteredProducts.length > 0 ? (
 
               <>
               <div className="gem-product-grid">
@@ -2241,6 +1609,12 @@ function Gemstones() {
             </div>
 
             <div className="gem-drawer-body">
+              {activeDrawer === "cart" && customerCartLoading && (
+                <p role="status">Loading your saved cart...</p>
+              )}
+              {activeDrawer === "cart" && customerCartError && (
+                <p role="alert">{customerCartError}</p>
+              )}
 
               {(
                 activeDrawer === "wishlist"
@@ -2287,13 +1661,14 @@ function Gemstones() {
                       </p>
 
                       <strong>{formatCurrencyPrice(item.price, currency)}</strong>
-                      <p className="drawer-item-quantity">Qty 1</p>
+                      <p className="drawer-item-quantity">Qty {Number(item.quantity) || 1}</p>
 
                     </div>
 
                     <button
                       type="button"
                       aria-label={`Remove ${item.name}`}
+                      disabled={Boolean(item.cartId && deletingCartIds.includes(item.cartId))}
                       onClick={() =>
                         activeDrawer === "wishlist"
                           ? removeWishlist(getCollectionItemKey(item))

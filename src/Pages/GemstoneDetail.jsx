@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { apiGet, apiPost, resolveMediaUrl } from '../services/api.js';
+import { apiPost, resolveMediaUrl } from '../services/api.js';
 import ShopNavDropdown from "../components/ShopNavDropdown.jsx";
 import BrandLogo from "../components/BrandLogo.jsx";
 
@@ -36,6 +36,7 @@ import {
   formatProductOfferEndDate,
   withActiveProductOffer
 } from '../productOffers.js';
+import { persistCustomerCartItem, useCustomerCart } from "../services/customerCart.js";
 
 const GemstoneDetail = ({ gem }) => {
   const [currency] = useState(getCurrentCurrency);
@@ -145,24 +146,16 @@ const GemstoneDetail = ({ gem }) => {
     dragStartX.current = event.clientX;
   };
 
-  // Customer Reviews State
-  const [reviews, setReviews] = useState([
-    {
-      id: 1,
-      name: 'Alexander Wright',
-      rating: 5,
-      date: 'September 12, 2026',
-      comment: 'An exquisite Royal Blue Sapphire. The clarity and cut exceed expectations. Truly a masterpiece.',
-      photo: null
-    }
-  ]);
-  const [newRating, setNewRating] = useState(5);
-  const [newComment, setNewComment] = useState('');
-  const [newPhoto, setNewPhoto] = useState(null);
   const [wishlist, setWishlist] = useSharedCollection('ceylon-wishlist');
   const [cart, setCart] = useSharedCollection('ceylon-cart');
   const [addedToCart, setAddedToCart] = useState(false);
   const [activeDrawer, setActiveDrawer] = useState(null);
+  const {
+    isLoading: customerCartLoading,
+    error: customerCartError,
+    deletingCartIds,
+    removeCartItem
+  } = useCustomerCart(activeDrawer === 'cart', setCart);
   const [showPaymentNotice, setShowPaymentNotice] = useState(false);
   const [showInquiryForm, setShowInquiryForm] = useState(false);
 
@@ -174,8 +167,24 @@ const GemstoneDetail = ({ gem }) => {
     (item) => getCollectionItemKey(item) === gemProductKey
   );
 
-  const addProductToCart = (product) => {
+  const addProductToCart = async (product) => {
     const productKey = getCollectionItemKey(product);
+    const stockQuantity = Number(product.stockQuantity ?? product.stock);
+    if (!Number.isSafeInteger(stockQuantity) || stockQuantity < 1) return false;
+    const cartItem = cart.find((item) => getCollectionItemKey(item) === productKey);
+
+    let savedCartItem;
+    try {
+      savedCartItem = await persistCustomerCartItem(
+        "gemstone",
+        product.inventoryId || product.id,
+        cartItem?.quantity || 1
+      );
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Unable to save this gemstone to your cart.");
+      return false;
+    }
+
     const offerProduct = withActiveProductOffer(product);
     const originalPrice = Number(
       offerProduct.basePriceUSD ?? offerProduct.price ?? offerProduct.priceUSD ?? 0
@@ -190,25 +199,35 @@ const GemstoneDetail = ({ gem }) => {
         (item) => getCollectionItemKey(item) === productKey
       );
 
-      if (alreadyInCart) return current;
+      if (alreadyInCart) {
+        return current.map((item) => getCollectionItemKey(item) === productKey
+          ? { ...item, quantity: savedCartItem.quantity }
+          : item);
+      }
 
       return [
         ...current,
-        normalizeCollectionItem({
-          ...offerProduct,
-          price: offerPrice,
-          basePriceUSD: originalPrice,
-          quantity: 1
-        })
+        {
+          ...normalizeCollectionItem({
+            ...offerProduct,
+            price: offerPrice,
+            basePriceUSD: originalPrice
+          }),
+          quantity: savedCartItem.quantity
+        }
       ];
     });
+    return true;
   };
 
-  const addGemToCart = () => {
-    addProductToCart(gem);
+  const addGemToCart = async () => {
+    if (!(await addProductToCart(gem))) return;
     setAddedToCart(true);
     setActiveDrawer('cart');
   };
+
+  const gemStockQuantity = Number(gem?.stockQuantity ?? gem?.stock);
+  const gemInStock = Number.isSafeInteger(gemStockQuantity) && gemStockQuantity > 0;
 
   const toggleGemWishlist = () => {
     const productKey = getCollectionItemKey(gem);
@@ -230,36 +249,6 @@ const GemstoneDetail = ({ gem }) => {
       ];
     });
   };
-
-  const handleImageChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setNewPhoto(URL.createObjectURL(e.target.files[0]));
-    }
-  };
-
-  useEffect(() => {
-    if (!gem?.id) return;
-    apiGet("/api/reviews")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.success && Array.isArray(data.data)) {
-          const gemReviews = data.data
-            .filter((r) => (r.gemstone_id === gem.id || String(r.gemstone_id) === String(gem.id)) && r.status === "APPROVED")
-            .map((r) => ({
-              id: r.id,
-              name: `Collector #${r.user_id}`,
-              rating: Number(r.rating),
-              date: r.created_at ? String(r.created_at).slice(0, 10) : 'Verified',
-              comment: r.comment,
-              photo: null
-            }));
-          if (gemReviews.length > 0) {
-            setReviews((prev) => [...gemReviews, ...prev]);
-          }
-        }
-      })
-      .catch(() => {});
-  }, [gem?.id]);
 
   const handleInquirySubmit = async (e) => {
     e.preventDefault();
@@ -293,44 +282,6 @@ const GemstoneDetail = ({ gem }) => {
   const showDetailsTab = (tab) => {
     setActiveTab(tab);
     detailSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  const handleReviewSubmit = async (e) => {
-    e.preventDefault();
-    if (!newComment.trim()) return;
-
-    const reviewObj = {
-      id: Date.now(),
-      name: 'Private Collector',
-      rating: newRating,
-      date: 'Just now',
-      comment: newComment,
-      photo: newPhoto
-    };
-
-    setReviews([reviewObj, ...reviews]);
-    const commentToSend = newComment;
-    const ratingToSend = newRating;
-    setNewComment('');
-    setNewPhoto(null);
-
-    try {
-      const user = (() => {
-        try { return JSON.parse(window.localStorage.getItem("ceylon-user") || "null"); }
-        catch { return null; }
-      })();
-
-      if (user?.id) {
-        await apiPost("/api/reviews", {
-          user_id: user.id,
-          gemstone_id: gem?.id || 1,
-          rating: ratingToSend,
-          comment: commentToSend,
-        });
-      }
-    } catch {
-      // Offline fallback
-    }
   };
 
   if (!gem) {
@@ -645,12 +596,13 @@ const GemstoneDetail = ({ gem }) => {
           <div className="cta-button-group gemstone-cta-button-group">
             <button
               type="button"
-              className="gold-btn"
+              className={`gold-btn ${gemInStock ? "" : "out-of-stock"}`}
+              disabled={!gemInStock}
               onClick={addedToCart
                 ? () => setActiveDrawer('cart')
                 : addGemToCart}
             >
-              <FaShoppingBag /> {addedToCart ? 'VIEW CART' : 'ADD TO CART'}
+              <FaShoppingBag /> {gemInStock ? (addedToCart ? 'VIEW CART' : 'ADD TO CART') : 'OUT OF STOCK'}
             </button>
             <button
               type="button"
@@ -782,80 +734,6 @@ const GemstoneDetail = ({ gem }) => {
           )}
         </div>
       </div>
-
-      {/*
-      <div className="reviews-section">
-        <div className="reviews-header">
-          <h2>CLIENT REVIEWS & GALLERY</h2>
-          <p>Verified testimonials from private collectors and gemstone enthusiasts.</p>
-        </div>
-
-        <form className="luxury-review-form" onSubmit={handleReviewSubmit}>
-          <h3>Share Your Experience</h3>
-          
-          <div className="form-row">
-            <div className="input-group">
-              <label>Rating</label>
-              <select value={newRating} onChange={(e) => setNewRating(Number(e.target.value))}>
-                <option value="5">★★★★★ Exceptional (5/5)</option>
-                <option value="4">★★★★☆ Excellent (4/5)</option>
-                <option value="3">★★★☆☆ Good (3/5)</option>
-              </select>
-            </div>
-
-            <div className="input-group">
-              <label>Upload Photograph (Optional)</label>
-              <input type="file" accept="image/*" onChange={handleImageChange} className="file-input" />
-            </div>
-          </div>
-
-          <div className="input-group">
-            <label>Review Remarks</label>
-            <textarea 
-              rows="3" 
-              placeholder="Describe your purchasing experience or gem quality..."
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              required
-            ></textarea>
-          </div>
-
-          {newPhoto && (
-            <div className="photo-preview-box">
-              <p>Image Preview:</p>
-              <img src={newPhoto} alt="Upload Preview" />
-            </div>
-          )}
-
-          <button type="submit" className="submit-gold-btn">SUBMIT TESTIMONIAL</button>
-        </form>
-
-        <div className="reviews-feed">
-          {reviews.map((rev) => (
-            <div key={rev.id} className="review-card-luxury">
-              <div className="review-top">
-                <div className="reviewer-info">
-                  <div className="avatar-circle">{rev.name.charAt(0)}</div>
-                  <div>
-                    <span className="reviewer-name">{rev.name}</span>
-                    <span className="review-date">{rev.date}</span>
-                  </div>
-                </div>
-                <div className="star-rating">{'★'.repeat(rev.rating)}</div>
-              </div>
-
-              <p className="review-text">{rev.comment}</p>
-
-              {rev.photo && (
-                <div className="review-photo-frame">
-                  <img src={rev.photo} alt="Client Gemstone" />
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-      */}
 
       <footer className="gem-detail-footer">
         <div className="gem-detail-footer-grid">
@@ -1000,6 +878,12 @@ const GemstoneDetail = ({ gem }) => {
               >×</button>
             </div>
 
+            {activeDrawer === 'cart' && customerCartLoading && (
+              <p role="status">Loading your saved cart...</p>
+            )}
+            {activeDrawer === 'cart' && customerCartError && (
+              <p role="alert">{customerCartError}</p>
+            )}
             {drawerItems.length === 0 ? (
               <p className="detail-cart-empty">
                 Your {activeDrawer === 'wishlist' ? 'wishlist' : 'cart'} is currently empty.
@@ -1015,14 +899,21 @@ const GemstoneDetail = ({ gem }) => {
                       <div className="detail-cart-item-info">
                         <strong>{itemName}</strong>
                         <span>{formatCurrencyPrice(item.price, currency)}</span>
-                        <span>Qty 1</span>
+                        <span>Qty {Number(item.quantity) || 1}</span>
                       </div>
                       <button
                         type="button"
                         className="detail-cart-remove"
-                        onClick={() => (activeDrawer === 'wishlist' ? setWishlist : setCart)(
-                          (current) => current.filter((entry) => getCollectionItemKey(entry) !== productKey)
-                        )}
+                        disabled={Boolean(item.cartId && deletingCartIds.includes(item.cartId))}
+                        onClick={() => {
+                          if (activeDrawer === 'wishlist') {
+                            setWishlist((current) => current.filter(
+                              (entry) => getCollectionItemKey(entry) !== productKey
+                            ));
+                          } else {
+                            void removeCartItem(item);
+                          }
+                        }}
                         aria-label={`Remove ${itemName}`}
                       >×</button>
                     </div>

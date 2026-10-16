@@ -248,6 +248,82 @@
   text-align: left;
 }
 
+.order-table-wrapper {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.admin-orders-table {
+  table-layout: fixed;
+}
+
+.admin-orders-table th,
+.admin-orders-table td {
+  padding: 10px 8px;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.admin-orders-table th:nth-child(1) { width: 8%; }
+.admin-orders-table th:nth-child(2) { width: 15%; }
+.admin-orders-table th:nth-child(3) { width: 10%; }
+.admin-orders-table th:nth-child(4) { width: 8%; }
+.admin-orders-table th:nth-child(5) { width: 10%; }
+.admin-orders-table th:nth-child(6) { width: 12%; }
+.admin-orders-table th:nth-child(7) { width: 12%; }
+.admin-orders-table th:nth-child(8) { width: 12%; }
+.admin-orders-table th:nth-child(9) { width: 13%; }
+
+.admin-orders-table .status-pill {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: keep-all;
+}
+
+.admin-orders-table th:nth-child(6),
+.admin-orders-table td:nth-child(6),
+.admin-orders-table th:nth-child(8),
+.admin-orders-table td:nth-child(8) {
+  min-width: 112px;
+}
+
+.admin-orders-table .admin-status-select {
+  width: 100%;
+  min-width: 112px;
+  padding: 6px 4px;
+}
+
+.order-actions {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: 4px;
+  gap: 6px;
+}
+
+.order-actions > button {
+  box-sizing: border-box;
+  width: min(112px, 100%);
+  max-width: 100%;
+  min-width: 0;
+  min-height: 30px;
+  flex: 0 1 30px;
+  justify-content: center;
+  padding: 6px 12px;
+  font-size: 11px;
+}
+
+.order-actions .gem-delete-btn {
+  width: min(112px, 100%);
+  max-width: 100%;
+}
+
 .admin-table th {
   background: #041d1a;
   color: #c9a24b;
@@ -320,8 +396,10 @@
 
 .certificate-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  align-items: center;
   gap: 8px;
+  min-width: max-content;
 }
 
 .certificate-delete-btn {
@@ -329,25 +407,96 @@
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  border: 1px solid #d9a6ac;
-  background: #fff7f7;
-  color: #a33342;
   font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: all 0.2s ease;
 }
 
-.certificate-delete-btn:hover:not(:disabled) {
-  border-color: #a33342;
-  background: #a33342;
-  color: #ffffff;
+.certificate-delete-btn.gem-delete-btn {
+  width: auto;
+  min-height: 34px;
+  padding: 6px 12px;
+  justify-content: center;
 }
 
 .certificate-delete-btn:disabled {
   cursor: wait;
   opacity: 0.65;
+}
+
+.certificate-edit-modal {
+  width: min(100%, 620px);
+}
+
+.certificate-edit-modal .admin-account-modal-heading p {
+  margin: 7px 0 0;
+  color: #64716d;
+  font-size: 12px;
+}
+
+.certificate-edit-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.certificate-edit-form > label {
+  display: grid;
+  gap: 6px;
+  color: #273b37;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.certificate-edit-form input,
+.certificate-edit-form select {
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 10px;
+  border: 1px solid #d9dfda;
+  border-radius: 4px;
+  background: #fff;
+  color: #172b28;
+  font: inherit;
+  font-weight: 400;
+}
+
+.certificate-edit-form .certificate-file-field,
+.certificate-edit-form .certificate-current-file,
+.certificate-edit-form .certificate-selected-file,
+.certificate-edit-form .admin-account-modal-actions {
+  grid-column: 1 / -1;
+}
+
+.certificate-edit-form .certificate-current-file {
+  color: #8b6b25;
+  font-size: 12px;
+}
+
+.certificate-edit-form .certificate-selected-file {
+  margin-top: -10px;
+  color: #64716d;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+  .certificate-modal-backdrop {
+    padding: 10px;
+  }
+
+  .certificate-edit-modal {
+    padding: 18px;
+  }
+
+  .certificate-edit-form {
+    grid-template-columns: 1fr;
+  }
+
+  .certificate-edit-form .certificate-file-field,
+  .certificate-edit-form .certificate-current-file,
+  .certificate-edit-form .certificate-selected-file,
+  .certificate-edit-form .admin-account-modal-actions {
+    grid-column: auto;
+  }
 }
 
 .gem-management-toolbar {
@@ -402,6 +551,27 @@
 
 .gem-management-table tbody tr:hover {
   background: #fbf8ef;
+}
+
+.gem-inventory-row-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 7px;
+  min-width: 0;
+}
+
+.gem-inventory-row-actions .admin-action-btn,
+.gem-inventory-row-actions .gem-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 6px 8px;
+  font-size: 11px;
+  white-space: nowrap;
 }
 
 .gem-category-pill {
@@ -476,6 +646,117 @@
 .gem-database-section .admin-table-wrapper,
 .gem-management-table {
   border-color: #d8c58f;
+}
+
+.jewellery-management-layout {
+  display: flex;
+  flex-direction: column;
+}
+
+.jewellery-management-layout > * {
+  order: 3;
+}
+
+.jewellery-inventory-section {
+  order: 3;
+}
+
+.jewellery-form-slot {
+  order: 1;
+}
+
+.jewellery-management-toolbar {
+  order: 2;
+}
+
+.jewellery-management-table {
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.jewellery-management-table th,
+.jewellery-management-table td {
+  padding: 12px 10px;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.jewellery-management-table th:nth-child(1) { width: 17%; }
+.jewellery-management-table th:nth-child(2) { width: 9%; }
+.jewellery-management-table th:nth-child(3) { width: 14%; }
+.jewellery-management-table th:nth-child(4) { width: 10%; }
+.jewellery-management-table th:nth-child(5) { width: 10%; }
+.jewellery-management-table th:nth-child(6) { width: 6%; }
+.jewellery-management-table th:nth-child(7) { width: 9%; }
+.jewellery-management-table th:nth-child(8) { width: 9%; }
+.jewellery-management-table th:nth-child(9) { width: 16%; }
+
+.jewellery-management-table td:nth-child(8) .gem-database-status {
+  display: flex;
+  width: fit-content;
+}
+
+.jewellery-handcrafted-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.jewellery-handcrafted-status.yes {
+  border-color: #c9dfcf;
+  background: #eff8f1;
+  color: #28643d;
+}
+
+.jewellery-handcrafted-status.no {
+  border-color: #e5d8c8;
+  background: #f7f2eb;
+  color: #76634d;
+}
+
+.jewellery-row-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 6px;
+  min-width: 0;
+}
+
+.jewellery-row-actions .admin-action-btn,
+.jewellery-row-actions .gem-delete-btn {
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  justify-content: center;
+  padding: 6px 8px;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.jewellery-row-actions .jewellery-row-approve-btn,
+.jewellery-row-actions .jewellery-row-reject-btn {
+  grid-column: 1 / -1;
+}
+
+.jewellery-row-actions .jewellery-row-delete-btn {
+  display: inline-flex;
+}
+
+.jewellery-action-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jewellery-management-table .jewellery-row-actions .admin-action-btn,
+.jewellery-management-table .jewellery-row-actions .gem-delete-btn {
+  flex: 1 1 auto;
 }
 
 .certificate-actions .admin-action-btn,
@@ -757,6 +1038,28 @@
   color: #9d7625;
 }
 
+.admin-gem-discount-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  margin: 0 0 12px;
+  padding: 6px 10px;
+  border: 1px solid #d9bd75;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #fff9e8, #f5e7bf);
+  color: #765719;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.65px;
+  line-height: 1;
+  box-shadow: 0 2px 6px rgba(118, 87, 25, 0.1);
+}
+
+.admin-gem-discount-badge svg {
+  font-size: 9px;
+}
+
 .admin-gem-offer-end-date {
   display: block;
   margin: -7px 0 10px;
@@ -765,9 +1068,78 @@
   font-weight: 600;
 }
 
+.admin-gem-stock {
+  display: inline-flex;
+  margin: 0 0 12px;
+  padding: 4px 7px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.admin-gem-stock.in-stock {
+  background: #edf7f0;
+  color: #267044;
+}
+
+.admin-gem-stock.out-of-stock {
+  background: #fff1f2;
+  color: #a33342;
+}
+
 .admin-gem-actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
+}
+
+.admin-gem-actions > button {
+  flex: 1;
+  min-width: 92px;
+}
+
+.admin-gem-actions .jewellery-card-edit-btn {
+  min-height: 34px;
+  justify-content: center;
+  padding: 8px;
+  border: 1px solid #041d1a;
+  border-radius: 4px;
+  background: #041d1a;
+  color: #c9a24b;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.admin-gem-actions .jewellery-card-edit-btn:hover {
+  border-color: #c9a24b;
+  background: #c9a24b;
+  color: #041d1a;
+}
+
+.admin-gem-actions .gem-certificate-btn {
+  min-height: 34px;
+  padding: 8px;
+  border-color: #c9a24b;
+  background: #041d1a;
+  color: #c9a24b;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.admin-gem-actions .gem-certificate-btn:hover:not(:disabled) {
+  background: #c9a24b;
+  color: #041d1a;
+}
+
+.admin-gem-actions .gem-certificate-btn:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.admin-gem-actions .gem-delete-btn {
+  width: auto;
 }
 
 .gem-delete-btn {
@@ -1023,6 +1395,21 @@
   cursor: pointer;
 }
 
+.gem-approval-product {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 180px;
+}
+
+.gem-approval-thumbnail {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex: 0 0 40px;
+}
+
 .gem-approval-approve {
   border-color: #b9ddc7 !important;
   background: #eef7f2;
@@ -1249,6 +1636,81 @@
   border: 1px solid #d9dfda;
   background: #ffffff;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.25);
+}
+
+.gem-edit-modal {
+  width: min(100%, 1040px);
+  max-height: 92vh;
+}
+
+.jewellery-edit-modal {
+  width: min(100%, 920px);
+  max-height: 92vh;
+}
+
+.jewellery-edit-modal .jewellery-edit-form-card {
+  margin-bottom: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.jewellery-edit-modal .admin-account-modal-heading {
+  margin-bottom: 16px;
+}
+
+.jewellery-edit-modal .gemstone-form {
+  max-height: none;
+  overflow: visible;
+}
+
+.jewellery-selected-image {
+  color: #64716d;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.gem-edit-modal .admin-account-modal-heading {
+  position: sticky;
+  top: -24px;
+  z-index: 2;
+  margin: -24px -24px 20px;
+  padding: 24px 24px 16px;
+  background: #ffffff;
+}
+
+.gem-edit-modal .gemstone-form {
+  max-height: none;
+  overflow: visible;
+}
+
+.gem-edit-media-input a {
+  color: #8b6b25;
+  font-size: 11px;
+}
+
+.gem-edit-media-input small {
+  color: #64716d;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.gem-edit-cancel-btn {
+  min-height: 46px;
+  padding: 12px 22px;
+  border: 1px solid #d9dfda;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #273b37;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.gem-edit-cancel-btn:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 
 .admin-account-details-modal {
@@ -1501,26 +1963,125 @@
   text-align: center;
 }
 
+.stock-alert-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stock-alert-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 18px;
+}
+
+.stock-alert-group {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid #e4decb;
+  border-radius: 10px;
+  background: linear-gradient(160deg, #ffffff 0%, #fcfaf5 100%);
+  box-shadow: 0 8px 24px rgba(4, 29, 26, 0.06);
+}
+
+.stock-alert-group-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 13px;
+  border-bottom: 1px solid #eee8d9;
+}
+
+.stock-alert-group-title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 11px;
+}
+
+.stock-alert-group-icon {
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #dfcb91;
+  border-radius: 10px;
+  background: #fbf5e5;
+  color: #8a6a2b;
+  font-size: 15px;
+}
+
+.stock-alert-group-title h3 {
+  margin: 0;
+  color: #061c2b;
+  font-family: "Cinzel", serif;
+  font-size: 14px;
+}
+
+.stock-alert-group-title p {
+  margin: 4px 0 0;
+  color: #72827e;
+  font-size: 10px;
+}
+
+.stock-alert-group-count {
+  display: inline-flex;
+  min-width: 30px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  border: 1px solid #e8d9ad;
+  border-radius: 999px;
+  background: #fff9e9;
+  color: #765719;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.stock-alert-group-empty {
+  margin: 0;
+  padding: 20px 12px;
+  border: 1px dashed #ded7c7;
+  border-radius: 7px;
+  color: #72827e;
+  font-size: 11px;
+  text-align: center;
+}
+
 .stock-alert-list {
   display: grid;
-  gap: 10px;
+  gap: 9px;
 }
 
 .stock-alert-row {
   display: grid;
-  grid-template-columns: 58px minmax(140px, 1fr) auto auto minmax(180px, auto);
+  grid-template-columns: 48px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 14px;
-  padding: 12px 16px;
-  border: 1px solid #e4decb;
-  border-radius: 6px;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #eee8d9;
+  border-radius: 7px;
   background: #ffffff;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.stock-alert-row:hover {
+  transform: translateY(-1px);
+  border-color: #d9c27e;
+  box-shadow: 0 5px 14px rgba(4, 29, 26, 0.06);
 }
 
 .stock-alert-row > img {
-  width: 58px;
-  height: 58px;
-  border-radius: 4px;
+  width: 48px;
+  height: 48px;
+  border: 1px solid #eee8d9;
+  border-radius: 6px;
   object-fit: cover;
   background: #f7f5ef;
 }
@@ -1537,6 +2098,7 @@
   color: #061c2b;
   font-size: 12px;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .stock-alert-gem span {
@@ -1545,6 +2107,7 @@
 }
 
 .stock-alert-status {
+  justify-self: end;
   padding: 6px 8px;
   border-radius: 999px;
   font-size: 9px;
@@ -1571,6 +2134,16 @@
   color: #061c2b;
   font-size: 12px;
   white-space: nowrap;
+}
+
+.stock-alert-row-footer {
+  display: flex;
+  grid-column: 2 / -1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #f0ede5;
 }
 
 .stock-restock-form {
@@ -1626,40 +2199,65 @@
   color: #041d1a;
 }
 
+.stock-restock-form button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 @media (max-width: 900px) {
-  .stock-alert-row {
-    grid-template-columns: 52px minmax(120px, 1fr) auto auto;
+  .stock-alert-heading-actions {
+    align-self: flex-start;
   }
 
-  .stock-restock-form {
-    grid-column: 2 / -1;
+  .stock-alert-groups {
+    grid-template-columns: 1fr;
+  }
+
+  .stock-alert-group {
+    padding: 16px;
   }
 }
 
 @media (max-width: 520px) {
+  .stock-alert-group {
+    padding: 12px;
+  }
+
   .stock-alert-row {
-    grid-template-columns: 48px minmax(0, 1fr) auto;
-    gap: 10px;
-    padding: 10px;
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 9px;
   }
 
   .stock-alert-row > img {
-    width: 48px;
-    height: 48px;
+    width: 42px;
+    height: 42px;
+  }
+
+  .stock-alert-row-footer {
+    grid-column: 1 / -1;
   }
 
   .stock-alert-quantity {
-    grid-column: 2;
+    font-size: 11px;
   }
 
   .stock-alert-status {
-    grid-row: 1;
-    grid-column: 3;
+    padding: 5px 6px;
+    font-size: 8px;
   }
 
   .stock-restock-form {
-    grid-row: 3;
-    grid-column: 2 / -1;
+    gap: 5px;
+  }
+
+  .stock-restock-form input {
+    width: 52px;
+  }
+
+  .stock-restock-form button {
+    padding: 0 7px;
+    font-size: 9px;
   }
 }
 
@@ -2494,6 +3092,93 @@
     flex-basis: 42px;
     font-size: 17px;
   }
+}
+
+@media (max-width: 900px) {
+  .admin-table-wrapper.order-table-wrapper {
+    overflow: visible;
+  }
+
+  .admin-orders-table,
+  .admin-orders-table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .admin-orders-table thead {
+    display: none;
+  }
+
+  .admin-orders-table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-bottom: 14px;
+    border: 1px solid #e4decb;
+    border-radius: 7px;
+    overflow: hidden;
+  }
+
+  .admin-orders-table tbody tr:last-child {
+    margin-bottom: 0;
+  }
+
+  .admin-orders-table td {
+    display: block;
+    min-width: 0;
+    padding: 10px;
+    border-right: 1px solid #eee9dc;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-orders-table th:nth-child(6),
+  .admin-orders-table td:nth-child(6),
+  .admin-orders-table th:nth-child(8),
+  .admin-orders-table td:nth-child(8) {
+    min-width: 0;
+  }
+
+  .admin-orders-table td::before {
+    display: block;
+    margin-bottom: 5px;
+    color: #8b6b25;
+    content: attr(data-label);
+    font-family: "Cinzel", serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+  }
+
+  .admin-orders-table td:nth-child(2),
+  .admin-orders-table td:nth-child(7),
+  .admin-orders-table .order-actions-cell {
+    grid-column: 1 / -1;
+  }
+
+  .admin-orders-table .order-status-cell .admin-status-select {
+    max-width: 100%;
+  }
+
+  .admin-orders-table .order-actions {
+    align-items: flex-start;
+  }
+
+  .admin-orders-table .order-actions > button {
+    padding: 6px 12px;
+    white-space: normal;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-orders-table tbody tr {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-orders-table td:nth-child(2),
+  .admin-orders-table td:nth-child(7),
+  .admin-orders-table .order-actions-cell {
+    grid-column: auto;
+  }
+
 }
 
 @media (max-width: 768px) {

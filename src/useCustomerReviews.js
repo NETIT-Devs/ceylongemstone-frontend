@@ -1,48 +1,49 @@
-import { useEffect, useState } from "react";
-import customerReviews from "./customerReviews.js";
-
-const storageKey = "ceylon-customer-reviews";
-
-const readReviews = () => {
-  try {
-    const storedReviews = window.localStorage.getItem(storageKey);
-    if (storedReviews === null) return customerReviews;
-
-    const parsedReviews = JSON.parse(storedReviews);
-    if (!Array.isArray(parsedReviews)) return customerReviews;
-
-    const userSubmitted = parsedReviews.filter(
-      (r) => !customerReviews.some((def) => def.id === r.id)
-    );
-
-    return [...userSubmitted, ...customerReviews].map(r => ({
-      ...r,
-      avatar: r.avatar && r.avatar.includes("unsplash.com") ? null : r.avatar
-    }));
-  } catch {
-    return customerReviews;
-  }
-};
+import { useCallback, useEffect, useState } from "react";
+import { apiGet } from "./services/api.js";
 
 export const useCustomerReviews = () => {
-  const [reviews, setReviews] = useState(readReviews);
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
+  const refreshReviews = useCallback(async () => {
+    setLoading(true);
+    setError("");
+
     try {
-      window.localStorage.setItem(storageKey, JSON.stringify(reviews));
-    } catch {
-      // Keep the current view usable if browser storage is unavailable.
+      const response = await apiGet("/api/reviews");
+      const data = await response.json();
+      if (!response.ok || data.success !== true || !Array.isArray(data.data)) {
+        throw new Error(data.message || "Unable to load customer reviews.");
+      }
+
+      setReviews(
+        data.data
+          .filter((review) => review.status === "APPROVED")
+          .map((review) => ({
+            id: review.id,
+            name: review.name?.trim() || "Customer",
+            location: review.gemstone_name || "",
+            rating: Number(review.rating),
+            comment: review.comment,
+            avatar: null,
+            createdAt: review.created_at,
+          }))
+      );
+    } catch (loadError) {
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : "Unable to load customer reviews."
+      );
+    } finally {
+      setLoading(false);
     }
-  }, [reviews]);
-
-  useEffect(() => {
-    const syncReviews = (event) => {
-      if (event.key === storageKey) setReviews(readReviews());
-    };
-
-    window.addEventListener("storage", syncReviews);
-    return () => window.removeEventListener("storage", syncReviews);
   }, []);
 
-  return [reviews, setReviews];
+  useEffect(() => {
+    refreshReviews();
+  }, [refreshReviews]);
+
+  return { reviews, loading, error, refreshReviews };
 };

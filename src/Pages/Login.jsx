@@ -22,7 +22,6 @@ import {
   readAdminAccounts,
   startAdminSession,
   endAdminSession,
-  loginAdminWithBackend,
 } from "../adminAccess.js";
 import { apiPost, setCustomerToken } from "../services/api.js";
 import "./Login.css";
@@ -95,29 +94,6 @@ const Login = () => {
 
     const inputEmail = loginForm.email.trim().toLowerCase();
     const inputPassword = loginForm.password;
-
-    const backendAdmin = await loginAdminWithBackend(inputEmail, inputPassword);
-
-    if (backendAdmin) {
-      if (backendAdmin.status !== "active") {
-        setLoginError("This administrative account has been deactivated. Please contact an executive.");
-        return;
-      }
-
-      if (backendAdmin.token) {
-        setCustomerToken(backendAdmin.token);
-      }
-      startAdminSession(backendAdmin);
-      const isSuper = backendAdmin.role === "super-admin";
-      setSuccessNote(
-        `Welcome, ${backendAdmin.name}! Redirecting to ${isSuper ? "Super Admin" : "Admin"} Portal...`
-      );
-      setIsSubmitted(true);
-      setTimeout(() => {
-        window.location.href = isSuper ? "/super-admin" : "/admin";
-      }, 1000);
-      return;
-    }
 
     setIsLoading(true);
     try {

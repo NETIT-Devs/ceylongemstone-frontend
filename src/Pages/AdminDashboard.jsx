@@ -31,7 +31,8 @@ import {
   FaUpload,
   FaBan,
   FaEdit,
-  FaSync
+  FaSync,
+  FaPercent
 } from "react-icons/fa";
 import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
 import CollectionDrawerPanel from "../components/CollectionDrawerPanel.jsx";
@@ -52,12 +53,10 @@ import { useJewelleryProductOverrides } from "../useJewelleryProductOverrides.js
 import { useJewellerySubmissions } from "../useJewellerySubmissions.js";
 import { prepareProductImage } from "../imageUpload.js";
 import { useHomeHeroSlides, useManagedBlogPosts } from "../useSiteContent.js";
-import { useCustomerReviews } from "../useCustomerReviews.js";
 import { TREATMENT_OPTIONS } from "../treatments.js";
 import { formatProductOfferEndDate, withActiveProductOffer } from "../productOffers.js";
 import {
   endAdminSession,
-  hashAdminPassword,
   readAdminAccounts,
   readAdminSession,
   writeAdminAccounts
@@ -66,78 +65,6 @@ import { API_BASE_URL, apiGet, apiPost, apiPut, apiDelete, apiRequest, resolveMe
 import "./AdminDashboard.css";
 import "./About.css";
 import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
-
-const initialAdminOrders = [
-  {
-    id: "CRG-94821",
-    customerName: "Lord Arthur Sterling",
-    customerEmail: "arthur.sterling@londoncollectors.co.uk",
-    date: "2026-09-28",
-    status: "DISPATCHED",
-    paymentStatus: "PAID ($12,500)",
-    gemName: "ROYAL BLUE SAPPHIRE",
-    carat: "4.52 Ct",
-    certNo: "GIC-2026-8891",
-    shippingAddress: "Mayfair, London, United Kingdom",
-    tracking: "FEX-9920184712-LK"
-  },
-  {
-    id: "CRG-88231",
-    customerName: "Countess Elena Rostova",
-    customerEmail: "elena.rostova@genevagems.ch",
-    date: "2026-09-14",
-    status: "DELIVERED",
-    paymentStatus: "PAID ($18,900)",
-    gemName: "CEYLON PADPARADSCHA SAPPHIRE",
-    carat: "3.18 Ct",
-    certNo: "GRS-2026-7734",
-    shippingAddress: "Rue du Rhône, Geneva, Switzerland",
-    tracking: "FEX-8817290123-LK"
-  },
-  {
-    id: "CRG-77102",
-    customerName: "Sheikh Al-Mansoor",
-    customerEmail: "almansoor@dubairoyal.ae",
-    date: "2026-09-30",
-    status: "PROCESSING",
-    paymentStatus: "PENDING ($22,000)",
-    gemName: "CEYLON GREEN GEMSTONE",
-    carat: "2.05 Ct",
-    certNo: "GIC-2026-9011",
-    shippingAddress: "Downtown Dubai, UAE",
-    tracking: "Pending Vault Vaulting"
-  }
-];
-
-const initialAdminPayments = [
-  {
-    id: "PAY-2026-1042",
-    orderId: "CRG-94821",
-    customerName: "Lord Arthur Sterling",
-    date: "2026-09-28",
-    method: "Visa ending 2048",
-    amount: 12500,
-    status: "SETTLED"
-  },
-  {
-    id: "PAY-2026-1038",
-    orderId: "CRG-88231",
-    customerName: "Countess Elena Rostova",
-    date: "2026-09-14",
-    method: "International wire",
-    amount: 18900,
-    status: "SETTLED"
-  },
-  {
-    id: "PAY-2026-1047",
-    orderId: "CRG-77102",
-    customerName: "Sheikh Al-Mansoor",
-    date: "2026-09-30",
-    method: "Bank transfer",
-    amount: 22000,
-    status: "PENDING"
-  }
-];
 
 const readGemApiResponse = async (response, fallbackMessage) => {
   let data;
@@ -164,9 +91,19 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
   const [isInquiryOpen, setIsInquiryOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState("ORDERS");
-  const [adminOrders, setAdminOrders] = useState(initialAdminOrders);
+  const [dashboardStats, setDashboardStats] = useState({
+    activeInventory: 0,
+    shipmentsInTransit: 0
+  });
+  const [adminOrders, setAdminOrders] = useState([]);
   const [backendGems, setBackendGems] = useState([]);
   const [backendCategories, setBackendCategories] = useState([]);
+  const [databaseGemApprovals, setDatabaseGemApprovals] = useState([]);
+  const [databaseJewelleryApprovals, setDatabaseJewelleryApprovals] = useState([]);
+  const [gemApprovalsError, setGemApprovalsError] = useState("");
+  const [jewelleryApprovalsError, setJewelleryApprovalsError] = useState("");
+  const [gemApprovalsLoading, setGemApprovalsLoading] = useState(false);
+  const [jewelleryApprovalsLoading, setJewelleryApprovalsLoading] = useState(false);
   const [categoriesError, setCategoriesError] = useState("");
   const [gemCategoryFilter, setGemCategoryFilter] = useState("all");
   const filteredBackendGems = backendGems.filter((gem) =>
@@ -204,25 +141,34 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       })),
     ...gemSubmissions.map((submission) => submission.gem)
   ].filter((gem) => gem.inventoryId || !deletedGemIds.includes(gem.id));
+  const storefrontGemsList = gemsList.filter(
+    (gem) => !gem.approval_status || gem.approval_status === "approved"
+  );
 
   const [inventory, setInventory] = useGemInventory(products);
   const [stockAdditions, setStockAdditions] = useState({});
-  const [payments, setPayments] = useState(initialAdminPayments);
+  const [lowStockItems, setLowStockItems] = useState([]);
+  const [lowStockLoading, setLowStockLoading] = useState(false);
+  const [lowStockError, setLowStockError] = useState("");
+  const [restockingItemKey, setRestockingItemKey] = useState(null);
+  const [payments, setPayments] = useState([]);
   const [paymentFilter, setPaymentFilter] = useState("ALL");
-  const [customerReviews, setCustomerReviews] = useCustomerReviews();
+  const [backendCustomerReviews, setBackendCustomerReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsError, setReviewsError] = useState("");
+  const [deletingReviewId, setDeletingReviewId] = useState(null);
   const [adminAccounts, setAdminAccounts] = useState(readAdminAccounts);
   const [newAdminAccount, setNewAdminAccount] = useState({
     name: "",
     email: "",
     department: "Operations",
     phone: "",
-    role: "admin",
     password: ""
   });
   const [isAdminFormOpen, setIsAdminFormOpen] = useState(false);
+  const [isAdminSaving, setIsAdminSaving] = useState(false);
   const [selectedAdminAccount, setSelectedAdminAccount] = useState(null);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
-  const [backendOrders, setBackendOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState("");
   const [backendShipments, setBackendShipments] = useState([]);
@@ -302,13 +248,18 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     currency: "USD",
     stock_quantity: "1",
     image_url: "",
+    offer_rate: "",
+    offer_start_date: "",
+    offer_end_date: "",
     is_handcrafted: true,
     status: "active"
   });
   const [editGem, setEditGem] = useState(null); // gem being edited
+  const [editGemFiles, setEditGemFiles] = useState({});
   const [gemSaving, setGemSaving] = useState(false);
   const [editCertificate, setEditCertificate] = useState(null);
   const [certificateSaving, setCertificateSaving] = useState(false);
+  const [certificateFile, setCertificateFile] = useState(null);
   const [certificateDeleting, setCertificateDeleting] = useState(null);
 
   // ─── Backend jewellery state ────────────────────────────────────────────────
@@ -317,6 +268,12 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
   const [jewelleryError, setJewelleryError] = useState("");
   const [jewellerySaving, setJewellerySaving] = useState(false);
   const [editingDbJewelleryId, setEditingDbJewelleryId] = useState(null);
+  const [jewelleryImageFile, setJewelleryImageFile] = useState(null);
+  const [jewelleryTypeFilter, setJewelleryTypeFilter] = useState("all");
+  const filteredBackendJewellery = backendJewellery.filter(
+    (item) => jewelleryTypeFilter === "all" ||
+      String(item.jewellery_type || "").trim().toLowerCase() === jewelleryTypeFilter.toLowerCase()
+  );
 
   const jewelleryList = [
     ...backendJewellery.map((item) => ({
@@ -324,6 +281,9 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       productKey: item.product_code || `jewellery-db-${item.id}`,
       product_code: item.product_code,
       name: item.product_name,
+      discountRate: item.discountRate ?? item.offer_rate,
+      offerStartDate: item.offerStartDate ?? item.offer_start_date,
+      offerEndDate: item.offerEndDate ?? item.offer_end_date,
       category: item.jewellery_type || "Jewellery",
       color: item.color || "—",
       shape: item.gemstone_type || item.jewellery_type || "Jewellery",
@@ -342,7 +302,11 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       .filter((item) => !item.deleted),
     ...jewellerySubmissions.map((submission) => submission.jewellery)
   ];
-
+  const storefrontJewelleryList = jewelleryList.filter((item) =>
+    item.isDbItem
+      ? ["active", "approved"].includes(String(item.status || "").toLowerCase())
+      : !["pending", "rejected", "inactive", "draft"].includes(String(item.status || "").toLowerCase())
+  );
   // helper – re-fetch gems list
   const refreshGems = async () => {
     setGemsLoading(true);
@@ -354,6 +318,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
         throw new Error("The gemstone service returned an invalid inventory.");
       }
       setBackendGems(data.data);
+      await refreshDashboardStats();
       return true;
     } catch (error) {
       setGemstonesError(error instanceof Error ? error.message : "Unable to load gemstones.");
@@ -379,13 +344,80 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
   };
 
-  const refreshLowStock = async () => {
-    const response = await apiGet("/api/gemstones/low-stock");
-    const data = await readGemApiResponse(response, "Unable to load low-stock gemstones.");
-    if (!Array.isArray(data.data)) {
-      throw new Error("The gemstone service returned invalid low-stock data.");
+  const refreshGemApprovals = async () => {
+    setGemApprovalsLoading(true);
+    setGemApprovalsError("");
+    try {
+      const response = await apiGet("/api/gemstones/pending-approvals");
+      const data = await readGemApiResponse(response, "Unable to load pending gemstone approvals.");
+      if (!Array.isArray(data.data)) {
+        throw new Error("The gemstone approval service returned invalid data.");
+      }
+      setDatabaseGemApprovals(data.data);
+      return true;
+    } catch (error) {
+      setGemApprovalsError(error instanceof Error ? error.message : "Unable to load pending gemstone approvals.");
+      return false;
+    } finally {
+      setGemApprovalsLoading(false);
     }
-    return true;
+  };
+
+  const refreshJewelleryApprovals = async () => {
+    setJewelleryApprovalsLoading(true);
+    setJewelleryApprovalsError("");
+    try {
+      const response = await apiGet("/api/jewellery/pending-approvals");
+      const data = await readGemApiResponse(response, "Unable to load pending jewellery approvals.");
+      if (!Array.isArray(data.data)) {
+        throw new Error("The jewellery approval service returned invalid data.");
+      }
+      setDatabaseJewelleryApprovals(data.data);
+      return true;
+    } catch (error) {
+      setJewelleryApprovalsError(error instanceof Error ? error.message : "Unable to load pending jewellery approvals.");
+      return false;
+    } finally {
+      setJewelleryApprovalsLoading(false);
+    }
+  };
+
+  const refreshLowStock = async () => {
+    setLowStockLoading(true);
+    setLowStockError("");
+    try {
+      const response = await apiGet("/api/dashboard/low-stock");
+      const data = await readGemApiResponse(response, "Unable to load low-stock inventory.");
+      if (!Array.isArray(data.data)) {
+        throw new Error("The dashboard service returned invalid low-stock data.");
+      }
+      setLowStockItems(data.data);
+      return true;
+    } catch (error) {
+      setLowStockError(error instanceof Error ? error.message : "Unable to load low-stock inventory.");
+      return false;
+    } finally {
+      setLowStockLoading(false);
+    }
+  };
+
+  const refreshDashboardStats = async () => {
+    try {
+      const response = await apiGet("/api/dashboard/stats");
+      const data = await readGemApiResponse(response, "Unable to load dashboard statistics.");
+      if (!data.data || !Number.isFinite(Number(data.data.active_inventory)) ||
+          !Number.isFinite(Number(data.data.shipments_in_transit))) {
+        throw new Error("The dashboard statistics service returned invalid data.");
+      }
+      setDashboardStats({
+        activeInventory: Number(data.data.active_inventory),
+        shipmentsInTransit: Number(data.data.shipments_in_transit)
+      });
+      return true;
+    } catch (error) {
+      console.error("Unable to load dashboard statistics:", error);
+      return false;
+    }
   };
 
   const refreshCertificates = async () => {
@@ -422,12 +454,40 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       const data = await readGemApiResponse(response, "Unable to load jewellery.");
       if (!Array.isArray(data.data)) throw new Error("Invalid jewellery response.");
       setBackendJewellery(data.data);
+      await refreshDashboardStats();
       return true;
     } catch (error) {
       setJewelleryError(error instanceof Error ? error.message : "Unable to load jewellery.");
       return false;
     } finally {
       setJewelleryLoading(false);
+    }
+  };
+
+  const refreshReviews = async () => {
+    setReviewsLoading(true);
+    setReviewsError("");
+    try {
+      const response = await apiGet("/api/reviews");
+      const data = await readGemApiResponse(response, "Unable to load customer reviews.");
+      if (!Array.isArray(data.data)) {
+        throw new Error("The review service returned invalid review data.");
+      }
+      setBackendCustomerReviews(data.data.map((review) => ({
+        ...review,
+        id: Number(review.id),
+        name: review.name || "Customer",
+        email: review.email || "",
+        location: review.gemstone_name || "General review",
+        rating: Number(review.rating),
+        createdAt: review.created_at,
+      })));
+      return true;
+    } catch (error) {
+      setReviewsError(error instanceof Error ? error.message : "Unable to load customer reviews.");
+      return false;
+    } finally {
+      setReviewsLoading(false);
     }
   };
 
@@ -479,18 +539,20 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
 
       const response = await apiGet("/api/orders");
       const data = await readGemApiResponse(response, "Unable to load orders.");
+      if (!Array.isArray(data.data)) {
+        throw new Error("The order service returned invalid order data.");
+      }
       if (data.success && Array.isArray(data.data)) {
-        setBackendOrders(data.data);
         const mappedOrders = data.data.map((o) => {
           const matchingShipment = shipments.find((s) => Number(s.order_id) === Number(o.id));
-          const orderTotal = Number(o.total_amount || 0);
+          const orderTotal = Number(o.final_total ?? o.total_amount ?? 0);
           return {
             id: o.order_number || `ORD-${o.id}`,
             dbId: o.id,
             orderNumber: o.order_number || `ORD-${o.id}`,
-            customerName: o.customer_name || "Valued Customer",
-            customerEmail: o.customer_email || "customer@example.com",
-            shippingAddress: o.shipping_address || "Standard Insured Delivery",
+            customerName: o.customer_name || "—",
+            customerEmail: o.customer_email || "—",
+            shippingAddress: o.shipping_address || "—",
             totalAmount: orderTotal,
             currency: o.currency || "USD",
             shippingCost: Number(o.shipping_cost || 0),
@@ -498,30 +560,27 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
             status: o.order_status || "PENDING",
             date: o.created_at ? String(o.created_at).slice(0, 10) : "",
             createdAt: o.created_at,
-            gemName: "Ceylon Royal Certified Gemstone",
-            carat: "Natural Gem Specimen",
-            certNo: "GIC / NGJA Certified",
+            items: Array.isArray(o.items) ? o.items : [],
             shipment: matchingShipment || null,
-            tracking: matchingShipment?.tracking_number || (o.order_status === "DELIVERED" ? "Delivered & Signed" : o.order_status === "SHIPPED" ? "In Transit" : "Pending Vault Dispatch"),
-            courier: matchingShipment?.courier || "DHL Express / FedEx Priority",
+            tracking: matchingShipment?.tracking_number || "Not assigned",
+            courier: matchingShipment?.courier || "",
             shipmentStatus: matchingShipment?.status || (o.order_status === "DELIVERED" ? "DELIVERED" : o.order_status === "SHIPPED" ? "SHIPPED" : "PENDING")
           };
         });
 
-        if (mappedOrders.length > 0) {
-          setAdminOrders(mappedOrders);
-          const mappedPayments = mappedOrders.map((o) => ({
-            id: `PAY-${o.dbId}-${String(o.id).slice(-4)}`,
-            orderId: o.id,
-            orderDbId: o.dbId,
-            customerName: o.customerName,
-            date: o.date,
-            method: "Secure Escrow Gateway",
-            amount: o.totalAmount,
-            status: o.paymentStatus === "PAID" ? "SETTLED" : o.paymentStatus
-          }));
-          setPayments(mappedPayments);
-        }
+        setAdminOrders(mappedOrders);
+        const mappedPayments = mappedOrders.map((o) => ({
+          id: `PAY-${o.dbId}-${String(o.id).slice(-4)}`,
+          orderId: o.id,
+          orderDbId: o.dbId,
+          customerName: o.customerName,
+          date: o.date,
+          method: "Not recorded",
+          amount: o.totalAmount,
+          status: o.paymentStatus === "PAID" ? "SETTLED" : o.paymentStatus
+        }));
+        setPayments(mappedPayments);
+        await refreshDashboardStats();
         return true;
       }
       return false;
@@ -540,9 +599,14 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
         refreshCategories(),
         refreshCertificates(),
         refreshJewellery(),
+        refreshReviews(),
         refreshOrders(),
         refreshShipments(),
-        refreshShippingMethods()
+        refreshShippingMethods(),
+        refreshLowStock(),
+        ...(isSuperAdmin
+          ? [refreshGemApprovals(), refreshJewelleryApprovals()]
+          : [])
       ])
     );
   }, []);
@@ -827,48 +891,93 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       return;
     }
     const email = newAdminAccount.email.trim().toLowerCase();
-    if (adminAccounts.some((account) => account.email.toLowerCase() === email)) {
-      showCustomAlert("An administrative account with this email address already exists.", "Validation Error", "warning");
-      return;
-    }
     if (newAdminAccount.password.length < 6) {
       showCustomAlert("Please use a secure password with at least 6 characters.", "Password Too Short", "warning");
       return;
     }
 
-    const account = {
-      id: `admin-${window.crypto.randomUUID()}`,
-      name: newAdminAccount.name.trim(),
-      email,
-      department: newAdminAccount.department || "Operations",
-      phone: newAdminAccount.phone.trim(),
-      role: newAdminAccount.role || "admin",
-      status: "active",
-      passwordHash: await hashAdminPassword(newAdminAccount.password),
-      createdAt: new Date().toISOString()
-    };
-    const updatedAccounts = [...adminAccounts, account];
-    writeAdminAccounts(updatedAccounts);
-    setAdminAccounts(updatedAccounts);
-    setNewAdminAccount({ name: "", email: "", department: "Operations", phone: "", role: "admin", password: "" });
-    setIsAdminFormOpen(false);
-    showCustomAlert(`Administrator account for ${account.name} has been successfully created.`, "Account Created", "success");
+    setIsAdminSaving(true);
+    try {
+      const response = await apiPost("/api/auth/admin-users", {
+        name: newAdminAccount.name.trim(),
+        email,
+        password: newAdminAccount.password,
+        phone: newAdminAccount.phone.trim()
+      });
+      const data = await readGemApiResponse(response, "Failed to create admin account.");
+      if (!data.user?.id) {
+        throw new Error("Admin account was created, but the server returned no user ID.");
+      }
+
+      const account = {
+        id: data.user.id,
+        name: data.user.name,
+        email: data.user.email,
+        department: newAdminAccount.department || "Operations",
+        phone: data.user.phone || "",
+        role: "admin",
+        status: Number(data.user.status) === 1 ? "active" : "inactive",
+        source: "backend",
+        createdAt: new Date().toISOString()
+      };
+      const updatedAccounts = [...adminAccounts, account];
+      writeAdminAccounts(updatedAccounts);
+      setAdminAccounts(updatedAccounts);
+      setNewAdminAccount({ name: "", email: "", department: "Operations", phone: "", password: "" });
+      setIsAdminFormOpen(false);
+      showCustomAlert(`Administrator account for ${account.name} has been successfully created.`, "Account Created", "success");
+    } catch (error) {
+      showCustomAlert(
+        error instanceof Error ? error.message : "Failed to create admin account.",
+        "Admin Account Creation Failed",
+        "danger"
+      );
+    } finally {
+      setIsAdminSaving(false);
+    }
   };
 
-  const handleAdminAccountStatus = (accountId, status) => {
+  const handleAdminAccountStatus = async (accountId, status) => {
     if (!isSuperAdmin) {
       showCustomAlert("Only Super Administrators can modify admin accounts.", "Access Restricted", "warning");
       return;
     }
-    if (accountId === currentAdmin?.accountId) {
+    if (String(accountId) === String(currentAdmin?.accountId)) {
       showCustomAlert("You cannot suspend your own active administrative session.", "Action Denied", "warning");
       return;
     }
-    const updatedAccounts = adminAccounts.map((account) =>
-      account.id === accountId ? { ...account, status } : account
-    );
-    writeAdminAccounts(updatedAccounts);
-    setAdminAccounts(updatedAccounts);
+
+    const databaseId = Number(accountId);
+    const hasDatabaseId =
+      Number.isSafeInteger(databaseId) &&
+      databaseId > 0 &&
+      String(databaseId) === String(accountId);
+
+    try {
+      if (hasDatabaseId) {
+        const response = await apiPut(`/api/auth/users/${databaseId}/status`, {
+          status: status === "active" ? 1 : 0
+        });
+        await readGemApiResponse(response, "Failed to update admin account status.");
+      }
+
+      const updatedAccounts = adminAccounts.map((account) =>
+        String(account.id) === String(accountId) ? { ...account, status } : account
+      );
+      writeAdminAccounts(updatedAccounts);
+      setAdminAccounts(updatedAccounts);
+      setSelectedAdminAccount((selected) =>
+        String(selected?.id) === String(accountId)
+          ? { ...selected, status }
+          : selected
+      );
+    } catch (error) {
+      showCustomAlert(
+        error instanceof Error ? error.message : "Failed to update admin account status.",
+        "Account Status Update Failed",
+        "danger"
+      );
+    }
   };
 
   const handleDeleteAdminAccount = (account) => {
@@ -882,12 +991,38 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
     showCustomConfirm(
       `Are you sure you want to revoke and permanently remove the admin account for ${account.name} (${account.email})? This action cannot be undone.`,
-      () => {
-        const updatedAccounts = adminAccounts.filter((item) => item.id !== account.id);
-        writeAdminAccounts(updatedAccounts);
-        setAdminAccounts(updatedAccounts);
-        if (selectedAdminAccount?.id === account.id) {
-          setSelectedAdminAccount(null);
+      async () => {
+        try {
+          const databaseId = Number(account.id);
+          const hasDatabaseId =
+            Number.isSafeInteger(databaseId) &&
+            databaseId > 0 &&
+            String(databaseId) === String(account.id);
+
+          if (hasDatabaseId) {
+            const response = await apiDelete(`/api/auth/users/${databaseId}`);
+            await readGemApiResponse(response, "Failed to remove admin account.");
+          }
+
+          const updatedAccounts = adminAccounts.filter(
+            (item) => String(item.id) !== String(account.id)
+          );
+          writeAdminAccounts(updatedAccounts);
+          setAdminAccounts(updatedAccounts);
+          if (String(selectedAdminAccount?.id) === String(account.id)) {
+            setSelectedAdminAccount(null);
+          }
+          showCustomAlert(
+            `Admin account for ${account.name} has been removed.`,
+            "Admin Account Removed",
+            "success"
+          );
+        } catch (error) {
+          showCustomAlert(
+            error instanceof Error ? error.message : "Failed to remove admin account.",
+            "Admin Account Removal Failed",
+            "danger"
+          );
         }
       },
       "Remove Admin Account",
@@ -897,31 +1032,26 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
 
   const handleDeleteReview = (review) => {
     showCustomConfirm(
-      `Are you sure you want to delete the published review submitted by ${review.name}?`,
-      () => {
-        setCustomerReviews((prev) => prev.filter((item) => item.id !== review.id));
+      `Are you sure you want to delete the review submitted by ${review.name}?`,
+      async () => {
+        setDeletingReviewId(review.id);
+        try {
+          const response = await apiDelete(`/api/reviews/${review.id}`);
+          await readGemApiResponse(response, "Failed to delete customer review.");
+          await refreshReviews();
+        } catch (error) {
+          showCustomAlert(
+            error instanceof Error ? error.message : "Failed to delete customer review.",
+            "Review Delete Failed",
+            "danger"
+          );
+        } finally {
+          setDeletingReviewId(null);
+        }
       },
       "Delete Customer Review",
       "danger"
     );
-  };
-
-  const resetGemForm = () => {
-    setNewGem({
-      name: "",
-      carat: "",
-      origin: "Ratnapura, Sri Lanka",
-      price: "",
-      tag: "CERTIFIED NATURAL",
-      image: "/blueGem.jpg",
-      galleryViews: [],
-      videoUrl: "",
-      discountRate: "",
-      discountLabel: "",
-      offerStartDate: "",
-      offerEndDate: ""
-    });
-    setEditingGemId(null);
   };
 
   const handleEditGem = (gem) => {
@@ -942,6 +1072,48 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     });
     setActiveTab("GEMS");
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleEditLiveGem = (gem) => {
+    setEditingGemId(gem.id);
+    setEditGem({
+      name: gem.name || "",
+      category_id: String(gem.category_id ?? ""),
+      color: gem.color || "",
+      carat: gem.carat == null ? "" : String(gem.carat),
+      length: gem.length == null ? "" : String(gem.length),
+      width: gem.width == null ? "" : String(gem.width),
+      height: gem.height == null ? "" : String(gem.height),
+      clarity: gem.clarity || "",
+      cut: gem.cut || "",
+      shape: gem.shape || "",
+      origin: gem.origin || "",
+      treatment_status: gem.treatment_status || "Unheated",
+      price: gem.price == null ? "" : String(gem.price),
+      stock: gem.stock == null ? "0" : String(gem.stock),
+      description: gem.description || "",
+      status: isGemstoneActive(gem.status) ? "available" : "unavailable",
+      discountRate: gem.offer_rate == null ? "" : String(gem.offer_rate),
+      offerStartDate: gem.offerStartDate ||
+        (gem.offer_start_date ? String(gem.offer_start_date).slice(0, 10) : ""),
+      offerEndDate: gem.offerEndDate ||
+        (gem.offer_end_date ? String(gem.offer_end_date).slice(0, 10) : ""),
+      mainImage: gem.main_image || gem.image || "",
+      backViewImage: gem.back_view_image || "",
+      rightViewImage: gem.right_view_image || "",
+      leftViewImage: gem.left_view_image || "",
+      additional_view_1: gem.additional_view_1 || "",
+      additional_view_2: gem.additional_view_2 || "",
+      videoClip: gem.video_url || gem.videoUrl || ""
+    });
+    setEditGemFiles({});
+  };
+
+  const closeLiveGemEdit = () => {
+    if (gemSaving) return;
+    setEditGem(null);
+    setEditingGemId(null);
+    setEditGemFiles({});
   };
 
   const handleAddGem = async (e) => {
@@ -1040,7 +1212,13 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
         body: formData,
       });
       await readGemApiResponse(res, "Failed to add gemstone.");
-      showCustomAlert(`Gemstone "${payload.name}" added successfully!`, "Gemstone Added", "success");
+      showCustomAlert(
+        isSuperAdmin
+          ? `Gemstone "${payload.name}" added successfully and is available in the shop.`
+          : `Gemstone "${payload.name}" was submitted for Super Admin approval.`,
+        isSuperAdmin ? "Gemstone Added" : "Gemstone Submitted",
+        "success"
+      );
       form.reset();
       setNewGem({
         name: "",
@@ -1076,118 +1254,127 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
   };
 
-  const handleEditGemSave = async (e) => {
+  const handleSaveLiveGem = async (e) => {
     e.preventDefault();
-    if (!editGem) return;
+    if (!editGem || editingGemId == null) return;
     if (!editGem.name.trim() || !editGem.category_id) {
       showCustomAlert("Gemstone name and category are required.", "Validation Error", "warning");
       return;
     }
-    if (!hasValidGemNumbers(editGem)) {
-      return;
-    }
 
-    const normalizedPrice = Number(newGem.price);
-    const normalizedDiscountRate = Number(newGem.discountRate);
+    const numericFields = ["carat", "length", "width", "height", "price", "stock"];
+    const invalidNumericValue = numericFields.some((field) => {
+      const value = editGem[field];
+      return value !== "" && (!Number.isFinite(Number(value)) || Number(value) < 0);
+    });
     if (
-      !Number.isFinite(normalizedPrice) ||
-      normalizedPrice <= 0 ||
-      (newGem.discountRate &&
-        (!Number.isFinite(normalizedDiscountRate) ||
-          normalizedDiscountRate < 1 ||
-          normalizedDiscountRate > 100))
+      !editGem.price ||
+      Number(editGem.price) <= 0 ||
+      invalidNumericValue ||
+      !Number.isInteger(Number(editGem.stock || 0))
     ) {
-      showCustomAlert("Enter a valid price and an offer rate between 1 and 100.", "Invalid Gemstone Details", "warning");
+      showCustomAlert(
+        "Enter a valid positive price, non-negative dimensions, and whole-number stock quantity.",
+        "Invalid Gemstone Details",
+        "warning"
+      );
+      return;
+    }
+    if (editGem.discountRate && (!editGem.offerStartDate || !editGem.offerEndDate)) {
+      showCustomAlert("Choose both offer start and end dates.", "Offer Dates Required", "warning");
+      return;
+    }
+    if (
+      editGem.discountRate &&
+      (!Number.isFinite(Number(editGem.discountRate)) ||
+        Number(editGem.discountRate) < 1 ||
+        Number(editGem.discountRate) > 100)
+    ) {
+      showCustomAlert("Offer rate must be between 1 and 100.", "Invalid Offer Rate", "warning");
+      return;
+    }
+    if (editGem.discountRate && editGem.offerStartDate > editGem.offerEndDate) {
+      showCustomAlert("Offer end date must be on or after the start date.", "Invalid Offer Dates", "warning");
       return;
     }
 
-    const gemId = editingGemId ?? Date.now();
-    const existingProduct = products.find((gem) => gem.id === editingGemId);
-    const existingSubmission = gemSubmissions.find(
-      (submission) => submission.gem.id === editingGemId
-    );
-    const createdGem = {
-      id: gemId,
-      detailId: gemId,
-      productKey: `${newGem.name.toLowerCase().replace(/\s+/g, "-")}-${gemId}`,
-      name: newGem.name.toUpperCase(),
-      category: existingProduct?.category ?? existingSubmission?.gem.category ?? "Other Gemstone",
-      origin: newGem.origin,
-      carat: newGem.carat ? Number.parseFloat(newGem.carat) : 3,
-      basePriceUSD: normalizedPrice,
-      price: normalizedPrice,
-      image: newGem.image || "/blueGem.jpg",
-      galleryViews: newGem.galleryViews.filter((view) => view.url),
-      videoUrl: newGem.videoUrl || "",
-      tag: newGem.tag || "CERTIFIED NATURAL",
-      discountRate: newGem.discountRate ? normalizedDiscountRate : null,
-      discountLabel: newGem.discountLabel.trim(),
-      offerStartDate: newGem.discountRate ? newGem.offerStartDate : "",
-      offerEndDate: newGem.discountRate ? newGem.offerEndDate : ""
-    };
+    setGemSaving(true);
+    try {
+      const payload = {
+        name: editGem.name.trim().toUpperCase(),
+        category_id: Number(editGem.category_id),
+        color: editGem.color || "",
+        carat: editGem.carat,
+        length: editGem.length,
+        width: editGem.width,
+        height: editGem.height,
+        clarity: editGem.clarity || "",
+        cut: editGem.cut || "",
+        shape: editGem.shape || "",
+        origin: editGem.origin || "",
+        treatment_status: editGem.treatment_status || "",
+        price: Number(editGem.price),
+        stock: Number(editGem.stock || 0),
+        description: editGem.description || "",
+        status: editGem.status,
+        offer_rate: editGem.discountRate || "",
+        offer_start_date: editGem.offerStartDate || "",
+        offer_end_date: editGem.offerEndDate || ""
+      };
+      const formData = new FormData();
+      Object.entries(payload).forEach(([key, value]) => formData.append(key, String(value)));
+      Object.entries(editGemFiles).forEach(([key, file]) => {
+        if (file) formData.append(key, file);
+      });
 
-    if (editingGemId) {
-      const isDbGem = backendGems.some((g) => String(g.id) === String(editingGemId));
-      if (isDbGem) {
-        try {
-          await apiPut(`/api/gemstones/${editingGemId}`, {
-            name: (editGem.name || newGem.name).trim().toUpperCase(),
-            category_id: editGem.category_id || newGem.category_id ? Number(editGem.category_id || newGem.category_id) : undefined,
-            color: editGem.color || newGem.color || null,
-            carat: editGem.carat || newGem.carat ? Number(editGem.carat || newGem.carat) : null,
-            price: normalizedPrice,
-            stock: editGem.stock || newGem.stock ? Number(editGem.stock || newGem.stock) : 1,
-            origin: editGem.origin || newGem.origin || null,
-            offer_rate: editGem.offer_rate || newGem.discountRate ? Number(editGem.offer_rate || newGem.discountRate) : null,
-            offer_start_date: editGem.offer_start_date || newGem.offerStartDate || null,
-            offer_end_date: editGem.offer_end_date || newGem.offerEndDate || null,
-          });
-          await refreshGems();
-        } catch (err) {
-          console.error("Backend gemstone update failed:", err);
-        }
-      }
-
-      setGemSubmissions((current) =>
-        current.map((submission) =>
-          submission.gem.id === editingGemId
-            ? { ...submission, gem: createdGem }
-            : submission
-        )
-      );
-      if (existingProduct) {
-        Object.assign(existingProduct, createdGem);
-        setGemProductOverrides((current) => ({
-          ...current,
-          [String(editingGemId)]: createdGem
-        }));
-      }
-      showCustomAlert(`"${createdGem.name}" has been updated successfully.`, "Gemstone Updated", "success");
-    } else {
-      setGemSubmissions((current) => [
-        ...current,
-        {
-          id: gemId,
-          gem: createdGem,
-          status: "pending",
-          submittedAt: new Date().toISOString()
-        }
-      ]);
-      showCustomAlert(
-        `"${createdGem.name}" has been submitted for Super Admin approval.`,
-        "Gemstone Submitted",
-        "success"
-      );
+      const response = await apiRequest(`/api/gemstones/${editingGemId}`, {
+        method: "PUT",
+        body: formData
+      });
+      await readGemApiResponse(response, "Failed to update gemstone.");
+      await refreshGems();
+      const updatedName = payload.name;
+      setEditGem(null);
+      setEditingGemId(null);
+      setEditGemFiles({});
+      showCustomAlert(`"${updatedName}" has been updated successfully.`, "Gemstone Updated", "success");
+    } catch (error) {
+      showCustomAlert(error.message || "Failed to update gemstone.", "Error", "danger");
+    } finally {
+      setGemSaving(false);
     }
-
-    setInventory((current) => ({
-      ...current,
-      [getCollectionItemKey(createdGem)]: current[getCollectionItemKey(createdGem)] ?? 1
-    }));
-    resetGemForm();
   };
 
-  const handleGemApproval = (submissionId, status) => {
+  const handleGemApproval = async (submissionId, status, isDbItem = false) => {
+    if (isDbItem) {
+      try {
+        const response = await apiPut(`/api/gemstones/${submissionId}/approval`, {
+          approval_status: status
+        });
+        await readGemApiResponse(response, `Failed to ${status} gemstone.`);
+        const [approvalsRefreshed] = await Promise.all([
+          refreshGemApprovals(),
+          refreshGems()
+        ]);
+        if (!approvalsRefreshed) {
+          showCustomAlert(
+            "Gemstone status was updated, but the pending approval list could not be refreshed.",
+            "Approval Updated",
+            "warning"
+          );
+          return;
+        }
+        showCustomAlert(
+          `Gemstone "${databaseGemApprovals.find((item) => item.id === submissionId)?.name || `#${submissionId}`}" was ${status}.`,
+          `Gemstone ${status === "approved" ? "Approved" : "Rejected"}`,
+          status === "approved" ? "success" : "warning"
+        );
+      } catch (error) {
+        showCustomAlert(error.message || `Failed to ${status} gemstone.`, "Approval Failed", "danger");
+      }
+      return;
+    }
+
     setGemSubmissions((current) =>
       current.map((submission) =>
         submission.id === submissionId
@@ -1209,11 +1396,20 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       currency: "USD",
       stock_quantity: "1",
       image_url: "",
+      offer_rate: "",
+      offer_start_date: "",
+      offer_end_date: "",
       is_handcrafted: true,
       status: "active"
     });
     setEditingJewelleryId(null);
     setEditingDbJewelleryId(null);
+    setJewelleryImageFile(null);
+  };
+
+  const closeDbJewelleryEdit = () => {
+    if (jewellerySaving) return;
+    resetJewelleryForm();
   };
 
   const handleEditJewellery = (item) => {
@@ -1231,9 +1427,13 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
         currency: item.currency || "USD",
         stock_quantity: String(item.stock_quantity ?? 1),
         image_url: item.image_url || "",
-        is_handcrafted: Boolean(item.is_handcrafted),
+        offer_rate: item.offer_rate == null ? "" : String(item.offer_rate),
+        offer_start_date: item.offer_start_date ? String(item.offer_start_date).slice(0, 10) : "",
+        offer_end_date: item.offer_end_date ? String(item.offer_end_date).slice(0, 10) : "",
+        is_handcrafted: item.is_handcrafted === true || Number(item.is_handcrafted) === 1,
         status: item.status || "active"
       });
+      setJewelleryImageFile(null);
     } else {
       // legacy localStorage item
       setEditingJewelleryId(item.id);
@@ -1248,12 +1448,16 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
         currency: "USD",
         stock_quantity: "1",
         image_url: item.image || "",
+        offer_rate: "",
+        offer_start_date: "",
+        offer_end_date: "",
         is_handcrafted: true,
         status: "active"
       });
+      setJewelleryImageFile(null);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
     setActiveTab("JEWELLERY");
-    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleSaveJewellery = async (event) => {
@@ -1264,6 +1468,29 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
     if (!newJewellery.price || Number(newJewellery.price) <= 0) {
       showCustomAlert("Enter a valid price greater than 0.", "Validation Error", "warning");
+      return;
+    }
+    if (
+      newJewellery.offer_rate &&
+      (!Number.isFinite(Number(newJewellery.offer_rate)) ||
+        Number(newJewellery.offer_rate) < 1 ||
+        Number(newJewellery.offer_rate) > 100)
+    ) {
+      showCustomAlert("Offer rate must be between 1 and 100.", "Invalid Offer Rate", "warning");
+      return;
+    }
+    if (
+      newJewellery.offer_rate &&
+      (!newJewellery.offer_start_date || !newJewellery.offer_end_date)
+    ) {
+      showCustomAlert("Choose both offer start and end dates.", "Offer Dates Required", "warning");
+      return;
+    }
+    if (
+      newJewellery.offer_rate &&
+      newJewellery.offer_start_date > newJewellery.offer_end_date
+    ) {
+      showCustomAlert("Offer end date must be on or after the start date.", "Invalid Offer Dates", "warning");
       return;
     }
 
@@ -1278,26 +1505,43 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       material: newJewellery.material || null,
       price: Number(newJewellery.price),
       currency: newJewellery.currency || "USD",
-      stock_quantity: parseInt(newJewellery.stock_quantity, 10) || 1,
+      stock_quantity: Math.max(0, parseInt(newJewellery.stock_quantity, 10) || 0),
       image_url: newJewellery.image_url || null,
+      offer_rate: newJewellery.offer_rate ? Number(newJewellery.offer_rate) : null,
+      offer_start_date: newJewellery.offer_start_date || null,
+      offer_end_date: newJewellery.offer_end_date || null,
       is_handcrafted: newJewellery.is_handcrafted ? 1 : 0,
       status: resolvedStatus
     };
 
     setJewellerySaving(true);
     try {
+      const formData = new FormData();
+      Object.entries(payload).forEach(([key, value]) => {
+        formData.append(key, value == null ? "" : String(value));
+      });
+      if (jewelleryImageFile) formData.append("image", jewelleryImageFile);
+
       if (editingDbJewelleryId !== null) {
         // UPDATE existing DB record
-        const res = await apiPut(`/api/jewellery/${editingDbJewelleryId}`, payload);
+        const res = await apiRequest(`/api/jewellery/${editingDbJewelleryId}`, {
+          method: "PUT",
+          body: formData
+        });
         await readGemApiResponse(res, "Failed to update jewellery item.");
         showCustomAlert(`"${payload.product_name}" updated successfully in database.`, "Jewellery Updated", "success");
       } else {
         // CREATE new DB record
-        const res = await apiPost("/api/jewellery", payload);
+        const res = await apiRequest("/api/jewellery", {
+          method: "POST",
+          body: formData
+        });
         await readGemApiResponse(res, "Failed to save jewellery item.");
         showCustomAlert(
-          `"${payload.product_name}" added to the database successfully and is now live on the frontend!`,
-          "Jewellery Added",
+          isSuperAdmin
+            ? `"${payload.product_name}" added successfully and is available in the shop.`
+            : `"${payload.product_name}" was submitted for Super Admin approval.`,
+          isSuperAdmin ? "Jewellery Added" : "Jewellery Submitted",
           "success"
         );
       }
@@ -1311,23 +1555,31 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
   };
 
   const handleJewelleryApproval = async (submissionId, status, isDbItem = false) => {
-    const isDb = isDbItem || backendJewellery.some((item) => item.id === submissionId);
+    const isDb = isDbItem || databaseJewelleryApprovals.some((item) => item.id === submissionId);
     if (isDb) {
       try {
         const res = await apiPut(`/api/jewellery/${submissionId}/status`, { status });
         await readGemApiResponse(res, `Failed to update status to ${status}`);
-        setBackendJewellery((prev) =>
-          prev.map((item) => (item.id === submissionId ? { ...item, status } : item))
-        );
-        const itemObj = backendJewellery.find((item) => item.id === submissionId);
+        const itemObj = databaseJewelleryApprovals.find((item) => item.id === submissionId);
+        const [approvalsRefreshed] = await Promise.all([
+          refreshJewelleryApprovals(),
+          refreshJewellery()
+        ]);
+        if (!approvalsRefreshed) {
+          showCustomAlert(
+            "Jewellery status was updated, but the pending approval list could not be refreshed.",
+            "Approval Updated",
+            "warning"
+          );
+          return;
+        }
         showCustomAlert(
           `Jewellery request "${itemObj?.product_name || `#${submissionId}`}" has been ${
-            status === "approved" ? "approved and is now active in the shop!" : "rejected."
+            status === "approved" ? "approved and is now available in the shop." : "rejected."
           }`,
           `Jewellery ${status === "approved" ? "Approved" : "Rejected"}`,
           status === "approved" ? "success" : "warning"
         );
-        await refreshJewellery();
       } catch (err) {
         showCustomAlert(err.message || "Failed to update jewellery status.", "Error", "danger");
       }
@@ -1371,6 +1623,58 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     );
   };
 
+  const openCertificateModal = (gem, certificate = null) => {
+    setCertificateFile(null);
+    setEditCertificate({
+      id: certificate?.id || null,
+      gemstone_id: gem.id,
+      gemstone_name: gem.name,
+      certificate_number: certificate?.certificate_number || "",
+      laboratory: certificate?.laboratory || "",
+      certificate_url: certificate?.certificate_url || "",
+      verification_status: String(certificate?.verification_status || "PENDING").toUpperCase(),
+      issue_date: certificate?.issue_date ? String(certificate.issue_date).slice(0, 10) : ""
+    });
+  };
+
+  const closeCertificateModal = () => {
+    if (certificateSaving) return;
+    setEditCertificate(null);
+    setCertificateFile(null);
+  };
+
+  const handleSaveCertificate = async (event) => {
+    event.preventDefault();
+    if (!editCertificate) return;
+    setCertificateSaving(true);
+    try {
+      const body = new FormData();
+      body.append("gemstone_id", String(editCertificate.gemstone_id));
+      body.append("certificate_number", editCertificate.certificate_number.trim());
+      body.append("laboratory", editCertificate.laboratory.trim());
+      body.append("verification_status", editCertificate.verification_status);
+      body.append("issue_date", editCertificate.issue_date);
+      body.append("certificate_url", editCertificate.certificate_url || "");
+      if (certificateFile) body.append("certificate", certificateFile);
+
+      const response = editCertificate.id
+        ? await apiRequest(`/api/certificates/${editCertificate.id}`, { method: "PUT", body })
+        : await apiRequest("/api/certificates", { method: "POST", body });
+      await readGemApiResponse(response, "Failed to save gemstone certificate.");
+      const refreshed = await refreshCertificates();
+      if (!refreshed) {
+        throw new Error("Certificate was saved, but the certificate list could not be refreshed.");
+      }
+      setEditCertificate(null);
+      setCertificateFile(null);
+      showCustomAlert("Certificate saved successfully.", "Certificate Saved", "success");
+    } catch (error) {
+      showCustomAlert(error.message || "Failed to save gemstone certificate.", "Error", "danger");
+    } finally {
+      setCertificateSaving(false);
+    }
+  };
+
   const handleDeleteJewellery = (itemId, isDbItem = false) => {
     showCustomConfirm(
       "Permanently delete this jewellery item from the database?",
@@ -1403,15 +1707,50 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     );
   };
 
-  const handleRestockGem = (productKey) => {
-    const quantity = Number(stockAdditions[productKey]);
-    if (!Number.isSafeInteger(quantity) || quantity < 1) return;
+  const handleRestockItem = async (item) => {
+    const itemKey = `${item.item_type}-${item.id}`;
+    const quantity = Number(stockAdditions[itemKey] ?? 1);
+    if (!Number.isSafeInteger(quantity) || quantity < 1) {
+      showCustomAlert("Enter a positive whole number of units to add.", "Invalid Quantity", "warning");
+      return;
+    }
 
-    setInventory((current) => ({
-      ...current,
-      [productKey]: (current[productKey] ?? 0) + quantity
-    }));
-    setStockAdditions((current) => ({ ...current, [productKey]: 1 }));
+    setRestockingItemKey(itemKey);
+    try {
+      const response = await apiPost(
+        `/api/dashboard/stock/${item.item_type}/${item.id}/restock`,
+        { quantity }
+      );
+      const result = await readGemApiResponse(response, "Unable to update inventory stock.");
+      if (!Number.isSafeInteger(Number(result.data?.quantity))) {
+        throw new Error("The inventory service returned an invalid stock quantity.");
+      }
+
+      setStockAdditions((current) => ({ ...current, [itemKey]: 1 }));
+      const refreshed = await refreshLowStock();
+      if (!refreshed) {
+        showCustomAlert(
+          "Stock was updated, but the low-stock list could not be refreshed.",
+          "Stock Updated",
+          "warning"
+        );
+      } else {
+        showCustomAlert(
+          `${item.item_name} stock updated to ${result.data.quantity}.`,
+          "Stock Updated",
+          "success"
+        );
+      }
+      if (item.item_type === "gemstone") {
+        await refreshGems();
+      } else {
+        await refreshJewellery();
+      }
+    } catch (error) {
+      showCustomAlert(error.message || "Unable to update inventory stock.", "Restock Failed", "danger");
+    } finally {
+      setRestockingItemKey(null);
+    }
   };
 
   const handleDeleteGem = (gemId) => {
@@ -1453,16 +1792,25 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
   const filteredPayments = payments.filter((payment) =>
     paymentFilter === "ALL" || payment.status === paymentFilter
   );
-  const lowStockCount = gemsList.filter((gem) =>
-    (inventory[getCollectionItemKey(gem)] ?? 0) <= LOW_STOCK_THRESHOLD
-  ).length;
-  const pendingGemApprovals = gemSubmissions.filter(
-    (submission) => submission.status === "pending"
-  );
+  const lowStockCount = lowStockItems.length;
+  const lowStockGroups = [
+    { type: "gemstone", title: "Gemstones", icon: <FaGem /> },
+    { type: "jewellery", title: "Jewellery", icon: <FaShoppingBag /> }
+  ];
+  const pendingGemApprovals = [
+    ...databaseGemApprovals.map((gem) => ({
+      id: gem.id,
+      isDb: true,
+      gem: {
+        ...gem,
+        category: gem.category_name || "Other Gemstone"
+      },
+      submittedAt: gem.created_at
+    })),
+    ...gemSubmissions.filter((submission) => submission.status === "pending")
+  ];
   const pendingJewelleryApprovals = [
-    ...backendJewellery
-      .filter((item) => item.status === "pending")
-      .map((item) => ({
+    ...databaseJewelleryApprovals.map((item) => ({
         id: item.id,
         isDb: true,
         jewellery: {
@@ -1497,6 +1845,16 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     name: "Operations Admin",
     email: "admin@ceylonroyalgemstones.com",
     role: "admin"
+  });
+  const visibleAdminAccounts = adminAccounts.filter((account) => {
+    const matchesCurrentId =
+      currentAdmin?.accountId != null &&
+      String(account.id) === String(currentAdmin.accountId);
+    const matchesCurrentEmail =
+      currentAdmin?.email &&
+      String(account.email || "").toLowerCase() === currentAdmin.email.toLowerCase();
+
+    return !matchesCurrentId && !matchesCurrentEmail;
   });
 
   return (
@@ -1621,15 +1979,15 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
             <div className="admin-stat-card" style={{ cursor: "pointer" }} onClick={() => setActiveTab("GEMS")}>
               <div className="stat-icon green"><FaGem /></div>
               <div>
-                <span>Active Inventory</span>
-                <strong>{gemsList.length} Gemstones</strong>
+                <span>Gemstones &amp; Jewellery</span>
+                <strong>{dashboardStats.activeInventory} Items</strong>
               </div>
             </div>
             <div className="admin-stat-card">
               <div className="stat-icon blue"><FaTruck /></div>
               <div>
-                <span>Shipments in Transit</span>
-                <strong>{adminOrders.filter(o => o.status === "DISPATCHED").length} Dispatched</strong>
+                <span>Shipments in Transit / Dispatched</span>
+                <strong>{dashboardStats.shipmentsInTransit} Orders</strong>
               </div>
             </div>
             {isSuperAdmin ? (
@@ -1684,7 +2042,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
               aria-pressed={activeTab === "REVIEWS"}
               onClick={() => setActiveTab("REVIEWS")}
             >
-              <FaStar /> Customer Reviews ({customerReviews.length})
+              <FaStar /> Customer Reviews ({backendCustomerReviews.length})
             </button>
             {isSuperAdmin && (
               <button
@@ -1781,11 +2139,13 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
 
               {ordersLoading ? (
                 <p className="admin-empty-state">Loading customer orders from database…</p>
+              ) : ordersError ? (
+                <p className="admin-empty-state" role="alert">{ordersError}</p>
               ) : adminOrders.length === 0 ? (
                 <p className="admin-empty-state">No customer orders recorded yet.</p>
               ) : (
-                <div className="admin-table-wrapper">
-                  <table className="admin-table">
+                <div className="admin-table-wrapper order-table-wrapper">
+                  <table className="admin-table admin-orders-table">
                     <thead>
                       <tr>
                         <th>Order ID</th>
@@ -1802,35 +2162,41 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                     <tbody>
                       {adminOrders.map((order) => (
                         <tr key={order.id}>
-                          <td>
+                          <td data-label="Order ID">
                             <strong className="order-code">{order.orderNumber || order.id}</strong>
                             <div className="order-date">{order.date}</div>
                           </td>
-                          <td>
+                          <td data-label="Customer & Destination">
                             <strong>{order.customerName}</strong>
                             <div className="table-subtext">{order.customerEmail}</div>
                             <div className="table-subtext"><FaMapMarkerAlt /> {order.shippingAddress}</div>
                           </td>
-                          <td>
-                            <strong>{order.gemName}</strong>
-                            <div className="table-subtext">{order.carat} • Cert: {order.certNo}</div>
+                          <td data-label="Ordered Items">
+                            {order.items.length > 0 ? order.items.map((item) => (
+                              <div key={item.id}>
+                                <strong>{item.gemstone_name}</strong>
+                                <div className="table-subtext">
+                                  Quantity: {item.quantity} · {Number(item.price).toLocaleString()} {item.currency || order.currency}
+                                </div>
+                              </div>
+                            )) : <span className="table-subtext">No item details available.</span>}
                           </td>
-                          <td>
+                          <td data-label="Amount">
                             <strong className="gold-text">
                               ${Number(order.totalAmount || 0).toLocaleString()} {order.currency || "USD"}
                             </strong>
                           </td>
-                          <td>
+                          <td data-label="Payment">
                             <span className={`status-pill status-${String(order.paymentStatus).toLowerCase()}`}>
                               {order.paymentStatus}
                             </span>
                           </td>
-                          <td>
+                          <td data-label="Order Status">
                             <span className={`status-pill status-${String(order.status).toLowerCase()}`}>
                               {order.status}
                             </span>
                           </td>
-                          <td>
+                          <td data-label="Shipment & Tracking">
                             {order.shipment ? (
                               <div>
                                 <strong style={{ fontSize: "11px", color: "#041d1a", display: "block" }}>
@@ -1863,7 +2229,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                               </div>
                             )}
                           </td>
-                          <td>
+                          <td className="order-status-cell" data-label="Update Status">
                             <select
                               value={order.status}
                               onChange={(e) => handleStatusChange(order.orderNumber || order.id, e.target.value, order.dbId)}
@@ -1876,8 +2242,8 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                               <option value="CANCELLED">CANCELLED</option>
                             </select>
                           </td>
-                          <td>
-                            <div className="certificate-actions" style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+                          <td className="order-actions-cell" data-label="Actions">
+                            <div className="order-actions">
                               <button
                                 type="button"
                                 className="admin-action-btn"
@@ -1898,7 +2264,6 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                                 <button
                                   type="button"
                                   className="gem-delete-btn"
-                                  style={{ width: "auto", padding: "5px 9px", fontSize: "11px" }}
                                   title="Cancel Order"
                                   onClick={() => handleCancelOrder(order)}
                                 >
@@ -1994,11 +2359,24 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
               <div className="admin-section-heading">
                 <div>
                   <h2><FaStar /> Customer Reviews</h2>
-                  <p>Review published customer feedback and remove content that should no longer appear publicly.</p>
+                  <p>Review customer submissions and remove content that should no longer appear publicly.</p>
                 </div>
-                <span className="admin-live-note">{customerReviews.length} PUBLISHED REVIEWS</span>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  <button
+                    type="button"
+                    className="admin-action-btn"
+                    onClick={refreshReviews}
+                    disabled={reviewsLoading}
+                    title="Refresh customer reviews from the database"
+                  >
+                    <FaSync /> {reviewsLoading ? "Refreshing…" : "Refresh Reviews"}
+                  </button>
+                  <span className="admin-live-note">{backendCustomerReviews.length} CUSTOMER REVIEWS</span>
+                </div>
               </div>
 
+              {reviewsError && <p className="admin-empty-state" role="alert">{reviewsError}</p>}
+              {reviewsLoading && <p className="admin-empty-state" role="status">Loading customer reviews…</p>}
               <div className="admin-table-wrapper">
                 <table className="admin-table review-admin-table">
                   <thead>
@@ -2012,11 +2390,12 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {customerReviews.map((review) => (
+                    {backendCustomerReviews.map((review) => (
                       <tr key={review.id}>
                         <td>
                           <strong>{review.name}</strong>
-                          <div className="table-subtext">{review.email || "Public testimonial"}</div>
+                          <div className="table-subtext">{review.email || "Customer review"}</div>
+                          <div className="table-subtext">{review.status || "PENDING"}</div>
                         </td>
                         <td>
                           <span className="review-admin-rating" aria-label={`${review.rating} out of 5 stars`}>
@@ -2032,14 +2411,15 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                             type="button"
                             className="review-delete-btn"
                             aria-label={`Delete review by ${review.name}`}
+                            disabled={deletingReviewId === review.id}
                             onClick={() => handleDeleteReview(review)}
                           >
-                            <FaTrash /> Delete
+                            <FaTrash /> {deletingReviewId === review.id ? "Deleting…" : "Delete"}
                           </button>
                         </td>
                       </tr>
                     ))}
-                    {customerReviews.length === 0 && (
+                    {backendCustomerReviews.length === 0 && !reviewsLoading && !reviewsError && (
                       <tr><td className="admin-empty-state" colSpan="6">There are no published customer reviews.</td></tr>
                     )}
                   </tbody>
@@ -2055,7 +2435,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                   <h2><FaUsers /> Admin Account Management</h2>
                   <p>Add new admins, review account details, suspend access, or remove Admin accounts.</p>
                 </div>
-                <span className="admin-live-note">LOCAL DEMO · SAME BROWSER ONLY</span>
+                <span className="admin-live-note">DATABASE-BACKED ACCOUNTS</span>
               </div>
 
               <div className="super-admin-profile">
@@ -2066,7 +2446,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
               </div>
 
               <div className="admin-account-toolbar">
-                <span>{adminAccounts.length} Admin accounts in total</span>
+                <span>{visibleAdminAccounts.length} Admin accounts</span>
                 <button type="button" className="admin-account-add-btn" onClick={() => setIsAdminFormOpen(true)}>
                   <FaPlus /> Add New Admin
                 </button>
@@ -2082,13 +2462,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                     <form className="admin-account-form" onSubmit={handleAddAdminAccount}>
                       <label><span>Admin name</span><input autoComplete="name" value={newAdminAccount.name} onChange={(event) => setNewAdminAccount((prev) => ({ ...prev, name: event.target.value }))} placeholder="e.g. Kasun Perera" required /></label>
                       <label><span>Email address</span><input type="email" autoComplete="email" value={newAdminAccount.email} onChange={(event) => setNewAdminAccount((prev) => ({ ...prev, email: event.target.value }))} placeholder="e.g. kasun@ceylonroyalgemstones.com" required /></label>
-                      <label>
-                        <span>Role</span>
-                        <select value={newAdminAccount.role || "admin"} onChange={(event) => setNewAdminAccount((prev) => ({ ...prev, role: event.target.value }))}>
-                          <option value="admin">Admin</option>
-                          <option value="super-admin">Super Admin</option>
-                        </select>
-                      </label>
+                      <label><span>Role</span><input value="Admin" readOnly /></label>
                       <label>
                         <span>Department</span>
                         <select value={newAdminAccount.department} onChange={(event) => setNewAdminAccount((prev) => ({ ...prev, department: event.target.value }))}>
@@ -2105,7 +2479,9 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                       <p className="admin-account-form-note">At least 6 characters. The password is hashed before it is stored.</p>
                       <div className="admin-account-modal-actions">
                         <button type="button" className="admin-modal-cancel" onClick={() => setIsAdminFormOpen(false)}>Cancel</button>
-                        <button type="submit" className="admin-account-add-btn"><FaPlus /> Save Admin</button>
+                        <button type="submit" className="admin-account-add-btn" disabled={isAdminSaving}>
+                          <FaPlus /> {isAdminSaving ? "Saving…" : "Save Admin"}
+                        </button>
                       </div>
                     </form>
                   </section>
@@ -2116,7 +2492,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                 <table className="admin-table accounts-table">
                   <thead><tr><th>Name</th><th>Email</th><th>Department</th><th>Phone</th><th>Role</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
                   <tbody>
-                    {adminAccounts.map((account) => (
+                    {visibleAdminAccounts.map((account) => (
                       <tr key={account.id}>
                         <td><strong>{account.name}</strong></td>
                         <td>{account.email}</td>
@@ -2142,7 +2518,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                         </td>
                       </tr>
                     ))}
-                    {adminAccounts.length === 0 && (
+                    {visibleAdminAccounts.length === 0 && (
                       <tr><td className="admin-empty-state" colSpan="8">No Admin accounts yet. Add an account above.</td></tr>
                     )}
                   </tbody>
@@ -2185,57 +2561,110 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                   <h2><FaExclamationTriangle /> Stock Alerts</h2>
                   <p>Review current quantities. Items with {LOW_STOCK_THRESHOLD} or fewer units are marked low stock.</p>
                 </div>
-                <span className="admin-live-note">{lowStockCount} LOW STOCK ITEMS</span>
+                <div className="stock-alert-heading-actions">
+                  <span className="admin-live-note">{lowStockCount} LOW STOCK ITEMS</span>
+                  <button
+                    type="button"
+                    className="admin-action-btn"
+                    onClick={refreshLowStock}
+                    disabled={lowStockLoading}
+                  >
+                    {lowStockLoading ? "Loading…" : "Refresh"}
+                  </button>
+                </div>
               </div>
 
-              <div className="stock-alert-list">
-                {gemsList.map((gem) => {
-                  const productKey = getCollectionItemKey(gem);
-                  const quantity = inventory[productKey] ?? 0;
-                  const stockStatus = quantity === 0
-                    ? "out"
-                    : quantity <= LOW_STOCK_THRESHOLD
-                      ? "low"
-                      : "available";
+              {lowStockError ? (
+                <p className="admin-empty-state" role="alert">
+                  {lowStockError}{" "}
+                  <button type="button" className="admin-action-btn" onClick={refreshLowStock}>Retry</button>
+                </p>
+              ) : lowStockLoading && lowStockItems.length === 0 ? (
+                <p className="admin-empty-state">Loading low-stock inventory…</p>
+              ) : (
+                <div className="stock-alert-groups">
+                  {lowStockGroups.map((group) => {
+                    const items = lowStockItems.filter((item) => item.item_type === group.type);
 
-                  return (
-                    <article className="stock-alert-row" key={productKey}>
-                      <img src={resolveMediaUrl(gem.image)} alt="" />
-                      <div className="stock-alert-gem">
-                        <strong>{gem.name}</strong>
-                        <span>{gem.productKey || gem.certificateNumber || `Gem #${gem.id}`}</span>
-                      </div>
-                      <span className={`stock-alert-status ${stockStatus}`}>
-                        {stockStatus === "out" ? "OUT OF STOCK" : stockStatus === "low" ? "LOW STOCK" : "IN STOCK"}
-                      </span>
-                      <strong className="stock-alert-quantity">{quantity} available</strong>
-                      <form
-                        className="stock-restock-form"
-                        onSubmit={(event) => {
-                          event.preventDefault();
-                          handleRestockGem(productKey);
-                        }}
-                      >
-                        <label className="sr-only" htmlFor={`restock-${productKey}`}>
-                          Quantity to add for {gem.name}
-                        </label>
-                        <input
-                          id={`restock-${productKey}`}
-                          type="number"
-                          min="1"
-                          step="1"
-                          value={stockAdditions[productKey] ?? 1}
-                          onChange={(event) => setStockAdditions((current) => ({
-                            ...current,
-                            [productKey]: event.target.value
-                          }))}
-                        />
-                        <button type="submit"><FaPlus /> Add stock</button>
-                      </form>
-                    </article>
-                  );
-                })}
-              </div>
+                    return (
+                      <section className={`stock-alert-group stock-alert-group-${group.type}`} key={group.type}>
+                        <header className="stock-alert-group-heading">
+                          <div className="stock-alert-group-title">
+                            <span className="stock-alert-group-icon">{group.icon}</span>
+                            <div>
+                              <h3>{group.title}</h3>
+                              <p>{group.type === "gemstone" ? "Gemstone inventory" : "Jewellery inventory"}</p>
+                            </div>
+                          </div>
+                          <span className="stock-alert-group-count">{items.length}</span>
+                        </header>
+                        {items.length === 0 ? (
+                          <p className="stock-alert-group-empty">No low-stock {group.title.toLowerCase()}.</p>
+                        ) : (
+                          <div className="stock-alert-list">
+                            {items.map((item) => {
+                              const itemKey = `${item.item_type}-${item.id}`;
+                              const quantity = Number(item.quantity);
+                              const stockStatus = quantity === 0 ? "out" : "low";
+                              const itemName = item.item_name || `${item.item_type} #${item.id}`;
+
+                              return (
+                                <article className="stock-alert-row" key={itemKey}>
+                                  <img
+                                    src={resolveMediaUrl(item.image_url) || "/logo.png"}
+                                    alt=""
+                                    onError={(event) => {
+                                      event.currentTarget.src = "/logo.png";
+                                    }}
+                                  />
+                                  <div className="stock-alert-gem">
+                                    <strong>{itemName}</strong>
+                                    <span>
+                                      {item.category ? `${item.category} · ` : ""}
+                                      {item.item_code || `#${item.id}`}
+                                    </span>
+                                  </div>
+                                  <span className={`stock-alert-status ${stockStatus}`}>
+                                    {stockStatus === "out" ? "OUT OF STOCK" : "LOW STOCK"}
+                                  </span>
+                                  <div className="stock-alert-row-footer">
+                                    <strong className="stock-alert-quantity">{quantity} available</strong>
+                                    <form
+                                      className="stock-restock-form"
+                                      onSubmit={(event) => {
+                                        event.preventDefault();
+                                        handleRestockItem(item);
+                                      }}
+                                    >
+                                      <label className="sr-only" htmlFor={`restock-${itemKey}`}>
+                                        Quantity to add for {itemName}
+                                      </label>
+                                      <input
+                                        id={`restock-${itemKey}`}
+                                        type="number"
+                                        min="1"
+                                        step="1"
+                                        value={stockAdditions[itemKey] ?? 1}
+                                        onChange={(event) => setStockAdditions((current) => ({
+                                          ...current,
+                                          [itemKey]: event.target.value
+                                        }))}
+                                      />
+                                      <button type="submit" disabled={restockingItemKey === itemKey}>
+                                        <FaPlus /> {restockingItemKey === itemKey ? "Updating…" : "Add stock"}
+                                      </button>
+                                    </form>
+                                  </div>
+                                </article>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </section>
+                    );
+                  })}
+                </div>
+              )}
             </section>
           )}
 
@@ -2246,12 +2675,21 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                   <h2><FaCheckCircle /> Gem Approval</h2>
                   <p>Review gemstones submitted by Admins before they appear in the shop.</p>
                 </div>
-                <span className="admin-live-note">
-                  {pendingGemApprovals.length} PENDING APPROVALS
-                </span>
-              </div>
+                  <div className="stock-alert-heading-actions">
+                    <span className="admin-live-note">{pendingGemApprovals.length} PENDING APPROVALS</span>
+                    <button type="button" className="admin-action-btn" onClick={refreshGemApprovals} disabled={gemApprovalsLoading}>
+                      {gemApprovalsLoading ? "Loading…" : "Refresh"}
+                    </button>
+                  </div>
+                </div>
+                {gemApprovalsError && (
+                  <p className="admin-empty-state" role="alert">
+                    {gemApprovalsError}{" "}
+                    <button type="button" className="admin-action-btn" onClick={refreshGemApprovals}>Retry</button>
+                  </p>
+                )}
 
-              <div className="admin-table-wrapper">
+                <div className="admin-table-wrapper">
                 <table className="admin-table gem-approval-table">
                   <thead>
                     <tr>
@@ -2266,14 +2704,28 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                     {pendingGemApprovals.map((submission) => (
                       <tr key={submission.id}>
                         <td>
-                          <strong>{submission.gem.name}</strong>
-                          <div className="table-subtext">
-                            {submission.gem.category || "Other Gemstone"}
+                          <div className="gem-approval-product">
+                            {resolveMediaUrl(submission.gem.main_image || submission.gem.image) && (
+                              <img
+                                className="gem-approval-thumbnail"
+                                src={resolveMediaUrl(submission.gem.main_image || submission.gem.image)}
+                                alt={submission.gem.name || "Gemstone"}
+                                onError={(event) => {
+                                  event.currentTarget.style.display = "none";
+                                }}
+                              />
+                            )}
+                            <div>
+                              <strong>{submission.gem.name}</strong>
+                              <div className="table-subtext">
+                                {submission.gem.category || "Other Gemstone"}
+                              </div>
+                            </div>
                           </div>
                         </td>
                         <td>
-                          {submission.gem.carat} Ct
-                          <div className="table-subtext">{submission.gem.origin}</div>
+                          {submission.gem.carat ? `${submission.gem.carat} Ct` : "—"}
+                          <div className="table-subtext">{submission.gem.origin || "—"}</div>
                         </td>
                         <td>
                           <strong className="gold-text">
@@ -2290,16 +2742,16 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                             <button
                               type="button"
                               className="gem-approval-approve"
-                              onClick={() => handleGemApproval(submission.id, "approved")}
+                              onClick={() => handleGemApproval(submission.id, "approved", submission.isDb)}
                             >
-                              <FaCheckCircle /> Approve
+                              <FaCheckCircle /> <span className="jewellery-action-label">Approve</span>
                             </button>
                             <button
                               type="button"
                               className="gem-approval-reject"
-                              onClick={() => handleGemApproval(submission.id, "rejected")}
+                              onClick={() => handleGemApproval(submission.id, "rejected", submission.isDb)}
                             >
-                              <FaTimes /> Reject
+                              <FaTimes /> <span className="jewellery-action-label">Reject</span>
                             </button>
                           </div>
                         </td>
@@ -2308,7 +2760,9 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                     {pendingGemApprovals.length === 0 && (
                       <tr>
                         <td className="admin-empty-state" colSpan="5">
-                          There are no gemstones waiting for approval.
+                          {gemApprovalsLoading
+                            ? "Loading database approvals…"
+                            : "There are no gemstones waiting for approval."}
                         </td>
                       </tr>
                     )}
@@ -2325,10 +2779,19 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                   <h2><FaCheckCircle /> Jewellery Approval</h2>
                   <p>Review jewellery items submitted by Admins before they appear in the shop.</p>
                 </div>
-                <span className="admin-live-note">
-                  {pendingJewelleryApprovals.length} PENDING APPROVALS
-                </span>
+                <div className="stock-alert-heading-actions">
+                  <span className="admin-live-note">{pendingJewelleryApprovals.length} PENDING APPROVALS</span>
+                  <button type="button" className="admin-action-btn" onClick={refreshJewelleryApprovals} disabled={jewelleryApprovalsLoading}>
+                    {jewelleryApprovalsLoading ? "Loading…" : "Refresh"}
+                  </button>
+                </div>
               </div>
+              {jewelleryApprovalsError && (
+                <p className="admin-empty-state" role="alert">
+                  {jewelleryApprovalsError}{" "}
+                  <button type="button" className="admin-action-btn" onClick={refreshJewelleryApprovals}>Retry</button>
+                </p>
+              )}
               <div className="admin-table-wrapper">
                 <table className="admin-table gem-approval-table">
                   <thead>
@@ -2401,7 +2864,9 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                     {pendingJewelleryApprovals.length === 0 && (
                       <tr>
                         <td className="admin-empty-state" colSpan="5">
-                          There are no jewellery items waiting for approval.
+                          {jewelleryApprovalsLoading
+                            ? "Loading database approvals…"
+                            : "There are no jewellery items waiting for approval."}
                         </td>
                       </tr>
                     )}
@@ -2728,18 +3193,17 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                               </span>
                             </td>
                             <td>
-                              <div className="certificate-actions" style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+                              <div className="gem-inventory-row-actions">
                                 <button
                                   type="button"
                                   className="admin-action-btn gem-edit-btn"
-                                  onClick={() => handleEditGem(gem)}
+                                  onClick={() => handleEditLiveGem(gem)}
                                 >
                                   Edit
                                 </button>
                                 <button
                                   type="button"
                                   className="gem-delete-btn"
-                                  style={{ width: "auto", padding: "4px 8px" }}
                                   onClick={() => handleDeleteGem(gem.id)}
                                 >
                                   <FaTrash /> Delete
@@ -2822,26 +3286,14 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                                   <button
                                     type="button"
                                     className="admin-action-btn"
-                                    onClick={() => setEditCertificate({
-                                      id: certificate?.id || null,
-                                      gemstone_id: gem.id,
-                                      gemstone_name: gem.name,
-                                      certificate_number: certificate?.certificate_number || "",
-                                      laboratory: certificate?.laboratory || "",
-                                      certificate_url: certificate?.certificate_url || "",
-                                      certificate_file: null,
-                                      verification_status: String(certificate?.verification_status || "pending").toLowerCase(),
-                                      issue_date: certificate?.issue_date
-                                        ? String(certificate.issue_date).slice(0, 10)
-                                        : ""
-                                    })}
+                                    onClick={() => openCertificateModal(gem, certificate)}
                                   >
                                     <FaFileInvoice /> {certificate ? "Edit Certificate" : "Add Certificate"}
                                   </button>
                                   {certificate && (
                                     <button
                                       type="button"
-                                      className="certificate-delete-btn"
+                                      className="gem-delete-btn certificate-delete-btn"
                                       aria-label={`Delete certificate for ${gem.name}`}
                                       disabled={certificateDeleting === certificate.id}
                                       onClick={() => handleDeleteCertificate(certificate, gem.name)}
@@ -2863,13 +3315,13 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
               {/* STOREFRONT GEMSTONE COLLECTION */}
               <div className="admin-section-heading" style={{ marginTop: "2rem" }}>
                 <div>
-                  <h2><FaGem /> Storefront Gemstone Collection ({gemsList.length})</h2>
+                  <h2><FaGem /> Storefront Gemstone Collection ({storefrontGemsList.length})</h2>
                   <p>Manage gemstone product cards currently displayed in the storefront.</p>
                 </div>
               </div>
 
               <div className="admin-gems-grid">
-                {gemsList.map((gem) => {
+                {storefrontGemsList.map((gem) => {
                   const reviewStatus = gemSubmissions.find(
                     (submission) => submission.gem.id === gem.id
                   )?.status;
@@ -2883,6 +3335,9 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                   const offerEndDate = hasDiscount
                     ? formatProductOfferEndDate(offerProduct)
                     : "";
+                  const availableStock = gem.inventoryId
+                    ? Number(gem.stock ?? 0)
+                    : Number(inventory[getCollectionItemKey(gem)] ?? 0);
 
                   return (
                     <div className="admin-gem-card" key={gem.id}>
@@ -2898,7 +3353,11 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                         </span>
                       )}
                       <h3>{gem.name}</h3>
-                      <p>{gem.carat ? `${gem.carat} Ct` : "3.50 Ct"} • {gem.origin}</p>
+                      <p>
+                        {gem.category || gem.category_name || "Gemstone"}
+                        {gem.carat ? ` · ${gem.carat} Ct` : ""}
+                        {gem.origin ? ` · ${gem.origin}` : ""}
+                      </p>
                       <div className={`admin-gem-prices ${hasDiscount ? "has-discount" : ""}`}>
                         {hasDiscount && (
                           <del className="product-original-price">
@@ -2913,55 +3372,50 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                         )}
                       </div>
                       {hasDiscount && (
-                        <span className="admin-gem-discount-rate">
-                          OFFER RATE: {discountRate}% OFF
+                        <span className="admin-gem-discount-badge">
+                          <FaPercent aria-hidden="true" />
+                          <span>{discountRate}% OFF</span>
                         </span>
                       )}
+                      <span className={`admin-gem-stock ${availableStock > 0 ? "in-stock" : "out-of-stock"}`}>
+                        {availableStock > 0 ? `In stock: ${availableStock}` : "Out of stock"}
+                      </span>
                       <div className="admin-gem-actions">
                         <button
                           type="button"
-                          className="admin-action-btn"
-                          style={{ marginRight: "6px" }}
+                          className="admin-action-btn gem-certificate-btn"
                           disabled={!certificatesLoaded}
-                          onClick={() => {
-                            const certificate = certificatesByGemstone[String(gem.id)];
-                            setEditCertificate({
-                              id: certificate?.id || null,
-                              gemstone_id: gem.id,
-                              gemstone_name: gem.name,
-                              certificate_number: certificate?.certificate_number || "",
-                              laboratory: certificate?.laboratory || "",
-                              certificate_url: certificate?.certificate_url || "",
-                              certificate_file: null,
-                              verification_status: String(certificate?.verification_status || "pending").toLowerCase(),
-                              issue_date: certificate?.issue_date
-                                ? String(certificate.issue_date).slice(0, 10)
-                                : ""
-                            });
-                          }}
+                          onClick={() => openCertificateModal(
+                            gem,
+                            certificatesByGemstone[String(gem.inventoryId || gem.id)] || null
+                          )}
                         >
-                          <FaFileInvoice /> {certificatesLoaded
-                            ? certificatesByGemstone[String(gem.id)] ? "Edit Certificate" : "Add Certificate"
-                            : "Loading Certificate…"}
+                          <FaFileInvoice />
+                          {certificatesLoaded
+                            ? certificatesByGemstone[String(gem.inventoryId || gem.id)]
+                              ? "Edit Certificate"
+                              : "Add Certificate"
+                            : "Loading…"}
                         </button>
-                        {!gem.inventoryId && (
-                          <>
-                            <button
-                              type="button"
-                              className="admin-action-btn gem-edit-btn"
-                              onClick={() => handleEditGem(gem)}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              className="gem-delete-btn"
-                              onClick={() => handleDeleteGem(gem.id)}
-                            >
-                              <FaTrash /> Remove
-                            </button>
-                          </>
-                        )}
+                        <button
+                          type="button"
+                          className="admin-action-btn gem-edit-btn"
+                          style={{ justifyContent: "center", padding: "8px" }}
+                          onClick={() => (
+                            gem.inventoryId
+                              ? handleEditLiveGem(gem)
+                              : handleEditGem(gem)
+                          )}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="gem-delete-btn"
+                          onClick={() => handleDeleteGem(gem.id)}
+                        >
+                          <FaTrash /> Remove
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -2972,9 +3426,9 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
           )}
 
           {activeTab === "JEWELLERY" && (
-            <section className="admin-section">
+            <section className="admin-section jewellery-management-layout">
               {/* ── DATABASE JEWELLERY LIVE TABLE ─────────────────────────── */}
-              <section className="admin-section gem-database-section">
+              <section className="admin-section gem-database-section jewellery-inventory-section">
                 <div className="admin-section-heading">
                   <div>
                     <h2><FaGem /> Live Jewellery Inventory ({backendJewellery.length})</h2>
@@ -2993,20 +3447,19 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                     <button type="button" className="admin-action-btn" onClick={refreshJewellery}>Retry</button>
                   </p>
                 ) : backendJewellery.length === 0 && !jewelleryLoading ? (
-                  <p className="admin-empty-state">No jewellery items in the database yet. Use the form below to add one.</p>
+                    <p className="admin-empty-state">No jewellery items in the database yet. Use the form above to add one.</p>
+                ) : filteredBackendJewellery.length === 0 && !jewelleryLoading ? (
+                    <p className="admin-empty-state">No jewellery items found for this type.</p>
                 ) : (
                   <div className="admin-table-wrapper">
-                    <table className="admin-table gem-management-table">
+                    <table className="admin-table gem-management-table jewellery-management-table">
                       <thead>
                         <tr>
-                          <th>Product Code</th>
-                          <th>Product Name</th>
+                          <th>Jewellery</th>
                           <th>Type</th>
-                          <th>Gemstone</th>
-                          <th>Color</th>
+                          <th>Gemstone / Color</th>
                           <th>Material</th>
                           <th>Price</th>
-                          <th>Currency</th>
                           <th>Stock</th>
                           <th>Handcrafted</th>
                           <th>Status</th>
@@ -3014,34 +3467,44 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                         </tr>
                       </thead>
                       <tbody>
-                        {backendJewellery.map((item) => (
+                        {filteredBackendJewellery.map((item) => (
                           <tr key={item.id}>
-                            <td><code style={{ fontSize: "11px", color: "#6a7b77" }}>{item.product_code}</code></td>
-                            <td><strong>{item.product_name}</strong></td>
-                            <td>{item.jewellery_type || "—"}</td>
-                            <td>{item.gemstone_type || "—"}</td>
-                            <td>{item.color || "—"}</td>
+                            <td>
+                              <strong>{item.product_name}</strong>
+                              <div className="table-subtext">{item.product_code || "No product code"}</div>
+                            </td>
+                            <td>
+                              <span className="gem-category-pill jewellery-type-pill">
+                                {item.jewellery_type || "Other"}
+                              </span>
+                            </td>
+                            <td>
+                              {item.gemstone_type || "—"}
+                              {item.color && <div className="table-subtext">{item.color}</div>}
+                            </td>
                             <td>{item.material || "—"}</td>
-                            <td className="gold-text">${Number(item.price).toLocaleString()}</td>
-                            <td>{item.currency}</td>
+                            <td className="gold-text">
+                              ${Number(item.price).toLocaleString()}
+                              <div className="table-subtext">{item.currency || "USD"}</div>
+                            </td>
                             <td>{item.stock_quantity}</td>
                             <td>
-                              <span className={`gem-database-status ${item.is_handcrafted ? "active" : "inactive"}`}>
+                              <span className={`jewellery-handcrafted-status ${Number(item.is_handcrafted) === 1 ? "yes" : "no"}`}>
                                 {Number(item.is_handcrafted) === 1 ? "Yes" : "No"}
                               </span>
                             </td>
                             <td>
-                              <span className={`gem-database-status ${item.status || "pending"}`}>
+                              <span className={`gem-database-status jewellery-row-status ${item.status || "pending"}`}>
                                 {item.status ? item.status.toUpperCase() : "PENDING"}
                               </span>
                             </td>
                             <td>
-                              <div className="certificate-actions" style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+                              <div className="jewellery-row-actions">
                                 {isSuperAdmin && item.status === "pending" && (
                                   <>
                                     <button
                                       type="button"
-                                      className="admin-action-btn"
+                                      className="admin-action-btn jewellery-row-approve-btn"
                                       style={{ backgroundColor: "#1e7e34", color: "#fff", borderColor: "#1e7e34", padding: "4px 8px" }}
                                       onClick={() => handleJewelleryApproval(item.id, "approved", true)}
                                       title="Approve Request"
@@ -3050,7 +3513,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                                     </button>
                                     <button
                                       type="button"
-                                      className="admin-action-btn"
+                                      className="admin-action-btn jewellery-row-reject-btn"
                                       style={{ backgroundColor: "#bd2130", color: "#fff", borderColor: "#bd2130", padding: "4px 8px" }}
                                       onClick={() => handleJewelleryApproval(item.id, "rejected", true)}
                                       title="Reject Request"
@@ -3061,14 +3524,14 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                                 )}
                                 <button
                                   type="button"
-                                  className="admin-action-btn gem-edit-btn"
+                                  className="admin-action-btn gem-edit-btn jewellery-row-edit-btn"
                                   onClick={() => handleEditJewellery(item)}
                                 >
                                   Edit
                                 </button>
                                 <button
                                   type="button"
-                                  className="gem-delete-btn"
+                                  className="gem-delete-btn jewellery-row-delete-btn"
                                   onClick={() => handleDeleteJewellery(item.id, true)}
                                 >
                                   <FaTrash /> Delete
@@ -3084,15 +3547,44 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
               </section>
 
               {/* ── ADD / EDIT FORM ──────────────────────────────────────── */}
-              <div className="add-gem-card" style={{ marginTop: "2rem" }}>
-                <h2><FaPlus /> {editingDbJewelleryId ? "Edit Jewellery Item" : isSuperAdmin ? "Add Jewellery to Database" : "Submit Jewellery Request"}</h2>
-                <p>
-                  {editingDbJewelleryId
-                    ? "Update the details below and click Save."
-                    : isSuperAdmin
-                      ? "Fill in the form to save a new jewellery item directly to the MySQL database."
+              <div
+                className={`jewellery-form-slot${editingDbJewelleryId !== null ? " admin-modal-backdrop jewellery-edit-modal-backdrop" : ""}`}
+                onClick={editingDbJewelleryId !== null ? closeDbJewelleryEdit : undefined}
+              >
+                <section
+                  className={editingDbJewelleryId !== null ? "admin-account-modal jewellery-edit-modal" : undefined}
+                  role={editingDbJewelleryId !== null ? "dialog" : undefined}
+                  aria-modal={editingDbJewelleryId !== null ? "true" : undefined}
+                  aria-labelledby={editingDbJewelleryId !== null ? "edit-jewellery-title" : undefined}
+                  onClick={editingDbJewelleryId !== null ? (event) => event.stopPropagation() : undefined}
+                >
+              <div className={`add-gem-card${editingDbJewelleryId !== null ? " jewellery-edit-form-card" : ""}`} style={{ marginTop: editingDbJewelleryId !== null ? 0 : "2rem" }}>
+                {editingDbJewelleryId !== null ? (
+                  <div className="admin-account-modal-heading">
+                    <div>
+                      <span>LIVE JEWELLERY INVENTORY</span>
+                      <h3 id="edit-jewellery-title">Edit Jewellery</h3>
+                    </div>
+                    <button
+                      type="button"
+                      className="admin-modal-close"
+                      aria-label="Close Edit Jewellery modal"
+                      disabled={jewellerySaving}
+                      onClick={closeDbJewelleryEdit}
+                    >
+                      <FaTimes />
+                    </button>
+                  </div>
+                ) : (
+                  <h2><FaPlus /> {isSuperAdmin ? "Add Jewellery to Database" : "Submit Jewellery Request"}</h2>
+                )}
+                {(editingDbJewelleryId || !isSuperAdmin) && (
+                  <p>
+                    {editingDbJewelleryId
+                      ? "Update the details below and click Save."
                       : "Enter jewellery details to submit a new request. It will be saved in the database and sent to Super Admin for approval."}
-                </p>
+                  </p>
+                )}
                 <form onSubmit={handleSaveJewellery} className="add-gem-form gemstone-form">
                   <div className="gem-form-row">
                     <div className="form-group">
@@ -3161,24 +3653,15 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                         type="text"
                         value={newJewellery.image_url}
                         onChange={(e) => setNewJewellery({ ...newJewellery, image_url: e.target.value })}
-                        placeholder="https://... or /BlueRing.jpg"
+                        placeholder="https://... or /uploads/gemstones/..."
                       />
                       <input
                         type="file"
                         accept="image/jpeg,image/png,image/webp"
                         style={{ marginTop: "6px", fontSize: "11px", color: "#6a7b77" }}
-                        onChange={async (event) => {
-                          const file = event.target.files?.[0];
-                          if (file) {
-                            try {
-                              const img = await prepareProductImage(file);
-                              setNewJewellery((prev) => ({ ...prev, image_url: img }));
-                            } catch (err) {
-                              console.warn("Image file conversion error:", err);
-                            }
-                          }
-                        }}
+                        onChange={(event) => setJewelleryImageFile(event.target.files?.[0] || null)}
                       />
+                      {jewelleryImageFile && <small className="jewellery-selected-image">Selected: {jewelleryImageFile.name}</small>}
                     </div>
                   </div>
                   <div className="gem-form-row">
@@ -3218,6 +3701,39 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                         step="1"
                         value={newJewellery.stock_quantity}
                         onChange={(e) => setNewJewellery({ ...newJewellery, stock_quantity: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="gem-form-row">
+                    <div className="form-group">
+                      <label htmlFor="jwl-offer-rate">Offer Rate (%)</label>
+                      <input
+                        id="jwl-offer-rate"
+                        type="number"
+                        min="1"
+                        max="100"
+                        step="0.01"
+                        value={newJewellery.offer_rate}
+                        onChange={(e) => setNewJewellery({ ...newJewellery, offer_rate: e.target.value })}
+                        placeholder="Leave blank for no offer"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="jwl-offer-start">Offer Start Date</label>
+                      <input
+                        id="jwl-offer-start"
+                        type="date"
+                        value={newJewellery.offer_start_date}
+                        onChange={(e) => setNewJewellery({ ...newJewellery, offer_start_date: e.target.value })}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="jwl-offer-end">Offer End Date</label>
+                      <input
+                        id="jwl-offer-end"
+                        type="date"
+                        value={newJewellery.offer_end_date}
+                        onChange={(e) => setNewJewellery({ ...newJewellery, offer_end_date: e.target.value })}
                       />
                     </div>
                   </div>
@@ -3266,18 +3782,45 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                           : <><FaPlus /> ADD JEWELLERY ITEM</>}
                     </button>
                     {editingDbJewelleryId !== null && (
-                      <button type="button" className="add-gem-cancel-btn" onClick={resetJewelleryForm}>
-                        <FaTimes /> Cancel Edit
+                      <button type="button" className="gem-edit-cancel-btn" onClick={closeDbJewelleryEdit} disabled={jewellerySaving}>
+                        Cancel
                       </button>
                     )}
                   </div>
                 </form>
               </div>
+                </section>
+              </div>
 
-              {/* ── LEGACY LOCAL STOREFRONT COLLECTION ─────────────────── */}
-              <h2 style={{ marginTop: "2.5rem" }}><FaGem /> Storefront Collection ({jewelleryList.length})</h2>
+                <div className="gem-management-toolbar jewellery-management-toolbar">
+                  <label htmlFor="jewellery-type-filter">Filter inventory by jewellery type</label>
+                  <select
+                    id="jewellery-type-filter"
+                    value={jewelleryTypeFilter}
+                    onChange={(event) => setJewelleryTypeFilter(event.target.value)}
+                  >
+                    <option value="all">All Jewellery</option>
+                    {["Necklaces", "Bracelets", "Rings", "Earrings", "Pendants", "Brooches", "Other"].map((type) => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                  <span>{filteredBackendJewellery.length} of {backendJewellery.length} database items</span>
+                </div>
+
+                {/* STOREFRONT JEWELLERY COLLECTION */}
+              <div className="admin-section-heading" style={{ marginTop: "2rem" }}>
+                <div>
+                  <h2><FaGem /> Storefront Jewellery Collection ({storefrontJewelleryList.length})</h2>
+                  <p>Manage jewellery product cards currently displayed in the storefront.</p>
+                </div>
+              </div>
               <div className="admin-gems-grid">
-                {jewelleryList.map((item) => {
+                {storefrontJewelleryList.map((item) => {
+                  const offerProduct = withActiveProductOffer(item);
+                  const discountRate = Number(offerProduct.discountRate);
+                  const hasDiscount = discountRate > 0 && discountRate <= 100;
+                  const stockValue = Number(item.stock_quantity ?? item.stockQuantity ?? item.stock ?? 0);
+                  const availableStock = Number.isFinite(stockValue) ? Math.max(0, stockValue) : 0;
                   const reviewStatus = jewellerySubmissions.find(
                     (submission) => submission.jewellery.id === item.id
                   )?.status;
@@ -3303,18 +3846,19 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                         <strong className="gem-price">
                           ${Number(item.basePriceUSD ?? item.price ?? 0).toLocaleString()} USD
                         </strong>
-                        {Number(item.discountRate) > 0 && (
-                          <span className="admin-gem-discount-rate">
-                            OFFER: {Number(item.discountRate)}% OFF
-                            {item.offerStartDate && item.offerEndDate
-                              ? ` · ${item.offerStartDate} to ${item.offerEndDate}`
-                              : ""}
+                        {hasDiscount && (
+                          <span className="admin-gem-discount-badge">
+                            <FaPercent aria-hidden="true" />
+                            <span>{discountRate}% OFF</span>
                           </span>
                         )}
+                        <span className={`admin-gem-stock ${availableStock > 0 ? "in-stock" : "out-of-stock"}`}>
+                          {availableStock > 0 ? `In stock: ${availableStock}` : "Out of stock"}
+                        </span>
                         <div className="admin-gem-actions">
                           <button
                             type="button"
-                            className="gem-edit-btn"
+                            className="admin-action-btn jewellery-card-edit-btn"
                             onClick={() => handleEditJewellery(item)}
                           >
                             Edit
@@ -3331,7 +3875,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                     </article>
                   );
                 })}
-                {jewelleryList.length === 0 && (
+                {storefrontJewelleryList.length === 0 && (
                   <p className="admin-empty-state">No jewellery items are in the collection.</p>
                 )}
               </div>
@@ -3588,6 +4132,399 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
         <SiteInquiryModal source={isSuperAdmin ? "Super Admin Portal" : "Admin Portal"} onClose={() => setIsInquiryOpen(false)} />
       )}
 
+      {editCertificate && (
+        <div className="admin-modal-backdrop certificate-modal-backdrop" onClick={closeCertificateModal}>
+          <section
+            className="admin-account-modal certificate-edit-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="certificate-edit-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="admin-account-modal-heading">
+              <div>
+                <span>GEMSTONE CERTIFICATE</span>
+                <h3 id="certificate-edit-title">
+                  {editCertificate.id ? "Edit Certificate" : "Add Certificate"}
+                </h3>
+                <p>For {editCertificate.gemstone_name}</p>
+              </div>
+              <button
+                type="button"
+                className="admin-modal-close"
+                aria-label="Close certificate form"
+                disabled={certificateSaving}
+                onClick={closeCertificateModal}
+              >
+                <FaTimes />
+              </button>
+            </div>
+            <form className="certificate-edit-form" onSubmit={handleSaveCertificate}>
+              <label>
+                Certificate Number
+                <input
+                  type="text"
+                  value={editCertificate.certificate_number}
+                  onChange={(event) => setEditCertificate({
+                    ...editCertificate,
+                    certificate_number: event.target.value
+                  })}
+                  required
+                />
+              </label>
+              <label>
+                Laboratory
+                <input
+                  type="text"
+                  value={editCertificate.laboratory}
+                  onChange={(event) => setEditCertificate({
+                    ...editCertificate,
+                    laboratory: event.target.value
+                  })}
+                  required
+                />
+              </label>
+              <label>
+                Verification Status
+                <select
+                  value={editCertificate.verification_status}
+                  onChange={(event) => setEditCertificate({
+                    ...editCertificate,
+                    verification_status: event.target.value
+                  })}
+                >
+                  <option value="VERIFIED">VERIFIED</option>
+                  <option value="PENDING">PENDING</option>
+                  <option value="REJECTED">REJECTED</option>
+                </select>
+              </label>
+              <label>
+                Issue Date
+                <input
+                  type="date"
+                  value={editCertificate.issue_date}
+                  onChange={(event) => setEditCertificate({
+                    ...editCertificate,
+                    issue_date: event.target.value
+                  })}
+                />
+              </label>
+              <label className="certificate-file-field">
+                Certificate File (PDF, JPG, PNG)
+                <input
+                  type="file"
+                  accept="application/pdf,image/jpeg,image/png"
+                  onChange={(event) => setCertificateFile(event.target.files?.[0] || null)}
+                />
+              </label>
+              {certificateFile && <small className="certificate-selected-file">Selected: {certificateFile.name}</small>}
+              {!certificateFile && editCertificate.certificate_url && (
+                <a
+                  className="certificate-current-file"
+                  href={resolveMediaUrl(editCertificate.certificate_url)}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  View current certificate file
+                </a>
+              )}
+              <div className="admin-account-modal-actions">
+                <button type="button" disabled={certificateSaving} onClick={closeCertificateModal}>
+                  Cancel
+                </button>
+                <button type="submit" className="admin-account-add-btn" disabled={certificateSaving}>
+                  {certificateSaving ? "Saving…" : "Save Certificate"}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
+
+      {editGem && (
+        <div
+          className="admin-modal-backdrop gem-edit-modal-backdrop"
+          onClick={closeLiveGemEdit}
+        >
+          <section
+            className="admin-account-modal gem-edit-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-gemstone-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="admin-account-modal-heading">
+              <div>
+                <span>LIVE GEMSTONE INVENTORY</span>
+                <h3 id="edit-gemstone-title">Edit Gemstone</h3>
+              </div>
+              <button
+                type="button"
+                className="admin-modal-close"
+                aria-label="Close Edit Gemstone modal"
+                disabled={gemSaving}
+                onClick={closeLiveGemEdit}
+              >
+                <FaTimes />
+              </button>
+            </div>
+            <form onSubmit={handleSaveLiveGem} className="add-gem-form gemstone-form">
+              <div className="gem-form-row">
+                <div className="form-group">
+                  <label htmlFor="edit-gem-name">Gemstone Name *</label>
+                  <input
+                    id="edit-gem-name"
+                    type="text"
+                    value={editGem.name}
+                    onChange={(event) => setEditGem({ ...editGem, name: event.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="edit-gem-category">Gemstone Category *</label>
+                  <select
+                    id="edit-gem-category"
+                    value={editGem.category_id}
+                    onChange={(event) => setEditGem({ ...editGem, category_id: event.target.value })}
+                    required
+                  >
+                    <option value="">Select a database category</option>
+                    {backendCategories.map((category) => (
+                      <option key={category.id} value={category.id}>{category.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="edit-gem-color">Color</label>
+                  <input
+                    id="edit-gem-color"
+                    type="text"
+                    value={editGem.color}
+                    onChange={(event) => setEditGem({ ...editGem, color: event.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="gem-form-row">
+                <div className="form-group">
+                  <label htmlFor="edit-gem-carat">Carat Weight</label>
+                  <input
+                    id="edit-gem-carat"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={editGem.carat}
+                    onChange={(event) => setEditGem({ ...editGem, carat: event.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <span className="admin-form-label">Dimensions (L x W x H)</span>
+                  <div className="gem-dimension-fields">
+                    {[
+                      { key: "length", label: "Length" },
+                      { key: "width", label: "Width" },
+                      { key: "height", label: "Height" }
+                    ].map(({ key, label }) => (
+                      <input
+                        key={key}
+                        aria-label={`${label} in mm`}
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder={label}
+                        value={editGem[key]}
+                        onChange={(event) => setEditGem({ ...editGem, [key]: event.target.value })}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="edit-gem-clarity">Clarity</label>
+                  <input
+                    id="edit-gem-clarity"
+                    type="text"
+                    value={editGem.clarity}
+                    onChange={(event) => setEditGem({ ...editGem, clarity: event.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="gem-form-row">
+                <div className="form-group">
+                  <label htmlFor="edit-gem-cut">Cut</label>
+                  <input
+                    id="edit-gem-cut"
+                    type="text"
+                    value={editGem.cut}
+                    onChange={(event) => setEditGem({ ...editGem, cut: event.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="edit-gem-shape">Shape</label>
+                  <input
+                    id="edit-gem-shape"
+                    type="text"
+                    value={editGem.shape}
+                    onChange={(event) => setEditGem({ ...editGem, shape: event.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="edit-gem-origin">Origin</label>
+                  <input
+                    id="edit-gem-origin"
+                    type="text"
+                    value={editGem.origin}
+                    onChange={(event) => setEditGem({ ...editGem, origin: event.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="gem-form-row">
+                <div className="form-group">
+                  <label htmlFor="edit-gem-treatment">Treatment Status</label>
+                  <select
+                    id="edit-gem-treatment"
+                    value={editGem.treatment_status}
+                    onChange={(event) => setEditGem({ ...editGem, treatment_status: event.target.value })}
+                  >
+                    {TREATMENT_OPTIONS.map((treatment) => (
+                      <option key={treatment}>{treatment}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="edit-gem-price">Price (USD $) *</label>
+                  <input
+                    id="edit-gem-price"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={editGem.price}
+                    onChange={(event) => setEditGem({ ...editGem, price: event.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="edit-gem-stock">Stock Quantity</label>
+                  <input
+                    id="edit-gem-stock"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={editGem.stock}
+                    onChange={(event) => setEditGem({ ...editGem, stock: event.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label htmlFor="edit-gem-status">Availability</label>
+                <select
+                  id="edit-gem-status"
+                  value={editGem.status}
+                  onChange={(event) => setEditGem({ ...editGem, status: event.target.value })}
+                >
+                  <option value="available">Available</option>
+                  <option value="unavailable">Unavailable</option>
+                </select>
+              </div>
+              <div className="form-group gem-description-field">
+                <label htmlFor="edit-gem-description">Description</label>
+                <textarea
+                  id="edit-gem-description"
+                  rows={3}
+                  value={editGem.description}
+                  onChange={(event) => setEditGem({ ...editGem, description: event.target.value })}
+                />
+              </div>
+              <section className="gem-media-section">
+                <div>
+                  <h3 className="gem-detail-upload-heading">Gemstone Gallery &amp; Uploads</h3>
+                  <p className="admin-image-help">Upload the main image, four views, and one inspection clip.</p>
+                </div>
+                <div className="gem-media-grid">
+                  {[
+                    { name: "mainImage", field: "mainImage", label: "Main Gemstone Image", accept: "image/jpeg,image/png,image/webp" },
+                    { name: "backViewImage", field: "backViewImage", label: "Back View", accept: "image/jpeg,image/png,image/webp" },
+                    { name: "rightViewImage", field: "rightViewImage", label: "Right View", accept: "image/jpeg,image/png,image/webp" },
+                    { name: "leftViewImage", field: "leftViewImage", label: "Left View", accept: "image/jpeg,image/png,image/webp" },
+                    { name: "additional_view_1", field: "additional_view_1", label: "Additional View 1", accept: "image/jpeg,image/png,image/webp" },
+                    { name: "additional_view_2", field: "additional_view_2", label: "Additional View 2", accept: "image/jpeg,image/png,image/webp" },
+                    { name: "videoClip", field: "videoClip", label: "Inspection Video Clip", accept: "video/mp4,video/webm,video/quicktime" }
+                  ].map(({ name, field, label, accept }) => (
+                    <div className="form-group edit-gem-media-input" key={name}>
+                      <label htmlFor={`edit-gem-${name}`}>{label}</label>
+                      {editGem[field] && !editGemFiles[name] && (
+                        <a href={resolveMediaUrl(editGem[field])} target="_blank" rel="noreferrer">
+                          View current file
+                        </a>
+                      )}
+                      {editGemFiles[name] && <small>{editGemFiles[name].name}</small>}
+                      <input
+                        id={`edit-gem-${name}`}
+                        name={name}
+                        type="file"
+                        accept={accept}
+                        onChange={(event) => setEditGemFiles({
+                          ...editGemFiles,
+                          [name]: event.target.files?.[0] || null
+                        })}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </section>
+              <section className="gem-offer-section">
+                <div className="form-group">
+                  <label htmlFor="edit-gem-offer-rate">Offer Rate (%) (optional)</label>
+                  <input
+                    id="edit-gem-offer-rate"
+                    type="number"
+                    min="1"
+                    max="100"
+                    step="1"
+                    value={editGem.discountRate}
+                    onChange={(event) => setEditGem({ ...editGem, discountRate: event.target.value })}
+                  />
+                </div>
+                <div className="offer-date-row">
+                  <div className="form-group">
+                    <label htmlFor="edit-gem-offer-start-date">Offer Start Date</label>
+                    <input
+                      id="edit-gem-offer-start-date"
+                      type="date"
+                      value={editGem.offerStartDate}
+                      onChange={(event) => setEditGem({ ...editGem, offerStartDate: event.target.value })}
+                      required={Boolean(editGem.discountRate)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="edit-gem-offer-end-date">Offer End Date</label>
+                    <input
+                      id="edit-gem-offer-end-date"
+                      type="date"
+                      min={editGem.offerStartDate || undefined}
+                      value={editGem.offerEndDate}
+                      onChange={(event) => setEditGem({ ...editGem, offerEndDate: event.target.value })}
+                      required={Boolean(editGem.discountRate)}
+                    />
+                  </div>
+                </div>
+              </section>
+              <div className="add-gem-form-actions gem-submit-actions">
+                <button
+                  type="button"
+                  className="gem-edit-cancel-btn"
+                  disabled={gemSaving}
+                  onClick={closeLiveGemEdit}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="add-gem-submit-btn gem-submit-btn" disabled={gemSaving}>
+                  {gemSaving ? "Saving…" : "SAVE GEMSTONE"}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
+
       {/* LUXURY ORDER INVOICE & TRACKING DOSSIER MODAL */}
       {selectedOrderDetails && (
         <div className="royal-modal-backdrop" onClick={() => setSelectedOrderDetails(null)}>
@@ -3632,7 +4569,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                 <div className="invoice-tracking-title">
                   <span><FaTruck /> International Priority Air Courier</span>
                   <span className="invoice-tracking-carrier">
-                    {selectedOrderDetails.courier || selectedOrderDetails.shipment?.courier || "DHL Express / FedEx Priority"}
+                    {selectedOrderDetails.courier || selectedOrderDetails.shipment?.courier || "Not assigned"}
                   </span>
                 </div>
                 <div className="invoice-tracking-code-wrap">
@@ -3666,24 +4603,28 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                 </div>
 
                 <div className="invoice-box">
-                  <span className="invoice-box-label"><FaGem /> Certified Gemstone Specimen</span>
-                  <strong>{selectedOrderDetails.gemName}</strong>
-                  <p>Weight: <strong>{selectedOrderDetails.carat}</strong></p>
-                  <p>Lab Cert: <strong style={{ color: "#b58c36" }}>{selectedOrderDetails.certNo}</strong></p>
+                  <span className="invoice-box-label"><FaGem /> Ordered Items</span>
+                  {selectedOrderDetails.items?.length > 0 ? selectedOrderDetails.items.map((item) => (
+                    <p key={item.id}>
+                      <strong>{item.gemstone_name}</strong>
+                      {" "}× {item.quantity} · {Number(item.price).toLocaleString()} {item.currency || selectedOrderDetails.currency}
+                    </p>
+                  )) : <p>No item details available.</p>}
                 </div>
 
                 <div className="invoice-box">
                   <span className="invoice-box-label"><FaCreditCard /> Financial Settlement</span>
                   <strong style={{ color: "#0d5c3a" }}>{selectedOrderDetails.paymentStatus}</strong>
                   <p>Order Placed: {selectedOrderDetails.date}</p>
-                  <p>Verified Escrow Settlement</p>
+                  <p>
+                    Total: {Number(selectedOrderDetails.totalAmount).toLocaleString()} {selectedOrderDetails.currency}
+                  </p>
                 </div>
 
                 <div className="invoice-box">
-                  <span className="invoice-box-label"><FaShieldAlt /> Authenticity Guarantee</span>
-                  <strong>100% Genuine Ceylon Gem</strong>
-                  <p>Origin: Ratnapura, Sri Lanka</p>
-                  <p>Royal Heritage Seal Applied</p>
+                  <span className="invoice-box-label"><FaShieldAlt /> Shipping Summary</span>
+                  <strong>{selectedOrderDetails.status}</strong>
+                  <p>Shipping cost: {Number(selectedOrderDetails.shippingCost).toLocaleString()} {selectedOrderDetails.currency}</p>
                 </div>
               </div>
             </div>
