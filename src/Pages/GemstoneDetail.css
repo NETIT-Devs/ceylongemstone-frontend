@@ -950,6 +950,11 @@
   color: #426749;
 }
 
+.luxury-detail-wrapper .status-pill.out-of-stock {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
 .luxury-detail-wrapper .spec-chip,
 .luxury-detail-wrapper .tabs-wrapper,
 .luxury-detail-wrapper .reviews-section,

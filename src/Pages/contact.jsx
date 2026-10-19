@@ -168,18 +168,18 @@ const Contact = () => {
       const res = await apiPost("/api/enquiries", payload);
       const data = await res.json();
 
-      if (res.ok && data.success) {
-        setSubmitted(true);
-        setFormData({ name: "", email: "", phone: "", subject: "", message: "" });
-      } else {
-        // Non-critical: show success anyway (backend may require gemstone_id to exist)
-        setSubmitted(true);
-        setFormData({ name: "", email: "", phone: "", subject: "", message: "" });
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Unable to send your message. Please try again.");
       }
-    } catch {
-      // Network error: show optimistic success, form is still saved locally
+
       setSubmitted(true);
       setFormData({ name: "", email: "", phone: "", subject: "", message: "" });
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : "Unable to send your message. Please try again."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -606,6 +606,11 @@ const Contact = () => {
               id="contact-form"
               onSubmit={handleSubmit}
             >
+              {submitError && (
+                <p className="contact-form-error" role="alert">
+                  {submitError}
+                </p>
+              )}
 
               <div className="form-row">
 
@@ -708,9 +713,10 @@ const Contact = () => {
               <button
                 type="submit"
                 className="contact-submit-btn"
+                disabled={isSubmitting}
               >
 
-                SEND MESSAGE
+                {isSubmitting ? "SENDING MESSAGE..." : "SEND MESSAGE"}
 
                 <span>
                   →

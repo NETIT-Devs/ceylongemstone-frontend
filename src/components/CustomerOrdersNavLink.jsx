@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-export const isUserSignedIn = () => {
+const isUserSignedIn = () => {
   try {
     const customer = JSON.parse(window.localStorage.getItem("ceylon-user") || "null");
     if (customer?.loggedIn === true) return true;

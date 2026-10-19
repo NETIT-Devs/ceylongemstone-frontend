@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import ShopNavDropdown from "../components/ShopNavDropdown.jsx";
 import BrandLogo from "../components/BrandLogo.jsx";
 import {
@@ -13,7 +14,6 @@ import {
   FaInstagram,
   FaWhatsapp,
 } from "react-icons/fa";
-import { FaFacebook } from "react-icons/fa6";
 import CollectionDrawerPanel from "../components/CollectionDrawerPanel.jsx";
 import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
 import CustomerOrdersNavLink from "../components/CustomerOrdersNavLink.jsx";
@@ -23,40 +23,18 @@ import {
   startAdminSession,
   endAdminSession,
 } from "../adminAccess.js";
-import { apiPost, setCustomerToken } from "../services/api.js";
+import {
+  API_BASE_URL,
+  apiGet,
+  apiPost,
+  clearCustomerToken,
+  setCustomerToken,
+} from "../services/api.js";
 import "./Login.css";
 import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
 import "../components/SiteFooter.css";
 
 const getPostLoginDestination = () => "/";
-
-const REGISTERED_USERS_KEY = "ceylon-registered-users";
-
-const getRegisteredUsers = () => {
-  try {
-    const raw = window.localStorage.getItem(REGISTERED_USERS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-};
-
-const saveRegisteredUser = (user) => {
-  try {
-    const users = getRegisteredUsers();
-    const existingIndex = users.findIndex(
-      (u) => u.email.toLowerCase() === user.email.toLowerCase()
-    );
-    if (existingIndex >= 0) {
-      users[existingIndex] = { ...users[existingIndex], ...user };
-    } else {
-      users.push(user);
-    }
-    window.localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(users));
-  } catch (err) {
-    console.error("Failed to save registered user:", err);
-  }
-};
 
 const Login = () => {
   const [wishlist, setWishlist] = useSharedCollection("ceylon-wishlist");
@@ -77,6 +55,96 @@ const Login = () => {
   const [loginError, setLoginError] = useState("");
   const [successNote, setSuccessNote] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+    const token = hashParams.get("token");
+    if (!token) return;
+
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${window.location.search}`
+    );
+    setCustomerToken(token);
+
+    const finishGoogleLogin = async () => {
+      try {
+        const response = await apiGet("/api/auth/me");
+        const data = await response.json();
+        if (!response.ok || !data.success || !data.user) {
+          throw new Error(data.message || "Unable to complete Google sign-in.");
+        }
+
+        const user = data.user;
+        const rawRole = String(user.role || "").toUpperCase();
+        const isAdminRole =
+          rawRole === "ADMIN" || rawRole === "SUPER_ADMIN" || rawRole === "SUPER-ADMIN";
+        const isSuper = rawRole.includes("SUPER");
+
+        if (isAdminRole) {
+          const adminAccount = {
+            id: user.id,
+            name: user.name || "Administrator",
+            email: user.email,
+            role: isSuper ? "super-admin" : "admin",
+            department: "Operations",
+            status: "active",
+            source: "backend",
+            token,
+          };
+          startAdminSession(adminAccount);
+          window.localStorage.setItem(
+            "ceylon-user",
+            JSON.stringify({
+              id: user.id,
+              email: user.email,
+              name: user.name || "Administrator",
+              phone: user.phone,
+              role: user.role,
+              loggedIn: true,
+            })
+          );
+          window.localStorage.setItem("ceylon-user-id", String(user.id));
+          window.dispatchEvent(new Event("ceylon-user-auth-change"));
+          setSuccessNote(`Welcome, ${adminAccount.name}! Redirecting to ${isSuper ? "Super Admin" : "Admin"} Portal...`);
+          setIsSubmitted(true);
+          setTimeout(() => {
+            window.location.href = isSuper ? "/super-admin" : "/admin";
+          }, 1000);
+          return;
+        }
+
+        endAdminSession();
+        window.localStorage.setItem(
+          "ceylon-user",
+          JSON.stringify({
+            id: user.id,
+            email: user.email,
+            name: user.name || user.email.split("@")[0],
+            phone: user.phone,
+            role: user.role,
+            loggedIn: true,
+          })
+        );
+        window.localStorage.setItem("ceylon-user-id", String(user.id));
+        window.dispatchEvent(new Event("ceylon-user-auth-change"));
+        setSuccessNote("Welcome back to Ceylon Royal Gemstones.");
+        setIsSubmitted(true);
+
+        const destination =
+          new URLSearchParams(window.location.search).get("redirect") || "/";
+        setTimeout(() => {
+          window.location.href = destination;
+        }, 1200);
+      } catch (error) {
+        clearCustomerToken();
+        setLoginError(error.message || "Unable to complete Google sign-in.");
+      }
+    };
+
+    finishGoogleLogin();
+  }, []);
 
   const handleLoginChange = (e) => {
     setLoginForm({ ...loginForm, [e.target.name]: e.target.value });
@@ -241,43 +309,9 @@ const Login = () => {
     }
   };
 
-  const handleFacebookLogin = () => {
+  const handleGoogleLogin = () => {
     setLoginError("");
-    const fbEmail = prompt(
-      "Enter your Facebook email or account to continue:",
-      "collector@facebook.com"
-    );
-    if (!fbEmail) return;
-
-    const cleanEmail = fbEmail.trim().toLowerCase();
-    const fbName =
-      cleanEmail.split("@")[0].replace(/[._-]/g, " ") || "Facebook Collector";
-    const formattedName =
-      fbName.charAt(0).toUpperCase() + fbName.slice(1);
-
-    const fbUser = {
-      name: formattedName,
-      email: cleanEmail,
-      provider: "facebook",
-      verified: true,
-      createdAt: new Date().toISOString(),
-    };
-    saveRegisteredUser(fbUser);
-
-    const userSession = {
-      email: fbUser.email,
-      name: fbUser.name,
-      provider: "facebook",
-      verified: true,
-      loggedIn: true,
-    };
-    window.localStorage.setItem("ceylon-user", JSON.stringify(userSession));
-    window.dispatchEvent(new Event("ceylon-user-auth-change"));
-    setSuccessNote(`Signed in via Facebook as ${userSession.name}! Welcome.`);
-    setIsSubmitted(true);
-    setTimeout(() => {
-      window.location.href = getPostLoginDestination();
-    }, 1200);
+    window.location.assign(`${API_BASE_URL}/api/auth/google`);
   };
 
   return (
@@ -437,14 +471,35 @@ const Login = () => {
               </div>
             )}
 
-            {/* Facebook Login Button */}
+            {/* Google Login Button */}
             <button
               type="button"
-              className="login-facebook-btn"
-              onClick={handleFacebookLogin}
+              className="login-google-btn"
+              onClick={handleGoogleLogin}
             >
-              <FaFacebook />
-              Continue with Facebook
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                focusable="false"
+              >
+                <path
+                  fill="#4285F4"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.15v2.84A11 11 0 0 0 12 23z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.84 13.04c-.22-.66-.35-1.36-.35-2.04s.13-1.38.35-2.04V6.12H2.15A11 11 0 0 0 1 11c0 1.78.43 3.46 1.15 4.88l3.69-2.84z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 4.43c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 1.09 14.97 0 12 0A11 11 0 0 0 2.15 6.12l3.69 2.84C6.71 6.36 9.14 4.43 12 4.43z"
+                />
+              </svg>
+              Continue with Google
             </button>
 
             <div className="login-divider">
@@ -461,6 +516,7 @@ const Login = () => {
                       id="login-email"
                       type="email"
                       name="email"
+                      autoComplete="username"
                       placeholder="Enter your email"
                       value={loginForm.email}
                       onChange={handleLoginChange}
@@ -477,6 +533,7 @@ const Login = () => {
                       id="login-password"
                       type={showPassword ? "text" : "password"}
                       name="password"
+                      autoComplete="current-password"
                       placeholder="Enter your password"
                       value={loginForm.password}
                       onChange={handleLoginChange}
@@ -497,7 +554,9 @@ const Login = () => {
                     <input type="checkbox" />
                     <span>Remember me</span>
                   </label>
-                  <a href="#" className="login-forgot">Forgot Password?</a>
+                  <Link to="/forgot-password" className="login-forgot">
+                    Forgot Password?
+                  </Link>
                 </div>
 
                 <button type="submit" className="login-submit-btn" disabled={isLoading}>
@@ -514,6 +573,7 @@ const Login = () => {
                       id="register-name"
                       type="text"
                       name="name"
+                      autoComplete="name"
                       placeholder="Enter your full name"
                       value={registerForm.name}
                       onChange={handleRegisterChange}
@@ -530,6 +590,7 @@ const Login = () => {
                       id="register-email"
                       type="email"
                       name="email"
+                      autoComplete="email"
                       placeholder="Enter your email"
                       value={registerForm.email}
                       onChange={handleRegisterChange}
@@ -546,6 +607,7 @@ const Login = () => {
                       id="register-phone"
                       type="tel"
                       name="phone"
+                      autoComplete="tel"
                       placeholder="+94 XX XXX XXXX"
                       value={registerForm.phone}
                       onChange={handleRegisterChange}
@@ -562,6 +624,7 @@ const Login = () => {
                       id="register-password"
                       type="password"
                       name="password"
+                      autoComplete="new-password"
                       placeholder="Create a password"
                       value={registerForm.password}
                       onChange={handleRegisterChange}
@@ -578,6 +641,7 @@ const Login = () => {
                       id="register-confirm"
                       type="password"
                       name="confirmPassword"
+                      autoComplete="new-password"
                       placeholder="Confirm your password"
                       value={registerForm.confirmPassword}
                       onChange={handleRegisterChange}

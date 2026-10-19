@@ -46,3 +46,22 @@ export const withActiveProductOffer = (product, now = new Date()) => {
   if (isProductOfferActive(product, now)) return product;
   return { ...product, discountRate: null, offer_rate: null, discountLabel: "", discount_label: "" };
 };
+
+export const getProductOfferPricing = (product, now = new Date()) => {
+  const offerProduct = withActiveProductOffer(product, now);
+  const originalPrice = Number(product?.basePriceUSD ?? product?.price ?? 0);
+  const currentPrice = Number(product?.price ?? originalPrice);
+  const discountRate = Number(offerProduct.discountRate ?? offerProduct.offer_rate);
+  const hasDiscount = Number.isFinite(discountRate) &&
+    discountRate >= 1 &&
+    discountRate <= 100;
+
+  return {
+    originalPrice,
+    currentPrice: hasDiscount
+      ? Math.min(currentPrice, Math.round(originalPrice * (1 - discountRate / 100)))
+      : currentPrice,
+    discountRate: hasDiscount ? discountRate : null,
+    discountLabel: offerProduct.discountLabel || offerProduct.discount_label || ""
+  };
+};

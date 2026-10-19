@@ -3,6 +3,7 @@ import ShopNavDropdown from "../components/ShopNavDropdown.jsx";
 import BrandLogo from "../components/BrandLogo.jsx";
 import {
   FaArrowLeft,
+  FaCheckCircle,
   FaEnvelope,
   FaFacebookF,
   FaHeart,
@@ -21,8 +22,11 @@ import {
 } from "../useSharedCollection.js";
 import { useGemInventory } from "../useGemInventory.js";
 import { products } from "./Gemstones.jsx";
+import { withActiveProductOffer } from "../productOffers.js";
+import ProductOfferPrice from "../components/ProductOfferPrice.jsx";
 import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
-import { apiGet, apiPost } from "../services/api.js";
+import { apiGet, apiPost, resolveMediaUrl } from "../services/api.js";
+import { currencyRates, getCurrentCurrency } from "../currency.js";
 import "./Checkout.css";
 import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
 
@@ -33,7 +37,53 @@ const formatPrice = (price) =>
     maximumFractionDigits: 2
   });
 
+const formatSummaryPrice = (usdAmount, currency) => {
+  const selectedCurrency = currencyRates[currency] || currencyRates.USD;
+  const amount = Number(usdAmount || 0) * selectedCurrency.rate;
+  const fractionDigits = currency === "USD" || currency === "GBP" || currency === "EUR"
+    ? 2
+    : 0;
+  return `${selectedCurrency.symbol}${amount.toLocaleString("en-US", {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits
+  })}`;
+};
+
+const normalizeCountry = (country) => String(country || "").trim().toLocaleLowerCase();
+
+const formatEstimatedDays = (estimatedDays) => {
+  const value = String(estimatedDays || "").trim();
+  if (!value || /(?:business\s+)?days$/i.test(value)) return value;
+  return `${value} days`;
+};
+
+const getCheckoutPriceBreakdown = (item) => {
+  const offerItem = withActiveProductOffer(item);
+  const originalUnitPrice = Number(item.basePriceUSD ?? item.price ?? 0);
+  const existingUnitPrice = Number(item.price ?? 0);
+  const discountRate = Number(offerItem.discountRate ?? offerItem.offer_rate);
+  const hasActiveDiscount =
+    Number.isFinite(discountRate) && discountRate >= 1 && discountRate <= 100;
+  const discountedUnitPrice = hasActiveDiscount
+    ? Math.min(
+        existingUnitPrice,
+        Math.round(originalUnitPrice * (1 - discountRate / 100))
+      )
+    : existingUnitPrice;
+  const quantity = Number(item.quantity) || 1;
+
+  return {
+    item,
+    originalUnitPrice,
+    unitPrice: discountedUnitPrice,
+    quantity,
+    originalTotal: originalUnitPrice * quantity,
+    discountedTotal: discountedUnitPrice * quantity
+  };
+};
+
 const Checkout = () => {
+  const [displayCurrency, setDisplayCurrency] = useState(getCurrentCurrency);
   const [showMyOrdersLink] = useState(() => {
     try {
       const customer = JSON.parse(
@@ -49,18 +99,39 @@ const Checkout = () => {
   const [inventory, setInventory] = useGemInventory(products);
   const [notice, setNotice] = useState("");
   const [isInquiryOpen, setIsInquiryOpen] = useState(false);
-  const [placedOrderId, setPlacedOrderId] = useState("");
+  const [completedOrder, setCompletedOrder] = useState(null);
   const [shippingMethods, setShippingMethods] = useState([]);
   const [shippingMethodsLoading, setShippingMethodsLoading] = useState(true);
   const [shippingMethodsError, setShippingMethodsError] = useState("");
   const [selectedShippingMethodId, setSelectedShippingMethodId] = useState("");
+  const [shippingCountry, setShippingCountry] = useState("Sri Lanka");
   const [shippingCostConversion, setShippingCostConversion] = useState(null);
   const orderSubmitted = useRef(false);
-  const itemTotal = cart.reduce(
-    (sum, item) => sum + Number(item.price || 0) * (Number(item.quantity) || 1),
+
+  useEffect(() => {
+    const syncCurrency = () => setDisplayCurrency(getCurrentCurrency());
+    window.addEventListener("ceylon-currency-change", syncCurrency);
+    window.addEventListener("storage", syncCurrency);
+    return () => {
+      window.removeEventListener("ceylon-currency-change", syncCurrency);
+      window.removeEventListener("storage", syncCurrency);
+    };
+  }, []);
+
+  const availableShippingMethods = shippingMethods.filter(
+    (method) => normalizeCountry(method.country) === normalizeCountry(shippingCountry)
+  );
+  const cartPriceBreakdown = cart.map(getCheckoutPriceBreakdown);
+  const itemTotal = cartPriceBreakdown.reduce(
+    (sum, line) => sum + line.discountedTotal,
     0
   );
-  const selectedShippingMethod = shippingMethods.find(
+  const originalItemTotal = cartPriceBreakdown.reduce(
+    (sum, line) => sum + line.originalTotal,
+    0
+  );
+  const discountTotal = Math.max(0, originalItemTotal - itemTotal);
+  const selectedShippingMethod = availableShippingMethods.find(
     (method) => String(method.id) === String(selectedShippingMethodId)
   );
   const selectedShippingAmount = Number(selectedShippingMethod?.shipping_cost);
@@ -99,6 +170,17 @@ const Checkout = () => {
     !shippingCostLoading &&
     !shippingCostError;
   const total = itemTotal + (shippingCostIsCurrent ? shippingCostUsd : 0);
+  const summaryItems = completedOrder?.items || cartPriceBreakdown.map((line) => ({
+    ...line.item,
+    price: line.unitPrice
+  }));
+  const summaryItemSubtotal = completedOrder?.itemSubtotal ?? itemTotal;
+  const summaryDiscountTotal = completedOrder?.discountTotal ?? discountTotal;
+  const summaryOriginalItemSubtotal = summaryItemSubtotal + summaryDiscountTotal;
+  const summaryShippingMethod = completedOrder?.shippingMethod || selectedShippingMethod?.shipping_method;
+  const summaryShippingCost = completedOrder?.shippingCost ??
+    (shippingCostIsCurrent ? shippingCostUsd : 0);
+  const summaryTotal = completedOrder?.total ?? total;
 
   useEffect(() => {
     let isActive = true;
@@ -122,10 +204,13 @@ const Checkout = () => {
         );
         if (isActive) {
           setShippingMethods(activeMethods);
+          const countryMethods = activeMethods.filter(
+            (method) => normalizeCountry(method.country) === normalizeCountry("Sri Lanka")
+          );
           setSelectedShippingMethodId((currentId) =>
-            activeMethods.some((method) => String(method.id) === String(currentId))
+            countryMethods.some((method) => String(method.id) === String(currentId))
               ? currentId
-              : String(activeMethods[0]?.id || "")
+              : String(countryMethods[0]?.id || "")
           );
         }
       } catch (error) {
@@ -204,23 +289,34 @@ const Checkout = () => {
       return;
     }
 
-    const unavailableItem = cart.find(
-      (item) =>
-        (Number(item.quantity) || 1) >
-        (inventory[getCollectionItemKey(item)] ?? 0)
-    );
+    const user = (() => {
+      try { return JSON.parse(window.localStorage.getItem("ceylon-user") || "null"); }
+      catch { return null; }
+    })();
+    const getAvailableQuantity = (item) => {
+      const inventoryQuantity = inventory[getCollectionItemKey(item)];
+      if (inventoryQuantity !== undefined && Number.isFinite(Number(inventoryQuantity))) {
+        return Number(inventoryQuantity);
+      }
+
+      const productQuantity = Number(item.stockQuantity);
+      return Number.isFinite(productQuantity) ? productQuantity : 0;
+    };
+    const unavailableItem = user?.id
+      ? null
+      : cart.find((item) => {
+        return (Number(item.quantity) || 1) > getAvailableQuantity(item);
+      });
 
     if (unavailableItem) {
-      const availableQuantity =
-        inventory[getCollectionItemKey(unavailableItem)] ?? 0;
       setNotice(
-        `${unavailableItem.name} has only ${availableQuantity} available. Please update your cart.`
+        `${unavailableItem.name} has only ${getAvailableQuantity(unavailableItem)} available. Please update your cart.`
       );
       return;
     }
 
     const formData = new FormData(event.currentTarget);
-    const orderId = `CRG-${Date.now()}`;
+    let orderId = `CRG-${Date.now()}`;
     const orderDate = new Date().toISOString();
     const country = String(formData.get("country") || "");
     const shippingAddress = [
@@ -229,15 +325,127 @@ const Checkout = () => {
       formData.get("postal"),
       country
     ].filter(Boolean).join(", ");
+    let confirmedOrder = null;
+
+    if (user?.id) {
+      try {
+        const items = cart.map((item) => {
+          const itemType =
+            item.itemType ||
+            item.item_type ||
+            (item.rawId != null
+              ? "jewellery"
+              : item.inventoryId != null
+                ? "gemstone"
+                : null);
+          const productId = itemType === "jewellery"
+            ? item.rawId ?? (String(item.id).startsWith("db-")
+              ? String(item.id).slice(3)
+              : item.id)
+            : item.inventoryId ?? item.id;
+
+          return {
+            item_type: itemType,
+            product_id: Number(productId),
+            quantity: Number(item.quantity) || 1
+          };
+        });
+
+        if (items.some((item) =>
+          !["gemstone", "jewellery"].includes(item.item_type) ||
+          !Number.isSafeInteger(item.product_id) ||
+          item.product_id < 1
+        )) {
+          throw new Error("Your cart has an item that is not linked to database inventory. Remove it and add it again from the shop.");
+        }
+
+        const response = await apiPost("/api/checkout", {
+          currency: "USD",
+          shipping_address: shippingAddress,
+          shipping_method_id: Number(selectedShippingMethod.id),
+          items
+        });
+        let result;
+        try {
+          result = await response.json();
+        } catch {
+          throw new Error("The checkout service returned an invalid response.");
+        }
+        if (!response.ok || result?.success !== true) {
+          throw new Error(result?.message || "Unable to complete checkout.");
+        }
+
+        orderId = result.order_number || orderId;
+        confirmedOrder = result;
+      } catch (error) {
+        setNotice(error instanceof Error ? error.message : "Unable to complete checkout.");
+        return;
+      }
+    }
+
+    const confirmedItems = Array.isArray(confirmedOrder?.items)
+      ? confirmedOrder.items.map((item, index) => ({
+          ...cart[index],
+          ...item,
+          basePriceUSD:
+            cart[index]?.basePriceUSD ??
+            Number(cart[index]?.price ?? item.price ?? 0),
+          discountRate:
+            cart[index]?.discountRate ?? item.discountRate,
+          discountLabel:
+            cart[index]?.discountLabel ?? item.discountLabel,
+          offer_rate: cart[index]?.offer_rate ?? item.offer_rate,
+          offer_start_date:
+            cart[index]?.offer_start_date ?? item.offer_start_date,
+          offer_end_date:
+            cart[index]?.offer_end_date ?? item.offer_end_date
+        }))
+      : cartPriceBreakdown.map((line) => ({
+          ...line.item,
+          price: line.unitPrice
+        }));
+    const confirmedSubtotal = confirmedItems.reduce(
+      (sum, item) =>
+        sum + Number(item.price || 0) * (Number(item.quantity) || 1),
+      0
+    );
+    const confirmedDiscountTotal = Math.max(
+      0,
+      originalItemTotal - confirmedSubtotal
+    );
+    const confirmedTotal = confirmedOrder
+      ? Number(confirmedOrder.final_total)
+      : total;
+    const completedOrderSnapshot = {
+      id: orderId,
+      items: confirmedItems.map((item, index) => ({
+        ...item,
+        price: Number(item.price || 0),
+        name: item.name || item.product_name,
+        image: resolveMediaUrl(
+          item.image || item.image_url || item.imageUrl || cart[index]?.image
+        )
+      })),
+      itemSubtotal: confirmedSubtotal,
+      discountTotal: confirmedDiscountTotal,
+      originalItemSubtotal: confirmedSubtotal + confirmedDiscountTotal,
+      shippingCost: confirmedOrder
+        ? Number(confirmedOrder.shipping_cost)
+        : shippingCostUsd,
+      shippingMethod: selectedShippingMethod.shipping_method,
+      total: confirmedTotal
+    };
     const newOrder = {
       id: orderId,
       date: orderDate.slice(0, 10),
       status: "PROCESSING",
       statusColor: "status-dispatched",
       statusText: "Order received and being prepared",
-      paymentStatus: `PENDING (${formatPrice(total)})`,
-      totalAmount: total,
-      shippingCost: shippingCostUsd,
+      paymentStatus: `PENDING (${formatPrice(confirmedTotal)})`,
+      totalAmount: confirmedTotal,
+      shippingCost: confirmedOrder
+        ? Number(confirmedOrder.shipping_cost)
+        : shippingCostUsd,
       shippingMethod: selectedShippingMethod.shipping_method,
       trackingNumber: "Tracking details pending",
       estimatedDelivery: "To be confirmed",
@@ -245,15 +453,18 @@ const Checkout = () => {
       customerEmail: String(formData.get("email") || ""),
       customerPhone: String(formData.get("phone") || ""),
       shippingAddress,
-      items: cart.map((item) => ({
-        name: item.name,
-        carat: `${item.carat} Ct`,
+      items: confirmedItems.map((item, index) => ({
+        name: item.name || item.product_name,
+        carat: item.carat ? `${item.carat} Ct` : "Not provided",
         cut: item.cut || item.shape || "Not provided",
         origin: item.origin || "Ratnapura, Sri Lanka",
         certificateId: item.certificateNumber || "Certification pending",
         price: Number(item.price || 0),
-        image: item.image,
-        tag: item.tag || item.treatment || "CERTIFIED NATURAL"
+        currency: item.currency || "USD",
+        image: resolveMediaUrl(
+          item.image || item.image_url || item.imageUrl || cart[index]?.image
+        ),
+        tag: item.tag || item.treatment || item.item_type?.toUpperCase() || "ORDER ITEM"
       })),
       timeline: [
         { step: "Order Placed & Confirmed", date: orderDate, completed: true },
@@ -263,13 +474,11 @@ const Checkout = () => {
       ]
     };
 
-    // ── Save to localStorage (always, for offline/guest support) ──
-    let savedOrders;
     try {
       const currentUser = JSON.parse(window.localStorage.getItem("ceylon-user") || "null");
       const userEmail = currentUser?.email;
       const ordersKey = userEmail ? `ceylon-orders-${userEmail}` : "ceylon-orders";
-      savedOrders = JSON.parse(
+      const savedOrders = JSON.parse(
         window.localStorage.getItem(ordersKey) || "[]"
       );
       if (!Array.isArray(savedOrders)) {
@@ -281,28 +490,15 @@ const Checkout = () => {
       );
     } catch (error) {
       console.error("Unable to save the order for My Orders.", error);
-      setNotice("Your order could not be saved. Please try again.");
-      return;
-    }
-
-    // ── Also post to backend for logged-in customers ──
-    const user = (() => {
-      try { return JSON.parse(window.localStorage.getItem("ceylon-user") || "null"); }
-      catch { return null; }
-    })();
-    if (user?.id) {
-      try {
-        await apiPost("/api/orders", {
-          user_id: user.id,
-          order_number: orderId,
-          total_amount: itemTotal,
-          shipping_cost: shippingCostUsd,
-          currency: "USD",
-          shipping_address: shippingAddress,
-        });
-      } catch {
-        // Non-blocking: order was already saved to localStorage
+      setNotice(confirmedOrder
+        ? `Order ${orderId} was placed, but this browser could not save the local order view.`
+        : "Your order could not be saved. Please try again.");
+      if (confirmedOrder) {
+        orderSubmitted.current = true;
+        setCompletedOrder(completedOrderSnapshot);
+        setCart([]);
       }
+      return;
     }
 
     orderSubmitted.current = true;
@@ -319,8 +515,7 @@ const Checkout = () => {
       }, current)
     );
     setCart([]);
-    setPlacedOrderId(orderId);
-    setNotice(`Order ${orderId} placed successfully!`);
+    setCompletedOrder(completedOrderSnapshot);
   };
 
   const handleInquirySubmit = (event) => {
@@ -425,9 +620,25 @@ const Checkout = () => {
             <FaArrowLeft /> Continue shopping
           </a>
           <p className="checkout-eyebrow">SECURE CHECKOUT</p>
-          <h1>Shipping details</h1>
+          <h1>{completedOrder ? "Order confirmed" : "Shipping details"}</h1>
 
-          {cart.length === 0 ? (
+          {completedOrder ? (
+            <section className="checkout-success" role="status" aria-labelledby="checkout-success-title">
+              <FaCheckCircle className="checkout-success-icon" aria-hidden="true" />
+              <p className="checkout-success-eyebrow">A NEW TREASURE IS ON ITS WAY</p>
+              <h2 id="checkout-success-title">Thank you for your order</h2>
+              <p className="checkout-success-message">
+                Your order has been placed successfully. We’ll keep you updated as it is prepared.
+              </p>
+              <div className="checkout-success-order-id">
+                <span>ORDER ID</span>
+                <strong>{completedOrder.id}</strong>
+              </div>
+              <a className="checkout-success-action" href="/my-orders">
+                View My Orders
+              </a>
+            </section>
+          ) : cart.length === 0 ? (
             <div className="checkout-empty">
               <p>Your cart is empty.</p>
               <a href="/gemstones">Explore gemstones</a>
@@ -438,31 +649,53 @@ const Checkout = () => {
                 <label>Full name<input name="name" autoComplete="name" required /></label>
                 <label>Email address<input name="email" type="email" autoComplete="email" required /></label>
                 <label>Phone<input name="phone" type="tel" autoComplete="tel" required /></label>
-                <label>Country<input name="country" autoComplete="country-name" required defaultValue="Sri Lanka" /></label>
+                <label>
+                  Country
+                  <input
+                    name="country"
+                    autoComplete="country-name"
+                    value={shippingCountry}
+                    onChange={(event) => {
+                      const country = event.target.value;
+                      const countryMethods = shippingMethods.filter(
+                        (method) => normalizeCountry(method.country) === normalizeCountry(country)
+                      );
+                      setShippingCountry(country);
+                      setSelectedShippingMethodId(String(countryMethods[0]?.id || ""));
+                    }}
+                    required
+                  />
+                </label>
                 <label className="checkout-field-wide">
                   Shipping method
                   <select
                     name="shipping_method_id"
                     value={selectedShippingMethodId}
                     onChange={(event) => setSelectedShippingMethodId(event.target.value)}
-                    disabled={shippingMethodsLoading || shippingMethods.length === 0}
+                    disabled={shippingMethodsLoading || availableShippingMethods.length === 0}
                     required
                   >
                     <option value="">
-                      {shippingMethodsLoading ? "Loading shipping methods…" : "Select a shipping method"}
+                      {shippingMethodsLoading
+                        ? "Loading shipping methods…"
+                        : availableShippingMethods.length
+                          ? "Select a shipping method"
+                          : "No shipping methods for this country"}
                     </option>
-                    {shippingMethods.map((method) => (
+                    {availableShippingMethods.map((method) => (
                       <option key={method.id} value={method.id}>
-                        {method.shipping_method} — {method.country} — {method.free_shipping === true || Number(method.free_shipping) === 1
+                        {method.shipping_method} — {method.free_shipping === true || Number(method.free_shipping) === 1
                           ? "Free shipping"
                           : `${Number(method.shipping_cost).toLocaleString()} ${method.currency || "USD"}`}
-                        {method.estimated_days ? ` — ${method.estimated_days} days` : ""}
+                        {method.estimated_days
+                          ? ` (${formatEstimatedDays(method.estimated_days)})`
+                          : ""}
                       </option>
                     ))}
                   </select>
                   {shippingMethodsError && <span role="alert">{shippingMethodsError}</span>}
-                  {!shippingMethodsLoading && !shippingMethodsError && shippingMethods.length === 0 && (
-                    <span role="alert">No active shipping methods are available.</span>
+                  {!shippingMethodsLoading && !shippingMethodsError && availableShippingMethods.length === 0 && (
+                    <span role="alert">No active shipping methods are available for this country.</span>
                   )}
                   {shippingCostLoading && <span role="status">Calculating shipping cost…</span>}
                   {shippingCostError && <span role="alert">{shippingCostError}</span>}
@@ -484,47 +717,73 @@ const Checkout = () => {
               </button>
             </form>
           )}
-          {notice && (
+          {notice && !completedOrder && (
             <div className="checkout-notice" role="status">
               <p>{notice}</p>
-              {placedOrderId && showMyOrdersLink && (
-                <a href="/my-orders">View My Orders</a>
-              )}
             </div>
           )}
         </div>
 
         <aside className="checkout-summary">
-          <h2>Order summary</h2>
-          {cart.map((item) => (
+          <h2>{completedOrder ? "Your order" : "Order summary"}</h2>
+          {summaryItems.map((item) => (
             <div className="checkout-item" key={item.productKey || item.id || item.name}>
-              <img src={item.image} alt={item.name} />
+              <img
+                src={item.image || item.image_url || item.imageUrl
+                  ? resolveMediaUrl(item.image || item.image_url || item.imageUrl)
+                  : ""}
+                alt={item.name}
+              />
               <div>
                 <strong>{item.name}</strong>
                 <span>Qty {Number(item.quantity) || 1}</span>
               </div>
-              <b>{formatPrice(Number(item.price || 0) * (Number(item.quantity) || 1))}</b>
+              <ProductOfferPrice
+                item={item}
+                currency={displayCurrency}
+                quantity={Number(item.quantity) || 1}
+                displayPrice={Number(item.price || 0)}
+              />
             </div>
           ))}
           <div className="checkout-total">
             <span>Items subtotal</span>
-            <strong>{formatPrice(itemTotal)}</strong>
+            <strong>{formatSummaryPrice(
+              summaryDiscountTotal > 0
+                ? summaryOriginalItemSubtotal
+                : summaryItemSubtotal,
+              displayCurrency
+            )}</strong>
           </div>
+          {summaryDiscountTotal > 0 && (
+            <>
+              <div className="checkout-total checkout-discount-total">
+                <span>Discount</span>
+                <strong>−{formatSummaryPrice(summaryDiscountTotal, displayCurrency)}</strong>
+              </div>
+              <div className="checkout-total">
+                <span>Discounted items total</span>
+                <strong>{formatSummaryPrice(summaryItemSubtotal, displayCurrency)}</strong>
+              </div>
+            </>
+          )}
           <div className="checkout-total">
-            <span>Shipping{selectedShippingMethod ? ` · ${selectedShippingMethod.shipping_method}` : ""}</span>
+            <span>Shipping{summaryShippingMethod ? ` · ${summaryShippingMethod}` : ""}</span>
             <strong>
-              {shippingCostLoading
+              {!completedOrder && shippingCostLoading
                 ? "Calculating…"
-                : selectedShippingMethod
-                  ? formatPrice(shippingCostIsCurrent ? shippingCostUsd : 0)
+                : summaryShippingMethod
+                  ? formatSummaryPrice(summaryShippingCost, displayCurrency)
                   : "Select a method"}
             </strong>
           </div>
           <div className="checkout-total">
             <span>Total</span>
-            <strong>{formatPrice(total)}</strong>
+            <strong>{formatSummaryPrice(summaryTotal, displayCurrency)}</strong>
           </div>
-          <p className="checkout-secure"><FaLock /> Your details are kept private.</p>
+          {!completedOrder && (
+            <p className="checkout-secure"><FaLock /> Your details are kept private.</p>
+          )}
         </aside>
       </main>
 

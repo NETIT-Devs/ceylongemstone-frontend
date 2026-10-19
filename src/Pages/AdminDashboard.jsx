@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ShopNavDropdown from "../components/ShopNavDropdown.jsx";
 import BrandLogo from "../components/BrandLogo.jsx";
 import {
   FaGem,
+  FaCrown,
   FaShoppingBag,
   FaUsers,
   FaChartLine,
@@ -32,7 +33,8 @@ import {
   FaBan,
   FaEdit,
   FaSync,
-  FaPercent
+  FaPercent,
+  FaCalendarAlt
 } from "react-icons/fa";
 import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
 import CollectionDrawerPanel from "../components/CollectionDrawerPanel.jsx";
@@ -52,12 +54,11 @@ import { useGemSubmissions } from "../useGemSubmissions.js";
 import { useJewelleryProductOverrides } from "../useJewelleryProductOverrides.js";
 import { useJewellerySubmissions } from "../useJewellerySubmissions.js";
 import { prepareProductImage } from "../imageUpload.js";
-import { useHomeHeroSlides, useManagedBlogPosts } from "../useSiteContent.js";
+import { useManagedBlogPosts } from "../useSiteContent.js";
 import { TREATMENT_OPTIONS } from "../treatments.js";
 import { formatProductOfferEndDate, withActiveProductOffer } from "../productOffers.js";
 import {
   endAdminSession,
-  readAdminAccounts,
   readAdminSession,
   writeAdminAccounts
 } from "../adminAccess.js";
@@ -84,6 +85,51 @@ const readGemApiResponse = async (response, fallbackMessage) => {
 const isGemstoneActive = (status) =>
   status === true || Number(status) === 1;
 
+const toLocalDateInputValue = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const getDateRangeForPreset = (preset) => {
+  const today = new Date();
+  const endDate = toLocalDateInputValue(today);
+  if (preset === "today") {
+    return { startDate: endDate, endDate };
+  }
+
+  if (preset === "this-year") {
+    return {
+      startDate: toLocalDateInputValue(new Date(today.getFullYear(), 0, 1)),
+      endDate
+    };
+  }
+
+  return {
+    startDate: toLocalDateInputValue(new Date(today.getFullYear(), today.getMonth(), 1)),
+    endDate
+  };
+};
+
+const createShipmentForm = (order, existingShipment, shippingMethods) => {
+  const defaultDelivery = new Date();
+  defaultDelivery.setDate(defaultDelivery.getDate() + 5);
+  return {
+    courier: existingShipment?.courier || "DHL Express",
+    tracking_number:
+      existingShipment?.tracking_number ||
+      `CRG-${order.dbId || "TRK"}-${Date.now().toString().slice(-6)}`,
+    shipping_method_id:
+      existingShipment?.shipping_method_id || (shippingMethods[0]?.id || 2),
+    estimated_delivery: existingShipment?.estimated_delivery
+      ? String(existingShipment.estimated_delivery).slice(0, 10)
+      : defaultDelivery.toISOString().slice(0, 10),
+    status: existingShipment?.status ||
+      (order.status === "DELIVERED" ? "DELIVERED" : "SHIPPED")
+  };
+};
+
 const AdminDashboard = ({ isSuperAdmin = false }) => {
   const [wishlist, setWishlist] = useSharedCollection("ceylon-wishlist");
   const [cart, setCart] = useSharedCollection("ceylon-cart");
@@ -92,9 +138,18 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
 
   const [activeTab, setActiveTab] = useState("ORDERS");
   const [dashboardStats, setDashboardStats] = useState({
-    activeInventory: 0,
+    gemstoneInventory: 0,
+    jewelleryInventory: 0,
+    totalOrders: 0,
     shipmentsInTransit: 0
   });
+  const [dateRangePreset, setDateRangePreset] = useState("this-month");
+  const [dateRangeDraft, setDateRangeDraft] = useState(() =>
+    getDateRangeForPreset("this-month")
+  );
+  const [appliedDateRange, setAppliedDateRange] = useState(() =>
+    getDateRangeForPreset("this-month")
+  );
   const [adminOrders, setAdminOrders] = useState([]);
   const [backendGems, setBackendGems] = useState([]);
   const [backendCategories, setBackendCategories] = useState([]);
@@ -115,7 +170,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
   const [certificatesLoaded, setCertificatesLoaded] = useState(false);
   const [certificatesError, setCertificatesError] = useState("");
   const [gemSubmissions, setGemSubmissions] = useGemSubmissions();
-  const [gemProductOverrides, setGemProductOverrides] = useGemProductOverrides();
+  const [gemProductOverrides] = useGemProductOverrides();
   const [jewellerySubmissions, setJewellerySubmissions] = useJewellerySubmissions();
   const [jewelleryProductOverrides, setJewelleryProductOverrides] =
     useJewelleryProductOverrides();
@@ -145,7 +200,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     (gem) => !gem.approval_status || gem.approval_status === "approved"
   );
 
-  const [inventory, setInventory] = useGemInventory(products);
+  const [inventory] = useGemInventory(products);
   const [stockAdditions, setStockAdditions] = useState({});
   const [lowStockItems, setLowStockItems] = useState([]);
   const [lowStockLoading, setLowStockLoading] = useState(false);
@@ -157,11 +212,13 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewsError, setReviewsError] = useState("");
   const [deletingReviewId, setDeletingReviewId] = useState(null);
-  const [adminAccounts, setAdminAccounts] = useState(readAdminAccounts);
+  const [updatingReviewId, setUpdatingReviewId] = useState(null);
+  const [adminAccounts, setAdminAccounts] = useState([]);
+  const [adminAccountsLoading, setAdminAccountsLoading] = useState(false);
+  const [adminAccountsError, setAdminAccountsError] = useState("");
   const [newAdminAccount, setNewAdminAccount] = useState({
     name: "",
     email: "",
-    department: "Operations",
     phone: "",
     password: ""
   });
@@ -172,6 +229,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState("");
   const [backendShipments, setBackendShipments] = useState([]);
+  const backendShipmentsRef = useRef(backendShipments);
   const [shippingMethods, setShippingMethods] = useState([]);
   const [activeShipmentOrder, setActiveShipmentOrder] = useState(null);
   const [shipmentSaving, setShipmentSaving] = useState(false);
@@ -307,8 +365,36 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       ? ["active", "approved"].includes(String(item.status || "").toLowerCase())
       : !["pending", "rejected", "inactive", "draft"].includes(String(item.status || "").toLowerCase())
   );
+
+  const refreshDashboardStats = useCallback(async () => {
+    try {
+      const params = new URLSearchParams({
+        startDate: appliedDateRange.startDate,
+        endDate: appliedDateRange.endDate
+      });
+      const response = await apiGet(`/api/dashboard/stats?${params.toString()}`);
+      const data = await readGemApiResponse(response, "Unable to load dashboard statistics.");
+      if (!data.data || !Number.isFinite(Number(data.data.active_gemstones)) ||
+          !Number.isFinite(Number(data.data.active_jewellery)) ||
+          !Number.isFinite(Number(data.data.total_orders)) ||
+          !Number.isFinite(Number(data.data.shipments_in_transit))) {
+        throw new Error("The dashboard statistics service returned invalid data.");
+      }
+      setDashboardStats({
+        gemstoneInventory: Number(data.data.active_gemstones),
+        jewelleryInventory: Number(data.data.active_jewellery),
+        totalOrders: Number(data.data.total_orders),
+        shipmentsInTransit: Number(data.data.shipments_in_transit)
+      });
+      return true;
+    } catch (error) {
+      console.error("Unable to load dashboard statistics:", error);
+      return false;
+    }
+  }, [appliedDateRange.startDate, appliedDateRange.endDate]);
+
   // helper – re-fetch gems list
-  const refreshGems = async () => {
+  const refreshGems = useCallback(async () => {
     setGemsLoading(true);
     setGemstonesError("");
     try {
@@ -326,9 +412,9 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     } finally {
       setGemsLoading(false);
     }
-  };
+  }, [refreshDashboardStats]);
 
-  const refreshCategories = async () => {
+  const refreshCategories = useCallback(async () => {
     setCategoriesError("");
     try {
       const response = await apiGet("/api/categories");
@@ -342,9 +428,9 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       setCategoriesError(error instanceof Error ? error.message : "Unable to load gemstone categories.");
       return false;
     }
-  };
+  }, []);
 
-  const refreshGemApprovals = async () => {
+  const refreshGemApprovals = useCallback(async () => {
     setGemApprovalsLoading(true);
     setGemApprovalsError("");
     try {
@@ -361,9 +447,9 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     } finally {
       setGemApprovalsLoading(false);
     }
-  };
+  }, []);
 
-  const refreshJewelleryApprovals = async () => {
+  const refreshJewelleryApprovals = useCallback(async () => {
     setJewelleryApprovalsLoading(true);
     setJewelleryApprovalsError("");
     try {
@@ -380,9 +466,9 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     } finally {
       setJewelleryApprovalsLoading(false);
     }
-  };
+  }, []);
 
-  const refreshLowStock = async () => {
+  const refreshLowStock = useCallback(async () => {
     setLowStockLoading(true);
     setLowStockError("");
     try {
@@ -399,28 +485,42 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     } finally {
       setLowStockLoading(false);
     }
-  };
+  }, []);
 
-  const refreshDashboardStats = async () => {
-    try {
-      const response = await apiGet("/api/dashboard/stats");
-      const data = await readGemApiResponse(response, "Unable to load dashboard statistics.");
-      if (!data.data || !Number.isFinite(Number(data.data.active_inventory)) ||
-          !Number.isFinite(Number(data.data.shipments_in_transit))) {
-        throw new Error("The dashboard statistics service returned invalid data.");
-      }
-      setDashboardStats({
-        activeInventory: Number(data.data.active_inventory),
-        shipmentsInTransit: Number(data.data.shipments_in_transit)
-      });
-      return true;
-    } catch (error) {
-      console.error("Unable to load dashboard statistics:", error);
-      return false;
+  useEffect(() => {
+    let isCurrent = true;
+
+    Promise.resolve().then(() => {
+      if (isCurrent) refreshDashboardStats();
+    });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [refreshDashboardStats]);
+
+  const selectDateRangePreset = (preset) => {
+    setDateRangePreset(preset);
+    if (preset !== "custom") {
+      const range = getDateRangeForPreset(preset);
+      setDateRangeDraft(range);
+      setAppliedDateRange(range);
     }
   };
 
-  const refreshCertificates = async () => {
+  const applyCustomDateRange = (event) => {
+    event.preventDefault();
+    if (
+      dateRangeDraft.startDate &&
+      dateRangeDraft.endDate &&
+      dateRangeDraft.startDate <= dateRangeDraft.endDate
+    ) {
+      setDateRangePreset("custom");
+      setAppliedDateRange(dateRangeDraft);
+    }
+  };
+
+  const refreshCertificates = useCallback(async () => {
     setCertificatesError("");
     try {
       const response = await apiGet("/api/certificates");
@@ -443,10 +543,10 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       setCertificatesError(error instanceof Error ? error.message : "Unable to load gemstone certificates.");
       return false;
     }
-  };
+  }, []);
 
   // ─── Refresh backend jewellery list ──────────────────────────────────────────
-  const refreshJewellery = async () => {
+  const refreshJewellery = useCallback(async () => {
     setJewelleryLoading(true);
     setJewelleryError("");
     try {
@@ -462,13 +562,13 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     } finally {
       setJewelleryLoading(false);
     }
-  };
+  }, [refreshDashboardStats]);
 
-  const refreshReviews = async () => {
+  const refreshReviews = useCallback(async () => {
     setReviewsLoading(true);
     setReviewsError("");
     try {
-      const response = await apiGet("/api/reviews");
+      const response = await apiGet("/api/reviews/admin");
       const data = await readGemApiResponse(response, "Unable to load customer reviews.");
       if (!Array.isArray(data.data)) {
         throw new Error("The review service returned invalid review data.");
@@ -489,10 +589,51 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     } finally {
       setReviewsLoading(false);
     }
-  };
+  }, []);
+
+  const refreshAdminAccounts = useCallback(async () => {
+    if (!isSuperAdmin) return false;
+
+    setAdminAccountsLoading(true);
+    setAdminAccountsError("");
+    try {
+      const response = await apiGet("/api/auth/admin-users");
+      const data = await readGemApiResponse(response, "Unable to load database admin accounts.");
+      if (!Array.isArray(data.users)) {
+        throw new Error("The admin account service returned invalid data.");
+      }
+
+      const accounts = data.users.map((user) => ({
+        id: Number(user.id),
+        name: user.name,
+        email: user.email,
+        phone: user.phone || "",
+        role: String(user.role).toLowerCase() === "super_admin"
+          ? "super-admin"
+          : "admin",
+        status: Number(user.status) === 1 ? "active" : "inactive",
+        approvalStatus: user.approval_status,
+        createdAt: user.created_at,
+        source: "backend"
+      }));
+
+      setAdminAccounts(accounts);
+      writeAdminAccounts(accounts);
+      return true;
+    } catch (error) {
+      setAdminAccountsError(
+        error instanceof Error
+          ? error.message
+          : "Unable to load database admin accounts."
+      );
+      return false;
+    } finally {
+      setAdminAccountsLoading(false);
+    }
+  }, [isSuperAdmin]);
 
   // ─── Refresh Shipping Methods ───────────────────────────────────────────────
-  const refreshShippingMethods = async () => {
+  const refreshShippingMethods = useCallback(async () => {
     try {
       const response = await apiGet("/api/shipping");
       const data = await readGemApiResponse(response, "Unable to load shipping methods.");
@@ -503,14 +644,15 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     } catch {
       return false;
     }
-  };
+  }, []);
 
   // ─── Refresh Shipments ──────────────────────────────────────────────────────
-  const refreshShipments = async () => {
+  const refreshShipments = useCallback(async () => {
     try {
       const response = await apiGet("/api/shipping/shipments");
       const data = await readGemApiResponse(response, "Unable to load shipments.");
       if (Array.isArray(data.shipments)) {
+        backendShipmentsRef.current = data.shipments;
         setBackendShipments(data.shipments);
         return data.shipments;
       }
@@ -518,26 +660,31 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     } catch {
       return [];
     }
-  };
+  }, []);
 
   // ─── Refresh Backend Orders & Payments Ledger ───────────────────────────────
-  const refreshOrders = async () => {
+  const refreshOrders = useCallback(async () => {
     setOrdersLoading(true);
     setOrdersError("");
     try {
-      let shipments = backendShipments;
+      let shipments = backendShipmentsRef.current;
       try {
         const shipRes = await apiGet("/api/shipping/shipments");
         const shipData = await shipRes.json();
         if (shipData.success && Array.isArray(shipData.shipments)) {
           shipments = shipData.shipments;
+          backendShipmentsRef.current = shipments;
           setBackendShipments(shipments);
         }
       } catch {
         // Keep existing shipments
       }
 
-      const response = await apiGet("/api/orders");
+      const params = new URLSearchParams({
+        startDate: appliedDateRange.startDate,
+        endDate: appliedDateRange.endDate
+      });
+      const response = await apiGet(`/api/orders?${params.toString()}`);
       const data = await readGemApiResponse(response, "Unable to load orders.");
       if (!Array.isArray(data.data)) {
         throw new Error("The order service returned invalid order data.");
@@ -590,7 +737,11 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     } finally {
       setOrdersLoading(false);
     }
-  };
+  }, [
+    appliedDateRange.startDate,
+    appliedDateRange.endDate,
+    refreshDashboardStats
+  ]);
 
   useEffect(() => {
     Promise.resolve().then(() =>
@@ -600,21 +751,46 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
         refreshCertificates(),
         refreshJewellery(),
         refreshReviews(),
-        refreshOrders(),
         refreshShipments(),
         refreshShippingMethods(),
         refreshLowStock(),
         ...(isSuperAdmin
-          ? [refreshGemApprovals(), refreshJewelleryApprovals()]
+          ? [
+              refreshGemApprovals(),
+              refreshJewelleryApprovals()
+            ]
           : [])
       ])
     );
-  }, []);
+  }, [
+    isSuperAdmin,
+    refreshCategories,
+    refreshCertificates,
+    refreshGems,
+    refreshGemApprovals,
+    refreshJewellery,
+    refreshJewelleryApprovals,
+    refreshLowStock,
+    refreshReviews,
+    refreshShippingMethods,
+    refreshShipments
+  ]);
 
-  const [editingJewelleryId, setEditingJewelleryId] = useState(null);
-  const [managedHeroSlides, setManagedHeroSlides] = useHomeHeroSlides();
+  useEffect(() => {
+    Promise.resolve().then(() => refreshOrders());
+  }, [refreshOrders]);
+
+  useEffect(() => {
+    Promise.resolve().then(() => refreshAdminAccounts());
+  }, [refreshAdminAccounts]);
+
+  const [managedHeroSlides, setManagedHeroSlides] = useState([]);
+  const [heroSlidesLoading, setHeroSlidesLoading] = useState(false);
+  const [heroSlidesError, setHeroSlidesError] = useState("");
+  const [heroSlideSaving, setHeroSlideSaving] = useState(false);
   const [managedBlogPosts, setManagedBlogPosts] = useManagedBlogPosts();
   const [newHeroSlide, setNewHeroSlide] = useState({ alt: "", image: "" });
+  const [editingHeroSlideId, setEditingHeroSlideId] = useState(null);
   const [newBlogPost, setNewBlogPost] = useState({
     title: "",
     category: "Gemstone Guide",
@@ -622,6 +798,39 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     content: "",
     image: ""
   });
+  const [editingBlogPostId, setEditingBlogPostId] = useState(null);
+
+  const refreshHeroSlides = useCallback(async () => {
+    setHeroSlidesLoading(true);
+    setHeroSlidesError("");
+    try {
+      const response = await apiGet("/api/banners");
+      const data = await response.json();
+      if (!response.ok || data?.success !== true || !Array.isArray(data.banners)) {
+        throw new Error(data?.message || "Unable to load homepage hero slides.");
+      }
+      setManagedHeroSlides(data.banners
+        .filter((banner) => String(banner.media_type).toUpperCase() === "IMAGE")
+        .map((banner) => ({
+        id: banner.id,
+        alt: banner.title,
+        image: banner.media_url,
+        mediaType: banner.media_type,
+        sortOrder: Number(banner.sort_order) || 0,
+        status: Number(banner.status) === 1
+      })));
+    } catch (error) {
+      setHeroSlidesError(
+        error instanceof Error ? error.message : "Unable to load homepage hero slides."
+      );
+    } finally {
+      setHeroSlidesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    Promise.resolve().then(() => refreshHeroSlides());
+  }, [refreshHeroSlides]);
 
   const handleProductImageSelection = async (event, setForm) => {
     const input = event.currentTarget;
@@ -642,21 +851,87 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
   };
 
-  const handleAddHeroSlide = (event) => {
+  const handleAddHeroSlide = async (event) => {
     event.preventDefault();
     if (!newHeroSlide.alt.trim() || !newHeroSlide.image) {
       showCustomAlert("Add a slide title and choose an image.", "Complete the Hero Slide", "warning");
       return;
     }
 
-    const slide = {
-      id: `admin-hero-${Date.now()}`,
-      alt: newHeroSlide.alt.trim(),
-      image: newHeroSlide.image
-    };
-    setManagedHeroSlides((current) => [...current, slide]);
+    setHeroSlideSaving(true);
+    try {
+      let mediaUrl = newHeroSlide.image;
+      if (mediaUrl.startsWith("data:image/")) {
+        const imageBlob = await (await fetch(mediaUrl)).blob();
+        const uploadBody = new FormData();
+        uploadBody.append("media", imageBlob, "homepage-hero.jpg");
+        const uploadResponse = await apiRequest("/api/banners/upload", {
+          method: "POST",
+          body: uploadBody
+        });
+        let uploadResult;
+        try {
+          uploadResult = await uploadResponse.json();
+        } catch {
+          throw new Error("The banner upload service returned an invalid response.");
+        }
+        if (!uploadResponse.ok || uploadResult?.success !== true || !uploadResult.media_url) {
+          throw new Error(uploadResult?.message || "Unable to upload the hero slide image.");
+        }
+        mediaUrl = uploadResult.media_url;
+      }
+
+      const banner = managedHeroSlides.find((slide) => slide.id === editingHeroSlideId);
+      const payload = {
+        title: newHeroSlide.alt.trim(),
+        media_type: "IMAGE",
+        media_url: mediaUrl,
+        sort_order: banner?.sortOrder ?? managedHeroSlides.length,
+        status: banner?.status === false ? 0 : 1
+      };
+      const response = editingHeroSlideId
+        ? await apiPut(`/api/banners/${editingHeroSlideId}`, payload)
+        : await apiPost("/api/banners", payload);
+      let result;
+      try {
+        result = await response.json();
+      } catch {
+        throw new Error("The banner service returned an invalid response.");
+      }
+      if (!response.ok || result?.success !== true) {
+        throw new Error(result?.message || "Unable to save the hero slide.");
+      }
+
+      await refreshHeroSlides();
+      setEditingHeroSlideId(null);
+      setNewHeroSlide({ alt: "", image: "" });
+      showCustomAlert(
+        editingHeroSlideId
+          ? "The homepage hero slide has been updated."
+          : "The new homepage hero slide has been published.",
+        editingHeroSlideId ? "Hero Slide Updated" : "Hero Slide Published",
+        "success"
+      );
+    } catch (error) {
+      showCustomAlert(
+        error instanceof Error ? error.message : "Unable to save the hero slide.",
+        "Hero Slide Save Failed",
+        "warning"
+      );
+    } finally {
+      setHeroSlideSaving(false);
+    }
+  };
+
+  const handleEditHeroSlide = (slide) => {
+    setEditingHeroSlideId(slide.id);
+    setNewHeroSlide({ alt: slide.alt || "", image: slide.image || "" });
+    document.getElementById("hero-slide-title")?.focus();
+  };
+
+  const handleCancelHeroSlideEdit = () => {
+    setEditingHeroSlideId(null);
     setNewHeroSlide({ alt: "", image: "" });
-    showCustomAlert("The new homepage hero slide has been published.", "Hero Slide Published", "success");
   };
 
   const handleAddBlogPost = (event) => {
@@ -676,20 +951,25 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
 
     const post = {
-      id: `admin-blog-${Date.now()}`,
+      id: editingBlogPostId || `admin-blog-${Date.now()}`,
       title: newBlogPost.title.trim(),
       category: newBlogPost.category,
-      date: new Date().toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "long",
-        day: "numeric"
-      }),
+      date: editingBlogPostId
+        ? managedBlogPosts.find((item) => item.id === editingBlogPostId)?.date
+        : new Date().toLocaleDateString(undefined, {
+            year: "numeric",
+            month: "long",
+            day: "numeric"
+          }),
       readTime: `${Math.max(1, Math.ceil(paragraphs.join(" ").split(/\s+/).length / 200))} min read`,
       image: newBlogPost.image,
       excerpt: newBlogPost.excerpt.trim(),
       content: paragraphs
     };
-    setManagedBlogPosts((current) => [post, ...current]);
+    setManagedBlogPosts((current) => editingBlogPostId
+      ? current.map((item) => item.id === editingBlogPostId ? post : item)
+      : [post, ...current]);
+    setEditingBlogPostId(null);
     setNewBlogPost({
       title: "",
       category: "Gemstone Guide",
@@ -697,18 +977,81 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       content: "",
       image: ""
     });
-    showCustomAlert("The article has been published on the Blog page.", "Blog Post Published", "success");
+    showCustomAlert(
+      editingBlogPostId
+        ? "The article has been updated on the Blog page."
+        : "The article has been published on the Blog page.",
+      editingBlogPostId ? "Blog Post Updated" : "Blog Post Published",
+      "success"
+    );
+  };
+
+  const handleEditBlogPost = (post) => {
+    setEditingBlogPostId(post.id);
+    setNewBlogPost({
+      title: post.title || "",
+      category: post.category || "Gemstone Guide",
+      excerpt: post.excerpt || "",
+      content: Array.isArray(post.content)
+        ? post.content.join("\n\n")
+        : String(post.content || ""),
+      image: post.image || ""
+    });
+    document.getElementById("blog-post-title")?.focus();
+  };
+
+  const handleCancelBlogEdit = () => {
+    setEditingBlogPostId(null);
+    setNewBlogPost({
+      title: "",
+      category: "Gemstone Guide",
+      excerpt: "",
+      content: "",
+      image: ""
+    });
   };
 
   const handleRemoveSiteContent = (kind, id) => {
     const isHeroSlide = kind === "hero slide";
     showCustomConfirm(
       `Remove this ${kind} from the website?`,
-      () => {
+      async () => {
         if (isHeroSlide) {
-          setManagedHeroSlides((current) => current.filter((item) => item.id !== id));
+          try {
+            const response = await apiDelete(`/api/banners/${id}`);
+            let result;
+            try {
+              result = await response.json();
+            } catch {
+              throw new Error("The banner service returned an invalid response.");
+            }
+            if (!response.ok || result?.success !== true) {
+              throw new Error(result?.message || "Unable to delete the hero slide.");
+            }
+            await refreshHeroSlides();
+            if (String(editingHeroSlideId) === String(id)) {
+              setEditingHeroSlideId(null);
+              setNewHeroSlide({ alt: "", image: "" });
+            }
+          } catch (error) {
+            showCustomAlert(
+              error instanceof Error ? error.message : "Unable to delete the hero slide.",
+              "Hero Slide Delete Failed",
+              "warning"
+            );
+          }
         } else {
           setManagedBlogPosts((current) => current.filter((item) => item.id !== id));
+          if (editingBlogPostId === id) {
+            setEditingBlogPostId(null);
+            setNewBlogPost({
+              title: "",
+              category: "Gemstone Guide",
+              excerpt: "",
+              content: "",
+              image: ""
+            });
+          }
         }
       },
       `Remove ${isHeroSlide ? "Hero Slide" : "Blog Post"}`,
@@ -813,13 +1156,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
   const handleOpenShipmentModal = (order) => {
     const existingShipment = backendShipments.find((s) => Number(s.order_id) === Number(order.dbId));
     setActiveShipmentOrder(order);
-    setShipmentForm({
-      courier: existingShipment?.courier || "DHL Express",
-      tracking_number: existingShipment?.tracking_number || `CRG-${order.dbId || "TRK"}-${Date.now().toString().slice(-6)}`,
-      shipping_method_id: existingShipment?.shipping_method_id || (shippingMethods[0]?.id || 2),
-      estimated_delivery: existingShipment?.estimated_delivery ? String(existingShipment.estimated_delivery).slice(0, 10) : new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10),
-      status: existingShipment?.status || (order.status === "DELIVERED" ? "DELIVERED" : "SHIPPED")
-    });
+    setShipmentForm(createShipmentForm(order, existingShipment, shippingMethods));
   };
 
   const handleSaveShipment = async (e) => {
@@ -913,19 +1250,22 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
         id: data.user.id,
         name: data.user.name,
         email: data.user.email,
-        department: newAdminAccount.department || "Operations",
         phone: data.user.phone || "",
         role: "admin",
         status: Number(data.user.status) === 1 ? "active" : "inactive",
         source: "backend",
-        createdAt: new Date().toISOString()
+        createdAt: data.user.created_at || new Date().toISOString()
       };
-      const updatedAccounts = [...adminAccounts, account];
-      writeAdminAccounts(updatedAccounts);
-      setAdminAccounts(updatedAccounts);
-      setNewAdminAccount({ name: "", email: "", department: "Operations", phone: "", password: "" });
+      const refreshed = await refreshAdminAccounts();
+      setNewAdminAccount({ name: "", email: "", phone: "", password: "" });
       setIsAdminFormOpen(false);
-      showCustomAlert(`Administrator account for ${account.name} has been successfully created.`, "Account Created", "success");
+      showCustomAlert(
+        refreshed
+          ? `Administrator account for ${account.name} has been successfully created.`
+          : `Administrator account for ${account.name} was created, but the database account list could not be refreshed. Refresh the page to retry.`,
+        refreshed ? "Account Created" : "Account Created; Refresh Failed",
+        refreshed ? "success" : "warning"
+      );
     } catch (error) {
       showCustomAlert(
         error instanceof Error ? error.message : "Failed to create admin account.",
@@ -964,8 +1304,8 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       const updatedAccounts = adminAccounts.map((account) =>
         String(account.id) === String(accountId) ? { ...account, status } : account
       );
-      writeAdminAccounts(updatedAccounts);
       setAdminAccounts(updatedAccounts);
+      writeAdminAccounts(updatedAccounts);
       setSelectedAdminAccount((selected) =>
         String(selected?.id) === String(accountId)
           ? { ...selected, status }
@@ -1007,8 +1347,8 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
           const updatedAccounts = adminAccounts.filter(
             (item) => String(item.id) !== String(account.id)
           );
-          writeAdminAccounts(updatedAccounts);
           setAdminAccounts(updatedAccounts);
+          writeAdminAccounts(updatedAccounts);
           if (String(selectedAdminAccount?.id) === String(account.id)) {
             setSelectedAdminAccount(null);
           }
@@ -1052,6 +1392,28 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       "Delete Customer Review",
       "danger"
     );
+  };
+
+  const handleReviewStatus = async (review, status) => {
+    setUpdatingReviewId(review.id);
+    try {
+      const response = await apiPut(`/api/reviews/${review.id}/status`, { status });
+      await readGemApiResponse(response, "Failed to update customer review status.");
+      await refreshReviews();
+      showCustomAlert(
+        `Customer review ${status.toLowerCase()} successfully.`,
+        "Review Updated",
+        "success"
+      );
+    } catch (error) {
+      showCustomAlert(
+        error instanceof Error ? error.message : "Failed to update customer review status.",
+        "Review Update Failed",
+        "danger"
+      );
+    } finally {
+      setUpdatingReviewId(null);
+    }
   };
 
   const handleEditGem = (gem) => {
@@ -1402,7 +1764,6 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       is_handcrafted: true,
       status: "active"
     });
-    setEditingJewelleryId(null);
     setEditingDbJewelleryId(null);
     setJewelleryImageFile(null);
   };
@@ -1436,7 +1797,6 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       setJewelleryImageFile(null);
     } else {
       // legacy localStorage item
-      setEditingJewelleryId(item.id);
       setNewJewellery({
         product_name: item.name || "",
         jewellery_type: item.category || "Necklaces",
@@ -1835,17 +2195,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       (submission) => submission.status === "pending"
     )
   ];
-  const currentAdmin = readAdminSession() || (isSuperAdmin ? {
-    accountId: "admin-super-root",
-    name: "Super Administrator",
-    email: "superadmin@ceylonroyalgemstones.com",
-    role: "super-admin"
-  } : {
-    accountId: "admin-operations-01",
-    name: "Operations Admin",
-    email: "admin@ceylonroyalgemstones.com",
-    role: "admin"
-  });
+  const currentAdmin = readAdminSession();
   const visibleAdminAccounts = adminAccounts.filter((account) => {
     const matchesCurrentId =
       currentAdmin?.accountId != null &&
@@ -1967,22 +2317,131 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
             </div>
           </section>
 
+          <section className="admin-date-filter" aria-label="Dashboard date range filter">
+            <div className="admin-date-filter-heading">
+              <span className="reporting-period-label">
+                <FaCalendarAlt aria-hidden="true" />
+                REPORTING PERIOD
+              </span>
+              <strong>Filter order activity</strong>
+            </div>
+            <div className="admin-date-filter-content">
+              <div className="admin-date-presets" role="group" aria-label="Date range presets">
+                <button
+                  type="button"
+                  className={dateRangePreset === "today" ? "active" : ""}
+                  aria-pressed={dateRangePreset === "today"}
+                  onClick={() => selectDateRangePreset("today")}
+                >
+                  Today
+                </button>
+                <button
+                  type="button"
+                  className={dateRangePreset === "this-month" ? "active" : ""}
+                  aria-pressed={dateRangePreset === "this-month"}
+                  onClick={() => selectDateRangePreset("this-month")}
+                >
+                  This Month
+                </button>
+                <button
+                  type="button"
+                  className={dateRangePreset === "this-year" ? "active" : ""}
+                  aria-pressed={dateRangePreset === "this-year"}
+                  onClick={() => selectDateRangePreset("this-year")}
+                >
+                  This Year
+                </button>
+                <button
+                  type="button"
+                  className={dateRangePreset === "custom" ? "active" : ""}
+                  aria-pressed={dateRangePreset === "custom"}
+                  onClick={() => selectDateRangePreset("custom")}
+                >
+                  Custom Range
+                </button>
+              </div>
+              {dateRangePreset === "custom" && (
+                <form className="admin-date-range-form" onSubmit={applyCustomDateRange}>
+                  <label>
+                    <span>From</span>
+                    <input
+                      type="date"
+                      value={dateRangeDraft.startDate}
+                      max={dateRangeDraft.endDate || undefined}
+                      onChange={(event) => {
+                        setDateRangePreset("custom");
+                        setDateRangeDraft((range) => ({
+                          ...range,
+                          startDate: event.target.value
+                        }));
+                      }}
+                      aria-label="Start date"
+                    />
+                  </label>
+                  <span className="admin-date-range-separator" aria-hidden="true">—</span>
+                  <label>
+                    <span>To</span>
+                    <input
+                      type="date"
+                      value={dateRangeDraft.endDate}
+                      min={dateRangeDraft.startDate || undefined}
+                      onChange={(event) => {
+                        setDateRangePreset("custom");
+                        setDateRangeDraft((range) => ({
+                          ...range,
+                          endDate: event.target.value
+                        }));
+                      }}
+                      aria-label="End date"
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    className="admin-date-apply"
+                    disabled={
+                      !dateRangeDraft.startDate ||
+                      !dateRangeDraft.endDate ||
+                      dateRangeDraft.startDate > dateRangeDraft.endDate
+                    }
+                  >
+                    Apply
+                  </button>
+                </form>
+              )}
+            </div>
+          </section>
+
           {/* STATS OVERVIEW CARDS */}
-          <div className={`admin-stats-grid ${isSuperAdmin ? "admin-stats-5cols" : ""}`}>
+          <div className={`admin-stats-grid ${isSuperAdmin ? "admin-stats-6cols" : "admin-stats-5cols"}`}>
             <div className="admin-stat-card" style={{ cursor: "pointer" }} onClick={() => setActiveTab("ORDERS")}>
               <div className="stat-icon gold"><FaShoppingBag /></div>
               <div>
                 <span>Total Orders</span>
-                <strong>{adminOrders.length} Orders</strong>
+                <strong>{dashboardStats.totalOrders} Orders</strong>
               </div>
             </div>
-            <div className="admin-stat-card" style={{ cursor: "pointer" }} onClick={() => setActiveTab("GEMS")}>
+            <button
+              type="button"
+              className="admin-stat-card admin-stat-card-button"
+              onClick={() => setActiveTab("GEMS")}
+            >
               <div className="stat-icon green"><FaGem /></div>
               <div>
-                <span>Gemstones &amp; Jewellery</span>
-                <strong>{dashboardStats.activeInventory} Items</strong>
+                <span>Gemstones Inventory</span>
+                <strong>{dashboardStats.gemstoneInventory} Items</strong>
               </div>
-            </div>
+            </button>
+            <button
+              type="button"
+              className="admin-stat-card admin-stat-card-button"
+              onClick={() => setActiveTab("JEWELLERY")}
+            >
+              <div className="stat-icon purple"><FaCrown /></div>
+              <div>
+                <span>Jewellery Inventory</span>
+                <strong>{dashboardStats.jewelleryInventory} Items</strong>
+              </div>
+            </button>
             <div className="admin-stat-card">
               <div className="stat-icon blue"><FaTruck /></div>
               <div>
@@ -2068,7 +2527,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
               aria-pressed={activeTab === "JEWELLERY"}
               onClick={() => setActiveTab("JEWELLERY")}
             >
-              <FaGem /> Jewellery Management ({jewelleryList.length})
+              <FaCrown /> Jewellery Management ({jewelleryList.length})
             </button>
             <button
               type="button"
@@ -2359,7 +2818,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
               <div className="admin-section-heading">
                 <div>
                   <h2><FaStar /> Customer Reviews</h2>
-                  <p>Review customer submissions and remove content that should no longer appear publicly.</p>
+                  <p>Approve reviews to publish them on the storefront. Reject or unpublish reviews to hide them, or delete them permanently.</p>
                 </div>
                 <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                   <button
@@ -2407,15 +2866,38 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                         <td>{review.location || "Not provided"}</td>
                         <td>{review.createdAt ? new Date(review.createdAt).toLocaleDateString() : "Published"}</td>
                         <td>
-                          <button
-                            type="button"
-                            className="review-delete-btn"
-                            aria-label={`Delete review by ${review.name}`}
-                            disabled={deletingReviewId === review.id}
-                            onClick={() => handleDeleteReview(review)}
-                          >
-                            <FaTrash /> {deletingReviewId === review.id ? "Deleting…" : "Delete"}
-                          </button>
+                          <div className="review-admin-actions">
+                            {review.status !== "APPROVED" && (
+                              <button
+                                type="button"
+                                className="admin-action-btn review-approve-btn"
+                                disabled={updatingReviewId === review.id || deletingReviewId === review.id}
+                                onClick={() => handleReviewStatus(review, "APPROVED")}
+                              >
+                                <FaCheckCircle /> Approve
+                              </button>
+                            )}
+                            {review.status !== "REJECTED" && (
+                              <button
+                                type="button"
+                                className={`admin-action-btn ${review.status === "APPROVED" ? "review-unpublish-btn" : "review-reject-btn"}`}
+                                disabled={updatingReviewId === review.id || deletingReviewId === review.id}
+                                onClick={() => handleReviewStatus(review, "REJECTED")}
+                              >
+                                {review.status === "APPROVED" ? <FaBan /> : <FaTimes />}
+                                {review.status === "APPROVED" ? "Unpublish" : "Reject"}
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              className="review-delete-btn"
+                              aria-label={`Delete review by ${review.name}`}
+                              disabled={deletingReviewId === review.id || updatingReviewId === review.id}
+                              onClick={() => handleDeleteReview(review)}
+                            >
+                              <FaTrash /> {deletingReviewId === review.id ? "Deleting…" : "Delete"}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -2463,17 +2945,6 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                       <label><span>Admin name</span><input autoComplete="name" value={newAdminAccount.name} onChange={(event) => setNewAdminAccount((prev) => ({ ...prev, name: event.target.value }))} placeholder="e.g. Kasun Perera" required /></label>
                       <label><span>Email address</span><input type="email" autoComplete="email" value={newAdminAccount.email} onChange={(event) => setNewAdminAccount((prev) => ({ ...prev, email: event.target.value }))} placeholder="e.g. kasun@ceylonroyalgemstones.com" required /></label>
                       <label><span>Role</span><input value="Admin" readOnly /></label>
-                      <label>
-                        <span>Department</span>
-                        <select value={newAdminAccount.department} onChange={(event) => setNewAdminAccount((prev) => ({ ...prev, department: event.target.value }))}>
-                          <option>Operations</option>
-                          <option>Finance</option>
-                          <option>Certification</option>
-                          <option>Fulfilment</option>
-                          <option>Inventory</option>
-                          <option>Customer Support</option>
-                        </select>
-                      </label>
                       <label><span>Phone number</span><input type="tel" autoComplete="tel" value={newAdminAccount.phone} onChange={(event) => setNewAdminAccount((prev) => ({ ...prev, phone: event.target.value }))} placeholder="e.g. +94 71 234 5678" /></label>
                       <label className="admin-account-password-field"><span>Temporary password</span><input type="password" autoComplete="new-password" minLength={6} value={newAdminAccount.password} onChange={(event) => setNewAdminAccount((prev) => ({ ...prev, password: event.target.value }))} placeholder="Min 6 characters" required /></label>
                       <p className="admin-account-form-note">At least 6 characters. The password is hashed before it is stored.</p>
@@ -2496,7 +2967,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                       <tr key={account.id}>
                         <td><strong>{account.name}</strong></td>
                         <td>{account.email}</td>
-                        <td>{account.department || "Operations"}</td>
+                        <td>—</td>
                         <td>{account.phone || "Not provided"}</td>
                         <td>
                           <span className={`admin-role-pill ${account.role === "super-admin" ? "super-admin-pill" : ""}`}>
@@ -2518,7 +2989,13 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                         </td>
                       </tr>
                     ))}
-                    {visibleAdminAccounts.length === 0 && (
+                    {adminAccountsLoading && (
+                      <tr><td className="admin-empty-state" colSpan="8">Loading database admin accounts…</td></tr>
+                    )}
+                    {!adminAccountsLoading && adminAccountsError && (
+                      <tr><td className="admin-empty-state" colSpan="8">{adminAccountsError}</td></tr>
+                    )}
+                    {!adminAccountsLoading && !adminAccountsError && visibleAdminAccounts.length === 0 && (
                       <tr><td className="admin-empty-state" colSpan="8">No Admin accounts yet. Add an account above.</td></tr>
                     )}
                   </tbody>
@@ -2536,7 +3013,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                       <div><dt>Full Name</dt><dd>{selectedAdminAccount.name}</dd></div>
                       <div><dt>Email Address</dt><dd>{selectedAdminAccount.email}</dd></div>
                       <div><dt>Administrative Role</dt><dd><strong style={{ color: selectedAdminAccount.role === "super-admin" ? "#b58c36" : "#041d1a" }}>{selectedAdminAccount.role === "super-admin" ? "Super Admin" : "Admin"}</strong></dd></div>
-                      <div><dt>Department</dt><dd>{selectedAdminAccount.department || "Operations"}</dd></div>
+                      <div><dt>Department</dt><dd>—</dd></div>
                       <div><dt>Phone Contact</dt><dd>{selectedAdminAccount.phone || "Not provided"}</dd></div>
                       <div><dt>Account Status</dt><dd><span className={`account-status status-${selectedAdminAccount.status}`}>{selectedAdminAccount.status.toUpperCase()}</span></dd></div>
                       <div><dt>Date Created</dt><dd>{selectedAdminAccount.createdAt ? new Date(selectedAdminAccount.createdAt).toLocaleString() : "System Default"}</dd></div>
@@ -3887,68 +4364,156 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
               <div className="admin-section-heading">
                 <div>
                   <h2><FaUpload /> Homepage Hero Slides</h2>
-                  <p>Upload an image and title to add it to the homepage hero slideshow.</p>
+                  <p>Upload, edit, or remove database-backed images used in the homepage hero slideshow.</p>
                 </div>
-                <span className="admin-live-note">{managedHeroSlides.length} UPLOADED SLIDES</span>
+                <span className="admin-live-note">
+                  {heroSlidesLoading ? "LOADING SLIDES…" : `${managedHeroSlides.length} DATABASE SLIDES`}
+                </span>
               </div>
+              {heroSlidesError && (
+                <p className="admin-form-error" role="alert">{heroSlidesError}</p>
+              )}
               <div className="add-gem-card">
-                <form className="add-gem-form" onSubmit={handleAddHeroSlide}>
-                  <div className="form-group">
-                    <label htmlFor="hero-slide-title">Slide title / image description</label>
-                    <input
-                      id="hero-slide-title"
-                      value={newHeroSlide.alt}
-                      onChange={(event) => setNewHeroSlide((current) => ({
-                        ...current,
-                        alt: event.target.value
-                      }))}
-                      placeholder="e.g. Rare Ceylon Blue Sapphire"
-                      required
-                    />
+                <div className="blog-editor-heading">
+                  <div>
+                    <span>HOMEPAGE CONTENT</span>
+                    <h3>{editingHeroSlideId ? "Edit hero slide" : "Create a new hero slide"}</h3>
                   </div>
-                  <div className="form-group">
-                    <span className="admin-form-label">Hero slide image</span>
-                    <label className="admin-image-picker" htmlFor="hero-slide-image">
-                      <input
-                        id="hero-slide-image"
-                        className="admin-image-picker-input"
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        onChange={(event) => handleProductImageSelection(event, setNewHeroSlide)}
-                      />
-                      <span className="admin-image-picker-icon"><FaUpload /></span>
-                      <span className="admin-image-picker-copy">
-                        <strong>{newHeroSlide.image ? "Image selected" : "Choose a slide image"}</strong>
-                        <small>Browse files on this device</small>
-                      </span>
-                      <span className="admin-image-picker-action">Browse files</span>
-                    </label>
-                    <span className="admin-image-help">JPEG, PNG, or WebP · up to 10 MB.</span>
-                  </div>
-                  <div className="add-gem-form-actions">
-                    <button type="submit" className="add-gem-submit-btn">
-                      <FaUpload /> PUBLISH HERO SLIDE
+                  {editingHeroSlideId && (
+                    <button
+                      type="button"
+                      className="blog-cancel-edit-btn"
+                      onClick={handleCancelHeroSlideEdit}
+                      disabled={heroSlideSaving}
+                    >
+                      <FaTimes /> Cancel editing
                     </button>
+                  )}
+                </div>
+                <form className="blog-editor-form hero-slide-editor-form" onSubmit={handleAddHeroSlide}>
+                  <div className="blog-editor-main">
+                    <div className="form-group">
+                      <label htmlFor="hero-slide-title">Slide title / image description</label>
+                      <input
+                        id="hero-slide-title"
+                        value={newHeroSlide.alt}
+                        onChange={(event) => setNewHeroSlide((current) => ({
+                          ...current,
+                          alt: event.target.value
+                        }))}
+                        placeholder="e.g. Rare Ceylon Blue Sapphire"
+                        required
+                      />
+                    </div>
+                    <div className="hero-slide-editor-note">
+                      <FaCheckCircle />
+                      <span>Use a concise, descriptive title to provide accessible image text.</span>
+                    </div>
                   </div>
+                  <aside className="blog-editor-sidebar">
+                    <div className="form-group">
+                      <span className="admin-form-label">Hero slide image</span>
+                      <label
+                        className={`blog-cover-dropzone hero-slide-dropzone ${newHeroSlide.image ? "has-image" : ""}`}
+                        htmlFor="hero-slide-image"
+                        onDragOver={(event) => event.preventDefault()}
+                        onDrop={(event) => {
+                          event.preventDefault();
+                          const file = event.dataTransfer.files?.[0];
+                          if (!file) return;
+                          const dataTransfer = new DataTransfer();
+                          dataTransfer.items.add(file);
+                          const input = document.getElementById("hero-slide-image");
+                          input.files = dataTransfer.files;
+                          handleProductImageSelection({ currentTarget: input }, setNewHeroSlide);
+                        }}
+                      >
+                        <input
+                          id="hero-slide-image"
+                          className="admin-image-picker-input"
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          onChange={(event) => handleProductImageSelection(event, setNewHeroSlide)}
+                        />
+                        {newHeroSlide.image ? (
+                          <img
+                            className="blog-cover-preview"
+                            src={resolveMediaUrl(newHeroSlide.image)}
+                            alt="Selected hero slide preview"
+                          />
+                        ) : (
+                          <span className="blog-cover-empty">
+                            <span className="blog-cover-upload-icon"><FaUpload /></span>
+                            <strong>Drop your slide image here</strong>
+                            <small>or click to browse your device</small>
+                            <span className="blog-cover-format">JPEG · PNG · WEBP</span>
+                          </span>
+                        )}
+                      </label>
+                      <span className="admin-image-help">Choose a high-quality landscape image · up to 10 MB.</span>
+                    </div>
+                    <div className="blog-editor-publish">
+                      <button
+                        type="submit"
+                        className="add-gem-submit-btn blog-submit-btn"
+                        disabled={heroSlideSaving}
+                      >
+                        {heroSlideSaving
+                          ? "SAVING SLIDE…"
+                          : editingHeroSlideId
+                            ? <><FaCheckCircle /> SAVE SLIDE CHANGES</>
+                            : <><FaUpload /> PUBLISH HERO SLIDE</>}
+                      </button>
+                      <span>
+                        {editingHeroSlideId
+                          ? "Your changes will update the homepage slideshow."
+                          : "The slide will be added to the homepage slideshow."}
+                      </span>
+                    </div>
+                  </aside>
                 </form>
               </div>
               <div className="site-content-list">
+                {heroSlidesLoading && (
+                  <p className="admin-empty-state" role="status">Loading hero slides from the database…</p>
+                )}
                 {managedHeroSlides.map((slide) => (
-                  <article className="site-content-row" key={slide.id}>
-                    <div className="site-content-row-info">
-                      <strong>{slide.alt}</strong>
-                      <span>Homepage hero slide</span>
+                  <article className="blog-admin-card hero-admin-card" key={slide.id}>
+                    <img
+                      className="blog-admin-card-image"
+                      src={resolveMediaUrl(slide.image)}
+                      alt=""
+                      onError={(event) => {
+                        event.currentTarget.style.visibility = "hidden";
+                      }}
+                    />
+                    <div className="blog-admin-card-content">
+                      <div className="blog-admin-card-meta">
+                        <span>Homepage hero slide</span>
+                      </div>
+                      <h3>{slide.alt}</h3>
                     </div>
-                    <button
-                      type="button"
-                      className="gem-delete-btn"
-                      onClick={() => handleRemoveSiteContent("hero slide", slide.id)}
-                    >
-                      <FaTrash /> Remove
-                    </button>
+                    <div className="blog-admin-card-actions">
+                      <button
+                        type="button"
+                        className="blog-edit-btn"
+                        onClick={() => handleEditHeroSlide(slide)}
+                        aria-label={`Edit ${slide.alt}`}
+                      >
+                        <FaEdit /> Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="blog-delete-btn"
+                        onClick={() => handleRemoveSiteContent("hero slide", slide.id)}
+                        aria-label={`Delete ${slide.alt}`}
+                      >
+                        <FaTrash /> Delete
+                      </button>
+                    </div>
                   </article>
                 ))}
-                {managedHeroSlides.length === 0 && (
+                {!heroSlidesLoading && !heroSlidesError && managedHeroSlides.length === 0 && (
                   <p className="admin-empty-state">No additional hero slides have been uploaded.</p>
                 )}
               </div>
@@ -3965,104 +4530,172 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                 <span className="admin-live-note">{managedBlogPosts.length} PUBLISHED ARTICLES</span>
               </div>
               <div className="add-gem-card">
-                <form className="add-gem-form" onSubmit={handleAddBlogPost}>
-                  <div className="form-group">
-                    <label htmlFor="blog-post-title">Article title</label>
-                    <input
-                      id="blog-post-title"
-                      value={newBlogPost.title}
-                      onChange={(event) => setNewBlogPost((current) => ({
-                        ...current,
-                        title: event.target.value
-                      }))}
-                      placeholder="Enter an article title"
-                      required
-                    />
+                <div className="blog-editor-heading">
+                  <div>
+                    <span>{editingBlogPostId ? "EDIT ARTICLE" : "ARTICLE EDITOR"}</span>
+                    <h3>{editingBlogPostId ? "Refine your story" : "Create a new story"}</h3>
                   </div>
-                  <div className="form-group">
-                    <label htmlFor="blog-post-category">Category</label>
-                    <select
-                      id="blog-post-category"
-                      value={newBlogPost.category}
-                      onChange={(event) => setNewBlogPost((current) => ({
-                        ...current,
-                        category: event.target.value
-                      }))}
+                  {editingBlogPostId && (
+                    <button
+                      type="button"
+                      className="blog-cancel-edit-btn"
+                      onClick={handleCancelBlogEdit}
                     >
-                      <option>Gemstone Guide</option>
-                      <option>Gemstone Article</option>
-                      <option>Jewellery</option>
-                      <option>Company News</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <span className="admin-form-label">Article cover image</span>
-                    <label className="admin-image-picker" htmlFor="blog-post-image">
-                      <input
-                        id="blog-post-image"
-                        className="admin-image-picker-input"
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        onChange={(event) => handleProductImageSelection(event, setNewBlogPost)}
-                      />
-                      <span className="admin-image-picker-icon"><FaUpload /></span>
-                      <span className="admin-image-picker-copy">
-                        <strong>{newBlogPost.image ? "Image selected" : "Choose a cover image"}</strong>
-                        <small>Browse files on this device</small>
-                      </span>
-                      <span className="admin-image-picker-action">Browse files</span>
-                    </label>
-                    <span className="admin-image-help">JPEG, PNG, or WebP · up to 10 MB.</span>
-                  </div>
-                  <div className="form-group site-content-wide-field">
-                    <label htmlFor="blog-post-excerpt">Short summary</label>
-                    <textarea
-                      id="blog-post-excerpt"
-                      value={newBlogPost.excerpt}
-                      onChange={(event) => setNewBlogPost((current) => ({
-                        ...current,
-                        excerpt: event.target.value
-                      }))}
-                      rows="3"
-                      placeholder="A short introduction shown on the Blog page"
-                      required
-                    />
-                  </div>
-                  <div className="form-group site-content-wide-field">
-                    <label htmlFor="blog-post-content">Article content</label>
-                    <textarea
-                      id="blog-post-content"
-                      value={newBlogPost.content}
-                      onChange={(event) => setNewBlogPost((current) => ({
-                        ...current,
-                        content: event.target.value
-                      }))}
-                      rows="8"
-                      placeholder="Write the article here. Separate paragraphs with a blank line."
-                      required
-                    />
-                  </div>
-                  <div className="add-gem-form-actions">
-                    <button type="submit" className="add-gem-submit-btn">
-                      <FaPlus /> PUBLISH BLOG POST
+                      <FaTimes /> Cancel editing
                     </button>
+                  )}
+                </div>
+                <form className="blog-editor-form" onSubmit={handleAddBlogPost}>
+                  <div className="blog-editor-main">
+                    <div className="blog-editor-title-row">
+                      <div className="form-group">
+                        <label htmlFor="blog-post-title">Article title</label>
+                        <input
+                          id="blog-post-title"
+                          value={newBlogPost.title}
+                          onChange={(event) => setNewBlogPost((current) => ({
+                            ...current,
+                            title: event.target.value
+                          }))}
+                          placeholder="Enter an article title"
+                          required
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="blog-post-category">Category</label>
+                        <select
+                          id="blog-post-category"
+                          value={newBlogPost.category}
+                          onChange={(event) => setNewBlogPost((current) => ({
+                            ...current,
+                            category: event.target.value
+                          }))}
+                        >
+                          <option>Gemstone Guide</option>
+                          <option>Gemstone Article</option>
+                          <option>Jewellery</option>
+                          <option>Company News</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="blog-post-excerpt">Short summary</label>
+                      <textarea
+                        id="blog-post-excerpt"
+                        value={newBlogPost.excerpt}
+                        onChange={(event) => setNewBlogPost((current) => ({
+                          ...current,
+                          excerpt: event.target.value
+                        }))}
+                        rows="3"
+                        placeholder="A short introduction shown on the Blog page"
+                        required
+                      />
+                    </div>
+                    <div className="form-group blog-content-field">
+                      <label htmlFor="blog-post-content">Article content</label>
+                      <textarea
+                        id="blog-post-content"
+                        value={newBlogPost.content}
+                        onChange={(event) => setNewBlogPost((current) => ({
+                          ...current,
+                          content: event.target.value
+                        }))}
+                        rows="8"
+                        placeholder="Write the article here. Separate paragraphs with a blank line."
+                        required
+                      />
+                    </div>
                   </div>
+                  <aside className="blog-editor-sidebar">
+                    <div className="form-group">
+                      <span className="admin-form-label">Article cover image</span>
+                      <label
+                        className={`blog-cover-dropzone ${newBlogPost.image ? "has-image" : ""}`}
+                        htmlFor="blog-post-image"
+                        onDragOver={(event) => event.preventDefault()}
+                        onDrop={(event) => {
+                          event.preventDefault();
+                          const file = event.dataTransfer.files?.[0];
+                          if (!file) return;
+                          const dataTransfer = new DataTransfer();
+                          dataTransfer.items.add(file);
+                          const input = document.getElementById("blog-post-image");
+                          input.files = dataTransfer.files;
+                          handleProductImageSelection({ currentTarget: input }, setNewBlogPost);
+                        }}
+                      >
+                        <input
+                          id="blog-post-image"
+                          className="admin-image-picker-input"
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          onChange={(event) => handleProductImageSelection(event, setNewBlogPost)}
+                        />
+                        {newBlogPost.image ? (
+                          <img
+                            className="blog-cover-preview"
+                            src={resolveMediaUrl(newBlogPost.image)}
+                            alt="Selected article cover preview"
+                          />
+                        ) : (
+                          <span className="blog-cover-empty">
+                            <span className="blog-cover-upload-icon"><FaUpload /></span>
+                            <strong>Drop your cover image here</strong>
+                            <small>or click to browse your device</small>
+                            <span className="blog-cover-format">JPEG · PNG · WEBP</span>
+                          </span>
+                        )}
+                      </label>
+                      <span className="admin-image-help">Recommended landscape image · up to 10 MB.</span>
+                    </div>
+                    <div className="blog-editor-publish">
+                      <button type="submit" className="add-gem-submit-btn blog-submit-btn">
+                        {editingBlogPostId ? <FaCheckCircle /> : <FaPlus />}
+                        {editingBlogPostId ? "SAVE ARTICLE CHANGES" : "PUBLISH BLOG POST"}
+                      </button>
+                      <span>Your article will appear on the public Blog page.</span>
+                    </div>
+                  </aside>
                 </form>
               </div>
               <div className="site-content-list">
                 {managedBlogPosts.map((post) => (
-                  <article className="site-content-row" key={post.id}>
-                    <div className="site-content-row-info">
-                      <strong>{post.title}</strong>
-                      <span>{post.category} · {post.date}</span>
+                  <article className="blog-admin-card" key={post.id}>
+                    <img
+                      className="blog-admin-card-image"
+                      src={resolveMediaUrl(post.image)}
+                      alt=""
+                      onError={(event) => {
+                        event.currentTarget.style.visibility = "hidden";
+                      }}
+                    />
+                    <div className="blog-admin-card-content">
+                      <div className="blog-admin-card-meta">
+                        <span>{post.category}</span>
+                        <span>{post.date || "Recently published"}</span>
+                      </div>
+                      <h3>{post.title}</h3>
+                      <p>{post.excerpt}</p>
                     </div>
-                    <button
-                      type="button"
-                      className="gem-delete-btn"
-                      onClick={() => handleRemoveSiteContent("blog post", post.id)}
-                    >
-                      <FaTrash /> Remove
-                    </button>
+                    <div className="blog-admin-card-actions">
+                      <button
+                        type="button"
+                        className="blog-edit-btn"
+                        onClick={() => handleEditBlogPost(post)}
+                        aria-label={`Edit ${post.title}`}
+                      >
+                        <FaEdit /> Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="blog-delete-btn"
+                        onClick={() => handleRemoveSiteContent("blog post", post.id)}
+                        aria-label={`Delete ${post.title}`}
+                      >
+                        <FaTrash /> Delete
+                      </button>
+                    </div>
                   </article>
                 ))}
                 {managedBlogPosts.length === 0 && (

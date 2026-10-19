@@ -114,6 +114,89 @@
   font-weight: 700;
 }
 
+.checkout-success {
+  padding: 34px;
+  border: 1px solid rgba(189, 152, 69, 0.55);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(249, 247, 239, 0.96));
+  box-shadow: 0 16px 40px rgba(16, 45, 50, 0.08);
+  text-align: center;
+}
+
+.checkout-success-icon {
+  width: 42px;
+  height: 42px;
+  color: #a17c2e;
+}
+
+.checkout-success-eyebrow {
+  margin: 18px 0 8px;
+  color: #a17c2e;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.checkout-success h2 {
+  margin: 0;
+  color: #102d32;
+  font: 500 23px "Cinzel", serif;
+}
+
+.checkout-success-message {
+  max-width: 370px;
+  margin: 12px auto 22px;
+  color: #647572;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.checkout-success-order-id {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid #e6dfca;
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.checkout-success-order-id span {
+  color: #78847d;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+
+.checkout-success-order-id strong {
+  color: #102d32;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  overflow-wrap: anywhere;
+}
+
+.checkout-success-action {
+  display: inline-flex;
+  min-height: 44px;
+  margin-top: 20px;
+  padding: 0 22px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #bd9845;
+  background: #bd9845;
+  color: #102d32;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.checkout-success-action:hover,
+.checkout-success-action:focus-visible {
+  background: #102d32;
+  color: #e3c77c;
+}
+
 .checkout-summary {
   padding: 25px;
   border: 1px solid #dce1dc;
@@ -166,6 +249,14 @@
   justify-content: space-between;
   padding-top: 19px;
   font-size: 13px;
+}
+
+.checkout-discount-total {
+  color: #537b5d;
+}
+
+.checkout-discount-total strong {
+  font-weight: 700;
 }
 
 .checkout-secure {

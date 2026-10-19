@@ -39,6 +39,14 @@
   color: #C9A24B;
 }
 
+.collection-drawer-actions > button:disabled,
+.collection-drawer-actions > button:disabled:hover {
+  border-color: #cbd5e1;
+  background: #e2e8f0;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
 .about-drawer,
 .gem-drawer,
 .detail-cart-panel {

@@ -27,6 +27,7 @@ import "./GemstoneDetail.css";
 import "./About.css";
 import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
 import CollectionDrawerActions from "../components/CollectionDrawerActions.jsx";
+import ProductOfferPrice from "../components/ProductOfferPrice.jsx";
 import CollectionDrawerPanel from "../components/CollectionDrawerPanel.jsx";
 import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
 import CustomerOrdersNavLink from "../components/CustomerOrdersNavLink.jsx";
@@ -201,7 +202,7 @@ function Juwellery() {
     } catch { /* URL parsing unsupported */ }
     return "All Jewellery";
   });
-  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSelection, setPageSelection] = useState({ filterKey: "", page: 1 });
 
   const [searchTerm, setSearchTerm] = useState(() => {
     try {
@@ -397,21 +398,27 @@ function Juwellery() {
   ]);
 
   const pageCount = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
+  const pageFilterKey = JSON.stringify([
+    selectedCategory,
+    searchTerm,
+    selectedColor,
+    minPrice,
+    maxPrice
+  ]);
+  const currentPage = Math.min(
+    pageSelection.filterKey === pageFilterKey ? pageSelection.page : 1,
+    Math.max(pageCount, 1)
+  );
   const paginatedProducts = filteredProducts.slice(
     (currentPage - 1) * PRODUCTS_PER_PAGE,
     currentPage * PRODUCTS_PER_PAGE
   );
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedCategory, searchTerm, selectedColor, minPrice, maxPrice]);
-
-  useEffect(() => {
-    setCurrentPage((page) => Math.min(page, Math.max(pageCount, 1)));
-  }, [pageCount]);
-
   const goToPage = (page) => {
-    setCurrentPage(page);
+    setPageSelection({
+      filterKey: pageFilterKey,
+      page: Math.min(Math.max(page, 1), Math.max(pageCount, 1))
+    });
     document.getElementById("gem-product-results")?.scrollIntoView({
       behavior: "smooth",
       block: "start"
@@ -1666,7 +1673,7 @@ function Juwellery() {
                         {item.category} • {item.color}
                       </p>
 
-                      <strong>{formatCurrencyPrice(item.price, currency)}</strong>
+                      <ProductOfferPrice item={item} currency={currency} />
                       <p className="drawer-item-quantity">Qty {Number(item.quantity) || 1}</p>
 
                     </div>

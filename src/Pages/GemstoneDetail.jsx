@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { apiPost, resolveMediaUrl } from '../services/api.js';
 import ShopNavDropdown from "../components/ShopNavDropdown.jsx";
 import BrandLogo from "../components/BrandLogo.jsx";
@@ -121,12 +121,6 @@ const GemstoneDetail = ({ gem }) => {
   const [rotationIndex, setRotationIndex] = useState(0);
   const [zoomLevel, setZoomLevel] = useState(1);
   const dragStartX = useRef(null);
-
-  useEffect(() => {
-    setActiveMedia({ type: 'image', url: firstImageUrl });
-    setIs360Mode(false);
-    setZoomLevel(1);
-  }, [firstImageUrl, gem?.id]);
 
   const handleRotationPointerDown = (event) => {
     if (!is360Mode || !hasRotationFrames) return;
@@ -535,7 +529,9 @@ const GemstoneDetail = ({ gem }) => {
         <div className="luxury-info">
           <div className="header-meta">
             <span className="sku-badge">REF. #{gem.id || 'CRG-8801'}</span>
-            <span className="status-pill">AVAILABLE</span>
+            <span className={`status-pill ${gemInStock ? 'in-stock' : 'out-of-stock'}`}>
+              {gemInStock ? 'AVAILABLE' : 'OUT OF STOCK'}
+            </span>
           </div>
 
           <h1 className="gem-heading">{gem.name || gem.title}</h1>

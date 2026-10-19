@@ -35,6 +35,8 @@ import { persistCustomerCartItem, useCustomerCart } from "../services/customerCa
 
 const JewelleryDetail = ({ gem }) => {
   const [currency] = useState(getCurrentCurrency);
+  const stockQuantity = Number(gem?.stockQuantity ?? gem?.stock_quantity ?? gem?.stock);
+  const isInStock = Number.isSafeInteger(stockQuantity) && stockQuantity > 0;
   const viewLabels = ['Front', 'Back', 'Right', 'Left'];
   const rawGalleryViews = Array.isArray(gem?.galleryViews) && gem.galleryViews.length > 0
     ? gem.galleryViews
@@ -117,6 +119,8 @@ const JewelleryDetail = ({ gem }) => {
   );
 
   const addProductToCart = async (product) => {
+    if (!isInStock) return;
+
     const productKey = getCollectionItemKey(product);
     const cartItem = cart.find((item) => getCollectionItemKey(item) === productKey);
 
@@ -154,6 +158,8 @@ const JewelleryDetail = ({ gem }) => {
   };
 
   const addGemToCart = async () => {
+    if (!isInStock) return;
+
     await addProductToCart(gem);
     setAddedToCart(true);
     setActiveDrawer('cart');
@@ -442,7 +448,9 @@ const JewelleryDetail = ({ gem }) => {
         <div className="luxury-info">
           <div className="header-meta">
             <span className="sku-badge">REF. #{gem.id || 'CRJ-8801'}</span>
-            <span className="status-pill">AVAILABLE</span>
+            <span className={`status-pill ${isInStock ? 'in-stock' : 'out-of-stock'}`}>
+              {isInStock ? 'AVAILABLE' : 'OUT OF STOCK'}
+            </span>
           </div>
 
           <h1 className="gem-heading">{gem.name || gem.title}</h1>
@@ -493,12 +501,13 @@ const JewelleryDetail = ({ gem }) => {
           <div className="cta-button-group">
             <button
               type="button"
-              className="gold-btn"
+              className={`gold-btn ${isInStock ? '' : 'out-of-stock'}`}
+              disabled={!isInStock}
               onClick={addedToCart
                 ? () => setActiveDrawer('cart')
                 : addGemToCart}
             >
-              <FaShoppingBag /> {addedToCart ? 'VIEW CART' : 'ADD TO CART'}
+              <FaShoppingBag /> {isInStock ? (addedToCart ? 'VIEW CART' : 'ADD TO CART') : 'OUT OF STOCK'}
             </button>
             <button
               type="button"

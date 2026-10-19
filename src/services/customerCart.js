@@ -7,6 +7,8 @@ import {
   resolveMediaUrl
 } from "./api.js";
 import { getCollectionItemKey } from "../useSharedCollection.js";
+import { currencyRates } from "../currency.js";
+import { getProductOfferPricing } from "../productOffers.js";
 
 const getCustomerId = () => {
   try {
@@ -35,6 +37,14 @@ const readResponse = async (response, fallbackMessage) => {
 const mapCustomerCartItem = (item) => {
   const isJewellery = item.item_type === "jewellery" || item.jewellery_id != null;
   const productId = isJewellery ? item.jewellery_id : item.gemstone_id;
+  const sourceCurrency = String(item.currency || "USD").toUpperCase();
+  const sourceRate = currencyRates[sourceCurrency]?.rate || 1;
+  const originalPriceUSD = Number(item.price || 0) / sourceRate;
+  const offerPricing = getProductOfferPricing({
+    ...item,
+    price: originalPriceUSD,
+    basePriceUSD: originalPriceUSD
+  });
 
   return {
     ...item,
@@ -46,10 +56,12 @@ const mapCustomerCartItem = (item) => {
       : `inventory-gemstone-${productId}`,
     name: item.name || (isJewellery ? "Jewellery" : "Gemstone"),
     image: resolveMediaUrl(item.image_url),
-    price: Number(item.price || 0),
+    price: offerPricing.currentPrice,
     quantity: Number(item.quantity) || 1,
     carat: item.carat || "",
-    basePriceUSD: Number(item.price || 0)
+    basePriceUSD: originalPriceUSD,
+    discountRate: offerPricing.discountRate,
+    discountLabel: offerPricing.discountLabel
   };
 };
 

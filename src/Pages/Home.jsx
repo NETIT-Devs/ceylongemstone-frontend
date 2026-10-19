@@ -28,6 +28,7 @@ import hero1Img from "../assets/hero1.jpeg";
 import hero3Img from "/BlueHero.png";
 import hero4Img from "/HeroNew.jpeg";
 import CollectionDrawerActions from "../components/CollectionDrawerActions.jsx";
+import ProductOfferPrice from "../components/ProductOfferPrice.jsx";
 import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
 import { useCustomerReviews } from "../useCustomerReviews.js";
 import {
@@ -40,9 +41,11 @@ import {
   formatProductOfferEndDate,
   withActiveProductOffer
 } from "../productOffers.js";
-import { useHomeHeroSlides } from "../useSiteContent.js";
 import { apiGet, resolveMediaUrl } from "../services/api.js";
-import { useCustomerCart } from "../services/customerCart.js";
+import {
+  persistCustomerCartItem,
+  useCustomerCart
+} from "../services/customerCart.js";
 import { normalizeTreatment } from "../treatments.js";
 import {
   currencyRates,
@@ -129,11 +132,42 @@ const Home = () => {
   const [selectedGem, setSelectedGem] = useState(null);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [heroSlideIndex, setHeroSlideIndex] = useState(0);
-  const [managedHeroSlides] = useHomeHeroSlides();
+  const [managedHeroSlides, setManagedHeroSlides] = useState([]);
   const homeHeroSlides = useMemo(
     () => [...heroSlides, ...managedHeroSlides],
     [managedHeroSlides]
   );
+
+  useEffect(() => {
+    let isActive = true;
+    const loadHeroSlides = async () => {
+      try {
+        const response = await apiGet("/api/banners/active");
+        const data = await response.json();
+        if (!response.ok || data?.success !== true || !Array.isArray(data.banners)) {
+          throw new Error(data?.message || "Unable to load homepage hero slides.");
+        }
+
+        if (isActive) {
+          setManagedHeroSlides(data.banners
+            .filter((banner) => String(banner.media_type).toUpperCase() === "IMAGE")
+            .map((banner) => ({
+              id: `banner-${banner.id}`,
+              image: resolveMediaUrl(banner.media_url),
+              alt: banner.title
+            })));
+        }
+      } catch (error) {
+        console.error("Homepage hero slides could not be loaded:", error);
+      }
+    };
+
+    void loadHeroSlides();
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
   const readMyOrdersLinkStatus = () => {
     try {
       const customer = JSON.parse(
@@ -290,7 +324,8 @@ const Home = () => {
           discountRate: item.discountRate ?? item.offer_rate,
           offerStartDate: item.offerStartDate ?? item.offer_start_date,
           offerEndDate: item.offerEndDate ?? item.offer_end_date,
-          status: item.status
+          status: item.status,
+          itemType: "jewellery"
         };
       }),
     [backendJewellery]
@@ -389,9 +424,7 @@ const Home = () => {
   // HERO IMAGE SLIDESHOW
   // =====================================================
 
-  useEffect(() => {
-    setHeroSlideIndex((index) => index % homeHeroSlides.length);
-  }, [homeHeroSlides.length]);
+  const activeHeroSlideIndex = heroSlideIndex % homeHeroSlides.length;
 
   useEffect(() => {
     const heroTimer = setInterval(() => {
@@ -445,11 +478,7 @@ const Home = () => {
 
   const maxReviewIndex = Math.max(0, displayReviews.length - cardsPerView);
 
-  useEffect(() => {
-    if (reviewSlideIndex > maxReviewIndex) {
-      setReviewSlideIndex(maxReviewIndex);
-    }
-  }, [maxReviewIndex, reviewSlideIndex]);
+  const activeReviewSlideIndex = Math.min(reviewSlideIndex, maxReviewIndex);
 
   useEffect(() => {
     if (maxReviewIndex <= 0) return;
@@ -508,9 +537,22 @@ const Home = () => {
     );
   };
 
-  const addFeaturedGemToCart = (product) => {
+  const addFeaturedGemToCart = async (product, openCart = true) => {
     const productKey = getCollectionItemKey(product);
-    if ((inventory[productKey] ?? 0) < 1) return;
+    if ((inventory[productKey] ?? 0) < 1) return false;
+
+    const cartItem = cart.find((item) => getCollectionItemKey(item) === productKey);
+    let savedCartItem;
+    try {
+      savedCartItem = await persistCustomerCartItem(
+        "gemstone",
+        product.inventoryId || product.id,
+        cartItem?.quantity || 1
+      );
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Unable to save this gemstone to your cart.");
+      return false;
+    }
 
     const offerProduct = withActiveProductOffer(product);
     const originalPrice = Number(offerProduct.basePriceUSD ?? offerProduct.price);
@@ -519,22 +561,49 @@ const Home = () => {
       ? Math.round(originalPrice * (1 - discountRate / 100))
       : originalPrice;
 
-    setCart((current) => current.some(
-      (item) => getCollectionItemKey(item) === productKey
-    )
-      ? current
-      : [...current, normalizeCollectionItem({
-          ...offerProduct,
-          price: offerPrice,
-          basePriceUSD: originalPrice,
-          quantity: 1
-        })]
-    );
-    setActiveDrawer("cart");
+    const cartProduct = {
+      ...offerProduct,
+      itemType: "gemstone",
+      name: offerProduct.name || offerProduct.title,
+      price: offerPrice,
+      basePriceUSD: originalPrice
+    };
+    setCart((current) => {
+      const exists = current.some((item) => getCollectionItemKey(item) === productKey);
+      if (exists) {
+        return current.map((item) => getCollectionItemKey(item) === productKey
+          ? { ...item, quantity: savedCartItem.quantity }
+          : item);
+      }
+
+      return [
+        ...current,
+        {
+          ...normalizeCollectionItem(cartProduct),
+          quantity: savedCartItem.quantity
+        }
+      ];
+    });
+    if (openCart) setActiveDrawer("cart");
+    return true;
   };
 
-  const addFeaturedJewelleryToCart = (product) => {
-    if (Number(product.stockQuantity) < 1) return;
+  const addFeaturedJewelleryToCart = async (product, openCart = true) => {
+    if (Number(product.stockQuantity) < 1) return false;
+    const productKey = getCollectionItemKey(product);
+    const cartItem = cart.find((item) => getCollectionItemKey(item) === productKey);
+    let savedCartItem;
+    try {
+      savedCartItem = await persistCustomerCartItem(
+        "jewellery",
+        product.rawId || product.id,
+        cartItem?.quantity || 1
+      );
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Unable to save this jewellery item to your cart.");
+      return false;
+    }
+
     const offerProduct = withActiveProductOffer(product);
     const originalPrice = Number(offerProduct.basePriceUSD ?? offerProduct.price);
     const discountRate = Number(offerProduct.discountRate);
@@ -542,18 +611,51 @@ const Home = () => {
       ? Math.round(originalPrice * (1 - discountRate / 100))
       : originalPrice;
 
-    setCart((current) => current.some(
-      (item) => getCollectionItemKey(item) === getCollectionItemKey(product)
-    )
-      ? current
-      : [...current, normalizeCollectionItem({
-          ...offerProduct,
-          price: offerPrice,
-          basePriceUSD: originalPrice,
-          quantity: 1
-        })]
-    );
+    const cartProduct = {
+      ...offerProduct,
+      id: product.id,
+      itemType: "jewellery",
+      name: offerProduct.name || offerProduct.title,
+      image: offerProduct.image || offerProduct.image_url,
+      price: offerPrice,
+      basePriceUSD: originalPrice
+    };
+    setCart((current) => {
+      const exists = current.some((item) => getCollectionItemKey(item) === productKey);
+      if (exists) {
+        return current.map((item) => getCollectionItemKey(item) === productKey
+          ? { ...item, quantity: savedCartItem.quantity }
+          : item);
+      }
+
+      return [
+        ...current,
+        {
+          ...normalizeCollectionItem(cartProduct),
+          quantity: savedCartItem.quantity
+        }
+      ];
+    });
+    if (openCart) setActiveDrawer("cart");
+    return true;
+  };
+
+  const addWishlistItemsToCart = async () => {
+    for (const item of wishlist) {
+      const isJewellery = item.itemType === "jewellery" ||
+        item.rawId != null ||
+        item.jewellery_id != null ||
+        String(item.id).startsWith("db-") ||
+        String(item.productKey).startsWith("jewellery-db-");
+      const added = isJewellery
+        ? await addFeaturedJewelleryToCart(item, false)
+        : await addFeaturedGemToCart(item, false);
+      if (!added) return false;
+    }
+
+    setWishlist([]);
     setActiveDrawer("cart");
+    return true;
   };
 
   const wishlistCount = wishlist.reduce(
@@ -869,7 +971,7 @@ const Home = () => {
                 key={slide.id}
                 src={slide.image}
                 alt={slide.alt}
-                className={`hero-slide-img ${heroSlideIndex === idx ? "active" : ""}`}
+                className={`hero-slide-img ${activeHeroSlideIndex === idx ? "active" : ""}`}
                 loading={idx === 0 ? "eager" : "lazy"}
                 decoding="async"
                 onError={(e) => {
@@ -887,7 +989,7 @@ const Home = () => {
             {homeHeroSlides.map((slide, idx) => (
               <span
                 key={slide.id}
-                className={`hero-dot ${heroSlideIndex === idx ? "active" : ""}`}
+                className={`hero-dot ${activeHeroSlideIndex === idx ? "active" : ""}`}
                 onClick={() => setHeroSlideIndex(idx)}
                 title={slide.alt}
                 aria-label={`Slide ${idx + 1}`}
@@ -1634,7 +1736,7 @@ const Home = () => {
               <div
                 className="reviews-track"
                 style={{
-                  transform: `translateX(-${reviewSlideIndex * (100 / cardsPerView)}%)`
+                  transform: `translateX(-${activeReviewSlideIndex * (100 / cardsPerView)}%)`
                 }}
               >
                 {displayReviews.map((review, idx) => (
@@ -1702,7 +1804,7 @@ const Home = () => {
                   <button
                     key={idx}
                     type="button"
-                    className={`reviews-dot ${reviewSlideIndex === idx ? "active" : ""}`}
+                    className={`reviews-dot ${activeReviewSlideIndex === idx ? "active" : ""}`}
                     onClick={() => setReviewSlideIndex(idx)}
                     aria-label={`Go to slide ${idx + 1}`}
                   />
@@ -1916,9 +2018,7 @@ const Home = () => {
                         {gem.carat}
                       </p>
 
-                      <span>
-                        {formatPrice(gem.basePriceUSD ?? gem.price)}
-                      </span>
+                      <ProductOfferPrice item={gem} currency={currency} />
 
                       <small>Qty {Number(gem.quantity) || 1}</small>
 
@@ -1969,6 +2069,7 @@ const Home = () => {
               setWishlist={setWishlist}
               setCart={setCart}
               setActiveDrawer={setActiveDrawer}
+              onAddWishlistToCart={addWishlistItemsToCart}
             />
           </div>
 

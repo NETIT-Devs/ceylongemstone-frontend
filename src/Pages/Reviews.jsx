@@ -19,7 +19,7 @@ import CustomerOrdersNavLink from "../components/CustomerOrdersNavLink.jsx";
 import SiteInquiryModal from "../components/SiteInquiryModal.jsx";
 import { useCustomerReviews } from "../useCustomerReviews.js";
 import { useSharedCollection } from "../useSharedCollection.js";
-import { apiGet, apiPost } from "../services/api.js";
+import { apiPost } from "../services/api.js";
 import "./About.css";
 import "./Reviews.css";
 import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
@@ -59,7 +59,6 @@ const Reviews = () => {
 
     try {
       const response = await apiPost("/api/reviews", {
-        user_id: user.id,
         rating: reviewForm.rating,
         comment: reviewForm.comment.trim(),
       });

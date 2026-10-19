@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import Home from './Pages/Home.jsx';
 import About from './Pages/About.jsx';
 import Contact from './Pages/contact.jsx';
@@ -12,6 +13,7 @@ import InternationalCustomers from './Pages/InternationalCustomers.jsx';
 import Reviews from './Pages/Reviews.jsx';
 import Blog from './Pages/Blog.jsx';
 import Login from './Pages/Login.jsx';
+import { ForgotPassword, ResetPassword } from './Pages/PasswordRecovery.jsx';
 import MyOrders from './Pages/MyOrders.jsx';
 import AdminDashboard from './Pages/AdminDashboard.jsx';
 import JoinWithUs from './Pages/JoinWithUs.jsx';
@@ -67,7 +69,7 @@ function InventoryGemstoneRoute({ gemstoneId }) {
     };
   }, [gemstoneId]);
 
-  if (gemstone) return <GemstoneDetails gem={gemstone} />;
+  if (gemstone) return <GemstoneDetails key={gemstone.id} gem={gemstone} />;
   if (error) {
     return (
       <main role="alert">
@@ -97,8 +99,9 @@ if (typeof window !== 'undefined') {
 }
 
 function App() {
-  const currentPage = window.location.pathname.toLowerCase();
-  const currentHash = window.location.hash.toLowerCase();
+  const location = useLocation();
+  const currentPage = location.pathname.toLowerCase();
+  const currentHash = location.hash.toLowerCase();
 
   useEffect(() => {
     if (currentPage === '/admin-access') {
@@ -166,6 +169,14 @@ function App() {
   // Login Page
   if (currentPage === '/login') {
     return <Login />;
+  }
+
+  if (currentPage === '/forgot-password') {
+    return <ForgotPassword />;
+  }
+
+  if (currentPage === '/reset-password') {
+    return <ResetPassword />;
   }
 
   // About Page

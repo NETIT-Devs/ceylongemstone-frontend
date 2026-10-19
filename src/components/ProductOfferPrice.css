@@ -1,0 +1,22 @@
+.product-offer-price {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 5px 8px;
+}
+
+.product-offer-price del {
+  color: #78847d;
+  font-size: 0.9em;
+}
+
+.product-offer-price strong {
+  color: #102d32;
+}
+
+.product-offer-price small {
+  color: #96752f;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}

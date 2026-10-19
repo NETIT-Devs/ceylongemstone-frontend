@@ -26,10 +26,21 @@ import CollectionDrawerPanel from "../components/CollectionDrawerPanel.jsx";
 import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
 import SiteInquiryModal from "../components/SiteInquiryModal.jsx";
 import { useSharedCollection } from "../useSharedCollection.js";
-import { apiGet, apiPut, clearCustomerToken } from "../services/api.js";
+import { apiGet, apiPut, clearCustomerToken, resolveMediaUrl } from "../services/api.js";
 import "./MyOrders.css";
 import "./About.css";
 import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
+
+const formatOrderCurrency = (amount, currency = "USD") => {
+  const currencyCode = /^[A-Z]{3}$/.test(String(currency).toUpperCase())
+    ? String(currency).toUpperCase()
+    : "USD";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currencyCode,
+    maximumFractionDigits: 2
+  }).format(Number(amount) || 0);
+};
 
 const formatEstimatedDelivery = (value) => {
   const datePart = String(value || "").match(/^\d{4}-\d{2}-\d{2}/)?.[0];
@@ -112,17 +123,59 @@ const MyOrders = () => {
             trackingNumber: order.tracking_number || order.shipment?.tracking_number || "Tracking details pending",
             estimatedDelivery: order.estimated_delivery || order.shipment?.estimated_delivery || "To be confirmed",
             courier: order.courier || order.shipment?.courier || "",
+            shippingMethod: order.shipping_method || order.shipment?.shipping_method || "",
             shippingAddress: order.shipping_address || "",
+            currency,
+            itemSubtotal: (Array.isArray(order.items) ? order.items : []).reduce(
+              (sum, item) =>
+                sum + Number(item.original_price ?? item.price ?? 0) *
+                  (Number(item.quantity) || 1),
+              0
+            ),
+            discountTotal: (Array.isArray(order.items) ? order.items : []).reduce(
+              (sum, item) =>
+                sum + Math.max(
+                  0,
+                  Number(item.original_price ?? item.price ?? 0) -
+                    Number(item.price ?? 0)
+                ) * (Number(item.quantity) || 1),
+              0
+            ),
+            discountLabel: [...new Set(
+              (Array.isArray(order.items) ? order.items : [])
+                .map((item) => Number(item.discount_rate))
+                .filter((rate) => rate > 0)
+            )]
+              .sort((a, b) => a - b)
+              .map((rate) => `${rate}%`)
+              .join(", "),
+            shippingCost: Number(order.shipping_cost || 0),
+            totalPaid: Number(
+              order.final_total ?? order.total_amount ?? 0
+            ),
             items: (Array.isArray(order.items) ? order.items : []).map((item) => ({
-              name: item.gemstone_name || item.name || "Gemstone",
+              category: String(item.item_type).toLowerCase() === "jewellery"
+                ? "JEWELLERY"
+                : "GEMSTONE",
+              name: item.name || item.gemstone_name ||
+                (item.item_type === "jewellery" ? "Jewellery" : "Gemstone"),
               carat: item.carat ? `${item.carat} Ct` : "Not provided",
               cut: item.cut || item.shape || "Not provided",
               origin: item.origin || "Not provided",
+              material: item.material || (Number(item.is_handcrafted) ? "Handcrafted" : "Not provided"),
+              gemstoneType: item.gemstone_type || "Not provided",
+              jewelleryType: item.jewellery_type ||
+                (Number(item.is_handcrafted) ? "Handcrafted" : "Not provided"),
               certificateId: item.certificate_number || "",
               price: Number(item.price || 0),
+              originalPrice: Number(item.original_price ?? item.price ?? 0),
+              discountRate: Number(item.discount_rate || 0),
+              quantity: Number(item.quantity) || 1,
               currency: item.currency || currency,
-              image: item.image_url || "/blueGem.jpg",
-              tag: "ORDER ITEM",
+              image: resolveMediaUrl(
+                item.image || item.image_url || item.imageUrl
+              ) || "/blueGem.jpg",
+              tag: item.tag || item.treatment || item.item_type?.toUpperCase() || "ORDER ITEM",
             })),
             timeline: [
               { step: "Order Placed & Confirmed", date: order.created_at ? String(order.created_at).slice(0, 16) : "", completed: true },
@@ -429,22 +482,56 @@ const MyOrders = () => {
                           <span className="order-item-tag">{item.tag}</span>
                           <h2>{item.name}</h2>
                           <div className="order-item-specs">
-                            <span>Weight: <strong>{item.carat}</strong></span>
-                            <span>Cut: <strong>{item.cut}</strong></span>
-                            <span>Origin: <strong>{item.origin}</strong></span>
+                            {item.category === "GEMSTONE" ? (
+                              <>
+                                <span>Weight: <strong>{item.carat}</strong></span>
+                                <span>Cut: <strong>{item.cut}</strong></span>
+                                <span>Origin: <strong>{item.origin}</strong></span>
+                              </>
+                            ) : (
+                              <>
+                                <span>Material: <strong>{item.material}</strong></span>
+                                <span>Gemstone Type: <strong>{item.gemstoneType}</strong></span>
+                                <span>Jewellery Type: <strong>{item.jewelleryType}</strong></span>
+                              </>
+                            )}
                           </div>
-                          <div className="order-item-cert">
-                            <FaCertificate /> Gemological Certificate ID: <strong>{item.certificateId}</strong>
-                          </div>
+                          {item.category === "GEMSTONE" && item.certificateId && (
+                            <div className="order-item-cert">
+                              <FaCertificate /> Gemological Certificate ID: <strong>{item.certificateId}</strong>
+                            </div>
+                          )}
                         </div>
                         <div className="order-item-pricing">
                           <span className="order-item-price">
-                            {Number(item.price).toLocaleString("en-US")} {item.currency}
+                            {formatOrderCurrency(item.price * item.quantity, item.currency)}
                           </span>
-                          <span className="shipping-note">Free Insured Courier Shipping</span>
+                          {item.quantity > 1 && (
+                            <span className="shipping-note">Qty {item.quantity}</span>
+                          )}
                         </div>
                       </div>
                     ))}
+                  </div>
+                  <div className="order-price-breakdown">
+                    <div>
+                      <span>Items Subtotal</span>
+                      <strong>{formatOrderCurrency(order.itemSubtotal, order.currency)}</strong>
+                    </div>
+                    {order.discountTotal > 0 && (
+                      <div className="order-discount-row">
+                        <span>Discount{order.discountLabel ? ` (${order.discountLabel} OFF)` : ""}</span>
+                        <strong>−{formatOrderCurrency(order.discountTotal, order.currency)}</strong>
+                      </div>
+                    )}
+                    <div>
+                      <span>Shipping Fee{order.shippingMethod ? ` — ${order.shippingMethod}` : ""}</span>
+                      <strong>{formatOrderCurrency(order.shippingCost, order.currency)}</strong>
+                    </div>
+                    <div className="order-paid-row">
+                      <span>Total Paid</span>
+                      <strong>{formatOrderCurrency(order.totalPaid, order.currency)}</strong>
+                    </div>
                   </div>
 
                   {/* ORDER TIMELINE STEPPER */}
@@ -471,6 +558,12 @@ const MyOrders = () => {
                   {/* CARD ACTIONS FOOTER */}
                   <div className="order-card-footer">
                     <div className="tracking-code-info">
+                      {order.shippingMethod && (
+                        <div className="tracking-detail">
+                          <span>Shipping Method</span>
+                          <strong>{order.shippingMethod}</strong>
+                        </div>
+                      )}
                       <div className="tracking-detail">
                         <span>Airway Bill / Tracking</span>
                         <strong>{order.trackingNumber}</strong>

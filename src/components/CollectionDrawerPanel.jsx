@@ -1,7 +1,9 @@
 import { FaGem, FaTimes, FaTrash } from "react-icons/fa";
 import { getCollectionItemKey } from "../useSharedCollection.js";
 import { useCustomerCart } from "../services/customerCart.js";
+import { getCurrentCurrency } from "../currency.js";
 import CollectionDrawerActions from "./CollectionDrawerActions.jsx";
+import ProductOfferPrice from "./ProductOfferPrice.jsx";
 
 const CollectionDrawerPanel = ({
   activeDrawer,
@@ -79,7 +81,7 @@ const CollectionDrawerPanel = ({
                   <div className="gem-drawer-item-info">
                     <h4>{item.name}</h4>
                     {item.carat ? <p>{item.carat} Ct</p> : null}
-                    <strong>${Number(item.price || 0).toLocaleString("en-US")}</strong>
+                    <ProductOfferPrice item={item} currency={getCurrentCurrency()} />
                     <p>Qty {Number(item.quantity) || 1}</p>
                   </div>
                   <button
