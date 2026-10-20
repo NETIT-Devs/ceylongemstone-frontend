@@ -27,7 +27,6 @@ import InternationalNavEntry from '../components/InternationalNavEntry.jsx';
 import CustomerOrdersNavLink from "../components/CustomerOrdersNavLink.jsx";
 import SiteInquiryModal from '../components/SiteInquiryModal.jsx';
 import { getCollectionItemKey, useSharedCollection } from '../useSharedCollection.js';
-import { apiPost } from '../services/api.js';
 import './About.css';
 import './JoinWithUs.css';
 import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
@@ -182,22 +181,6 @@ export default function JoinWithUs() {
         ? `Certificate image: ${certificateFile.name} (I will attach it in this WhatsApp chat.)`
         : 'Certificate image: I can provide it in this WhatsApp chat if needed.'
     ].join('\n');
-    try {
-      const user = (() => {
-        try { return JSON.parse(window.localStorage.getItem("ceylon-user") || "null"); }
-        catch { return null; }
-      })();
-      apiPost("/api/enquiries", {
-        name: businessName.trim(),
-        email: email.trim(),
-        message: `[Vendor Partnership Application] Business: ${businessName.trim()} | Location: ${location.trim()} | Phone: ${phone.trim()} | Gems: ${gemstoneTypes}`,
-        gemstone_id: 1,
-        ...(user?.id ? { user_id: user.id } : {})
-      }).catch(() => {});
-    } catch {
-      // Backend unavailable or offline
-    }
-
     const whatsappUrl = `https://wa.me/94712345678?text=${encodeURIComponent(message)}`;
     const whatsappWindow = window.open(whatsappUrl, '_blank');
 
@@ -249,8 +232,8 @@ export default function JoinWithUs() {
           <a href="/About">Our Story</a>
           <a href="/trust">Certification</a>
           <a href="/reviews">Reviews</a>
-          <a href="/contact">Contact</a>
           <a href="/blog">Blog</a>
+          <a href="/contact">Contact</a>
           <InternationalNavEntry />
           <CustomerOrdersNavLink />
         </div>
@@ -268,7 +251,7 @@ export default function JoinWithUs() {
             {wishlistCount > 0 && <span className="about-badge">{wishlistCount}</span>}
           </button>
 
-          <button
+          {/* <button
             type="button"
             className="about-nav-icon"
             aria-label={`Open cart, ${cartCount} items`}
@@ -277,19 +260,25 @@ export default function JoinWithUs() {
           >
             <FaShoppingBag />
             {cartCount > 0 && <span className="about-badge">{cartCount}</span>}
-          </button>
+          </button> */}
+
+          <a
+            href="https://wa.me/94712345678"
+            target="_blank"
+            rel="noreferrer"
+            className="about-inquire-btn"
+          >
+            INQUIRE NOW
+          </a>
 
           <button
             type="button"
-            className="about-inquire-btn"
-            onClick={() => setIsInquiryOpen(true)}
+            className="navbar-joinus-btn active"
+            title="Join With Us"
+            onClick={() => setIsFormOpen(true)}
           >
-            INQUIRE NOW
-          </button>
-
-          <a href="/join-us" className="navbar-joinus-btn active" title="Join With Us">
             <span>JOIN US</span>
-          </a>
+          </button>
 
           <a href="/login" className="navbar-login-btn" title="Login / Register">
             <FaUser />

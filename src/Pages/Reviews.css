@@ -11,6 +11,11 @@
   min-height: 480px;
   height: 55vh;
   padding-top: 100px;
+  background: url("/review2hero.jpeg") center / cover no-repeat;
+}
+
+.reviews-page-hero::after {
+  display: none;
 }
 
 .reviews-page-hero h1 {

@@ -300,8 +300,8 @@ const MyOrders = () => {
           <a href="/About">Our Story</a>
           <a href="/trust">Certification</a>
           <a href="/reviews">Reviews</a>
-          <a href="/contact">Contact</a>
           <a href="/blog">Blog</a>
+          <a href="/contact">Contact</a>
           <a href="/my-orders" className="active">My Orders</a>
           <InternationalNavEntry />
         </div>
@@ -317,7 +317,7 @@ const MyOrders = () => {
             <FaHeart />
             {wishlistCount > 0 && <span className="about-badge">{wishlistCount}</span>}
           </button>
-          <button
+          {/* <button
             type="button"
             className="about-nav-icon"
             title="Shopping Cart"
@@ -325,14 +325,15 @@ const MyOrders = () => {
           >
             <FaShoppingBag />
             {cartCount > 0 && <span className="about-badge">{cartCount}</span>}
-          </button>
-          <button
-            type="button"
+          </button> */}
+          <a
+            href="https://wa.me/94712345678"
+            target="_blank"
+            rel="noreferrer"
             className="about-inquire-btn"
-            onClick={() => setIsInquiryOpen(true)}
           >
             INQUIRE NOW
-          </button>
+          </a>
           <a
             href="/join-us"
             className="navbar-joinus-btn"

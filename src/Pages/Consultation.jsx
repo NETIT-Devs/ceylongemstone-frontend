@@ -41,8 +41,8 @@ const Consultation = () => {
           <a href="/About">Our Story</a>
           <a href="/trust">Certification</a>
           <a href="/reviews">Reviews</a>
-          <a href="/contact">Contact</a>
           <a href="/blog">Blog</a>
+          <a href="/contact">Contact</a>
           <InternationalNavEntry />
           <CustomerOrdersNavLink />
         </div>
@@ -58,7 +58,7 @@ const Consultation = () => {
             <FaHeart />
             {wishlist.length > 0 && <span className="about-badge">{wishlist.reduce((sum, item) => sum + item.quantity, 0)}</span>}
           </button>
-          <button
+          {/* <button
             type="button"
             className="about-nav-icon"
             title="Shopping Cart"
@@ -67,10 +67,10 @@ const Consultation = () => {
           >
             <FaShoppingBag />
             {cart.length > 0 && <span className="about-badge">{cart.reduce((sum, item) => sum + item.quantity, 0)}</span>}
-          </button>
-          <button type="button" onClick={() => setIsInquiryOpen(true)} className="about-inquire-btn">
+          </button> */}
+          <a href="https://wa.me/94712345678" target="_blank" rel="noreferrer" className="about-inquire-btn">
             INQUIRE NOW
-          </button>
+          </a>
           <a
             href="/join-us"
             className="navbar-joinus-btn"

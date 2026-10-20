@@ -62,8 +62,8 @@ const TrustPage = () => {
           <a href="/About">Our Story</a>
           <a href="/trust" className="active">Certification</a>
           <a href="/reviews">Reviews</a>
-          <a href="/contact">Contact</a>
           <a href="/blog">Blog</a>
+          <a href="/contact">Contact</a>
           <InternationalNavEntry />
           <CustomerOrdersNavLink />
         </div>
@@ -79,7 +79,7 @@ const TrustPage = () => {
             <FaHeart />
             {wishlist.length > 0 && <span className="about-badge">{wishlist.reduce((total, item) => total + item.quantity, 0)}</span>}
           </button>
-          <button
+          {/* <button
             type="button"
             className="about-nav-icon"
             aria-label={`Open cart, ${cart.reduce((total, item) => total + item.quantity, 0)} items`}
@@ -88,14 +88,15 @@ const TrustPage = () => {
           >
             <FaShoppingBag />
             {cart.length > 0 && <span className="about-badge">{cart.reduce((total, item) => total + item.quantity, 0)}</span>}
-          </button>
-          <button
-            type="button"
+          </button> */}
+          <a
+            href="https://wa.me/94712345678"
+            target="_blank"
+            rel="noreferrer"
             className="about-inquire-btn"
-            onClick={() => setIsInquiryOpen(true)}
           >
             INQUIRE NOW
-          </button>
+          </a>
           <a
             href="/join-us"
             className="navbar-joinus-btn"

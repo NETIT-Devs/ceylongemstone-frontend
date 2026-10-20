@@ -649,9 +649,9 @@ function Gemstones() {
           <a href="/About">Our Story</a>
           <a href="/trust">Certification</a>
           <a href="/reviews">Reviews</a>
-          <a href="/contact">Contact</a>
           <a href="/blog">Blog</a>
-          {showMyOrdersLink && <a href="/my-orders">My Orders</a>}
+          <a href="/contact">Contact</a>
+          {/* {showMyOrdersLink && <a href="/my-orders">My Orders</a>} */}
           <InternationalNavEntry />
         </div>
 
@@ -732,7 +732,7 @@ function Gemstones() {
             )}
           </button>
 
-          <button
+          {/* <button
             className="about-nav-icon"
             title="Shopping Cart"
             onClick={() => setActiveDrawer("cart")}
@@ -744,14 +744,17 @@ function Gemstones() {
                 {cartCount}
               </span>
             )}
-          </button>
 
-          <button
+          </button> */}
+
+          <a
+            href="https://wa.me/94712345678"
+            target="_blank"
+            rel="noreferrer"
             className="about-inquire-btn"
-            onClick={() => setInquiryProduct(shopProducts[0] || null)}
           >
             INQUIRE NOW
-          </button>
+          </a>
 
           <a
             href="/join-us"
@@ -775,9 +778,7 @@ function Gemstones() {
 
       {/* ================= HERO ================= */}
 
-      <section className="gem-hero">
-
-        <div className="gem-hero-overlay"></div>
+      <section className="gem-hero gemstone-collection-hero">
 
         <div className="gem-hero-content">
 
@@ -1328,7 +1329,7 @@ function Gemstones() {
                             )}
                           </div>
 
-                          <button
+                          {/* <button
                             type="button"
                             className={`add-to-cart-btn ${
                               inStock ? "" : "out-of-stock"
@@ -1345,7 +1346,7 @@ function Gemstones() {
                           >
                             <FaShoppingBag />
                             <span>{inStock ? "ADD TO CART" : "OUT OF STOCK"}</span>
-                          </button>
+                          </button> */}
 
                         </div>
 
@@ -1841,14 +1842,19 @@ function Gemstones() {
               <button
                 className="modal-inquire-btn"
                 onClick={() => {
-                  setInquiryProduct(selectedProduct);
-                  setSelectedProduct(null);
+                  const refCode = selectedProduct.refCode || selectedProduct.ref_code || selectedProduct.id || "N/A";
+                  const message = `Hello, I am interested in this gemstone:\n\nReference: ${refCode}\nName: ${selectedProduct.name}\nPrice: Rs ${selectedProduct.price}\n\nPlease provide more details.`;
+                  window.open(
+                    `https://wa.me/94712345678?text=${encodeURIComponent(message)}`,
+                    "_blank",
+                    "noopener,noreferrer"
+                  );
                 }}
               >
-                INQUIRE ABOUT THIS GEM
+                INQUIRE ABOUT THIS GEM ON WHATSAPP
               </button>
 
-              <button
+              {/* <button
                 className="modal-inquire-btn"
                 onClick={() => {
                   addToCart(selectedProduct);
@@ -1857,7 +1863,7 @@ function Gemstones() {
                 }}
               >
                 ADD TO COLLECTION
-              </button>
+              </button> */}
 
             </div>
 

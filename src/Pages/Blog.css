@@ -11,6 +11,11 @@
   min-height: 480px;
   height: 55vh;
   padding-top: 100px;
+  background: url("/blogHero.webp") center / cover no-repeat;
+}
+
+.blog-page-hero::after {
+  display: none;
 }
 
 .blog-page-hero h1 {

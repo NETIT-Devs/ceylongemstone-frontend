@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { FaBars, FaChevronDown, FaTimes } from "react-icons/fa";
 import { hasAdminAccess, readAdminSession } from "../adminAccess.js";
-import SiteInquiryModal from "./SiteInquiryModal.jsx";
 
 const baseLinks = [
   { label: "Home", href: "/" },
@@ -9,8 +8,8 @@ const baseLinks = [
   { label: "Our Story", href: "/About" },
   { label: "Certification", href: "/trust" },
   { label: "Client reviews", href: "/reviews" },
-  { label: "Contact", href: "/contact" },
   { label: "Blog", href: "/blog" },
+  { label: "Contact", href: "/contact" },
 ];
 
 const readInternationalMode = () => {
@@ -26,24 +25,10 @@ const readInternationalMode = () => {
   return true;
 };
 
-const isSignedInCustomer = () => {
-  try {
-    const customer = JSON.parse(window.localStorage.getItem("ceylon-user") || "null");
-    if (customer?.loggedIn === true) return true;
-    const admin = JSON.parse(window.localStorage.getItem("ceylon-admin-session") || "null");
-    if (admin?.accountId) return true;
-    return false;
-  } catch {
-    return false;
-  }
-};
-
-export default function MobileSiteMenu({ onInquire }) {
+export default function MobileSiteMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const [isShopOpen, setIsShopOpen] = useState(false);
-  const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
   const [isInternationalEnabled, setIsInternationalEnabled] = useState(readInternationalMode);
-  const [isCustomerSignedIn, setIsCustomerSignedIn] = useState(isSignedInCustomer);
   const adminSession = readAdminSession();
   const hasAdminSession = hasAdminAccess("/admin");
 
@@ -58,17 +43,6 @@ export default function MobileSiteMenu({ onInquire }) {
     };
   }, []);
 
-  useEffect(() => {
-    const syncCustomer = () => setIsCustomerSignedIn(isSignedInCustomer());
-
-    window.addEventListener("storage", syncCustomer);
-    window.addEventListener("ceylon-user-auth-change", syncCustomer);
-    return () => {
-      window.removeEventListener("storage", syncCustomer);
-      window.removeEventListener("ceylon-user-auth-change", syncCustomer);
-    };
-  }, []);
-
   const openDrawer = () => {
     setIsInternationalEnabled(readInternationalMode());
     setIsOpen(true);
@@ -77,7 +51,6 @@ export default function MobileSiteMenu({ onInquire }) {
   const links = [
     ...baseLinks,
     ...(isInternationalEnabled ? [{ label: "International clients", href: "/international" }] : []),
-    ...(isCustomerSignedIn ? [{ label: "My Orders", href: "/my-orders" }] : []),
     ...(hasAdminSession
       ? [{
           label: adminSession?.role === "super-admin" ? "Super Admin Portal" : "Admin Portal",
@@ -162,20 +135,15 @@ export default function MobileSiteMenu({ onInquire }) {
             ))}
           </div>
           <div className="mobile-site-menu-actions">
-            <button
-              type="button"
+            <a
+              href="https://wa.me/94712345678"
+              target="_blank"
+              rel="noreferrer"
               className="mobile-site-menu-inquire"
-              onClick={() => {
-                setIsOpen(false);
-                if (typeof onInquire === "function") {
-                  onInquire();
-                } else {
-                  setIsInquiryModalOpen(true);
-                }
-              }}
+              onClick={() => setIsOpen(false)}
             >
               Inquire now
-            </button>
+            </a>
             <a href="/join-us" onClick={() => setIsOpen(false)}>
               Join us
             </a>
@@ -185,12 +153,6 @@ export default function MobileSiteMenu({ onInquire }) {
           </div>
         </nav>
       </div>
-      {isInquiryModalOpen && (
-        <SiteInquiryModal
-          onClose={() => setIsInquiryModalOpen(false)}
-          source="Mobile Navigation"
-        />
-      )}
     </>
   );
 }

@@ -192,12 +192,12 @@ const About = () => {
             Reviews
           </a>
 
-          <a href="/contact">
-            Contact
-          </a>
-
           <a href="/blog">
             Blog
+          </a>
+
+          <a href="/contact">
+            Contact
           </a>
 
           <InternationalNavEntry />
@@ -236,7 +236,7 @@ const About = () => {
 
           {/* CART */}
 
-          <button
+          {/* <button
             className="about-nav-icon"
             title="Shopping Cart"
             onClick={() => setActiveDrawer("cart")}
@@ -251,14 +251,17 @@ const About = () => {
             )}
 
           </button>
+          */}
 
 
-          <button
+          <a
+            href="https://wa.me/94712345678"
+            target="_blank"
+            rel="noreferrer"
             className="about-inquire-btn"
-            onClick={() => setSelectedGem(gems[0])}
           >
             INQUIRE NOW
-          </button>
+          </a>
 
           <a
             href="/join-us"
@@ -286,9 +289,7 @@ const About = () => {
           HERO
       ====================================================== */}
 
-      <section className="about-hero">
-
-        <div className="hero-overlay"></div>
+      <section className="about-hero our-story-hero">
 
         <div className="about-hero-content">
 

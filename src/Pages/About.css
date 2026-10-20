@@ -274,6 +274,14 @@
   overflow: hidden;
 }
 
+.about-hero.our-story-hero {
+  background: url("/ourStoryHero.jpeg") center / cover no-repeat;
+}
+
+.about-hero.our-story-hero::after {
+  display: none;
+}
+
 .about-hero::after {
   content: "";
 

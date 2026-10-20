@@ -97,8 +97,8 @@ const Reviews = () => {
           <a href="/About">Our Story</a>
           <a href="/trust">Certification</a>
           <a href="/reviews" className="active">Reviews</a>
-          <a href="/contact">Contact</a>
           <a href="/blog">Blog</a>
+          <a href="/contact">Contact</a>
           <InternationalNavEntry />
           <CustomerOrdersNavLink />
         </div>
@@ -114,7 +114,7 @@ const Reviews = () => {
             <FaHeart />
             {wishlist.length > 0 && <span className="about-badge">{wishlist.reduce((sum, item) => sum + item.quantity, 0)}</span>}
           </button>
-          <button
+          {/* <button
             type="button"
             className="about-nav-icon"
             title="Shopping Cart"
@@ -123,10 +123,10 @@ const Reviews = () => {
           >
             <FaShoppingBag />
             {cart.length > 0 && <span className="about-badge">{cart.reduce((sum, item) => sum + item.quantity, 0)}</span>}
-          </button>
-          <button type="button" className="about-inquire-btn" onClick={() => setIsInquiryOpen(true)}>
+          </button> */}
+          <a href="https://wa.me/94712345678" target="_blank" rel="noreferrer" className="about-inquire-btn">
             INQUIRE NOW
-          </button>
+          </a>
           <a
             href="/join-us"
             className="navbar-joinus-btn"
@@ -148,7 +148,6 @@ const Reviews = () => {
       <main>
         {/* Dark Hero Header Section */}
         <section className="about-hero reviews-page-hero">
-          <div className="hero-overlay"></div>
           <div className="about-hero-content">
             <div className="hero-logo-wrapper">
               <BrandLogo
@@ -220,7 +219,7 @@ const Reviews = () => {
           <div className="review-experience-layout">
             <figure className="review-experience-video">
               <video
-                src="/revV.mp4"
+                src="/reviewVideo1.mp4"
                 controls
                 autoPlay
                 muted

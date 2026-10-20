@@ -210,9 +210,11 @@ const JewelleryDetail = ({ gem }) => {
   }
 
   const gemName = gem.name || gem.title || 'this jewellery piece';
+  const gemRefCode = gem.refCode || gem.ref_code || `CRJ-${gem.id || '8801'}`;
   const gemDescription = gem.description ||
     `A ${gem.category || 'Ceylon'} jewellery piece${gem.color ? ` in ${gem.color.toLowerCase()}` : ''}, designed to celebrate natural beauty.`;
-  const whatsappMessage = `Hello, I'm interested in ${gemName} (Ref. ${gem.id || 'N/A'}). Please share more details and certificate information.`;
+  const jewelleryPrice = gem.basePriceUSD ?? gem.price ?? gem.priceUSD ?? 0;
+  const whatsappMessage = `Hello, I am interested in this jewellery piece:\n\nReference: ${gemRefCode}\nName: ${gemName}\nPrice: Rs ${jewelleryPrice}\n\nPlease provide more details.`;
 
   return (
     <div className="luxury-detail-wrapper">
@@ -232,8 +234,8 @@ const JewelleryDetail = ({ gem }) => {
           <a href="/About">Our Story</a>
           <a href="/trust">Certification</a>
           <a href="/reviews">Reviews</a>
-          <a href="/contact">Contact</a>
           <a href="/blog">Blog</a>
+          <a href="/contact">Contact</a>
           <InternationalNavEntry />
           <CustomerOrdersNavLink />
         </nav>
@@ -250,7 +252,7 @@ const JewelleryDetail = ({ gem }) => {
             <FaHeart />
             {wishlistCount > 0 && <span className="gem-detail-badge about-badge">{wishlistCount}</span>}
           </button>
-          <button
+          {/* <button
             type="button"
             className="gem-detail-nav-icon about-nav-icon"
             aria-label={`Cart, ${cartCount} items`}
@@ -259,14 +261,15 @@ const JewelleryDetail = ({ gem }) => {
           >
             <FaShoppingBag />
             {cartCount > 0 && <span className="gem-detail-badge about-badge">{cartCount}</span>}
-          </button>
-          <button
-            type="button"
+          </button> */}
+          <a
+            href="https://wa.me/94712345678"
+            target="_blank"
+            rel="noreferrer"
             className="gem-detail-inquire-link about-inquire-btn"
-            onClick={() => setShowInquiryForm(true)}
           >
             INQUIRE NOW
-          </button>
+          </a>
           <a
             href="/join-us"
             className="navbar-joinus-btn"
@@ -499,7 +502,7 @@ const JewelleryDetail = ({ gem }) => {
           </div>
 
           <div className="cta-button-group">
-            <button
+            {/* <button
               type="button"
               className={`gold-btn ${isInStock ? '' : 'out-of-stock'}`}
               disabled={!isInStock}
@@ -508,7 +511,7 @@ const JewelleryDetail = ({ gem }) => {
                 : addGemToCart}
             >
               <FaShoppingBag /> {isInStock ? (addedToCart ? 'VIEW CART' : 'ADD TO CART') : 'OUT OF STOCK'}
-            </button>
+            </button> */}
             <button
               type="button"
               className={`outline-btn ${isWishlisted ? 'wishlisted' : ''}`}
@@ -535,13 +538,13 @@ const JewelleryDetail = ({ gem }) => {
             </strong>
           </div>
 
-          <button
+          {/* <button
             type="button"
             className="pay-now-btn"
             onClick={() => setShowPaymentNotice(true)}
           >
             PAY NOW
-          </button>
+          </button> */}
           <p className="payment-setup-note">Secure online checkout is not available yet.</p>
         </div>
       </div>

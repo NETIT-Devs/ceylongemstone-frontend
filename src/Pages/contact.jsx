@@ -29,7 +29,6 @@ import {
   getCollectionItemKey,
   useSharedCollection
 } from "../useSharedCollection.js";
-import { apiPost } from "../services/api.js";
 import { useCustomerCart } from "../services/customerCart.js";
 
 
@@ -99,7 +98,6 @@ const Contact = () => {
 
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
 
   /* =======================================================
@@ -143,47 +141,33 @@ const Contact = () => {
      CONTACT FORM
   ======================================================= */
 
-  const handleSubmit = async (e) => {
-
+  const handleSubmit = (e) => {
     e.preventDefault();
     setSubmitError("");
-    setIsSubmitting(true);
+    const message = [
+      "Hello, I would like to contact Ceylon Royal Gemstones.",
+      "",
+      `Name: ${formData.name}`,
+      `Email: ${formData.email}`,
+      `Phone / WhatsApp: ${formData.phone}`,
+      `Subject: ${formData.subject}`,
+      "",
+      "Message:",
+      formData.message
+    ].join("\n");
+    const whatsappWindow = window.open(
+      `https://wa.me/94712345678?text=${encodeURIComponent(message)}`,
+      "_blank"
+    );
 
-    try {
-      // Post enquiry to backend
-      // gemstone_id=1 used as a general contact fallback (first static gem)
-      const userId = (() => {
-        try { return JSON.parse(window.localStorage.getItem("ceylon-user") || "null")?.id || null; }
-        catch { return null; }
-      })();
-
-      const payload = {
-        name: formData.name,
-        email: formData.email,
-        message: `${formData.subject ? `[${formData.subject}] ` : ""}${formData.message}`,
-        gemstone_id: 1, // General contact enquiry fallback
-        ...(userId ? { user_id: userId } : {}),
-      };
-
-      const res = await apiPost("/api/enquiries", payload);
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || "Unable to send your message. Please try again.");
-      }
-
-      setSubmitted(true);
-      setFormData({ name: "", email: "", phone: "", subject: "", message: "" });
-    } catch (error) {
-      setSubmitError(
-        error instanceof Error
-          ? error.message
-          : "Unable to send your message. Please try again."
-      );
-    } finally {
-      setIsSubmitting(false);
+    if (!whatsappWindow) {
+      setSubmitError("WhatsApp could not be opened. Please allow pop-ups and try again.");
+      return;
     }
+    whatsappWindow.opener = null;
 
+    setSubmitted(true);
+    setFormData({ name: "", email: "", phone: "", subject: "", message: "" });
   };
 
 
@@ -246,14 +230,14 @@ const Contact = () => {
             Reviews
           </a>
 
+          <a href="/blog">Blog</a>
+
           <a
             href="/contact"
             className="active"
           >
             Contact
           </a>
-
-          <a href="/blog">Blog</a>
 
           <InternationalNavEntry />
           <CustomerOrdersNavLink />
@@ -287,7 +271,7 @@ const Contact = () => {
           </button>
 
 
-          <button
+          {/* <button
             className="about-nav-icon about-badge-btn"
             title="Shopping Cart"
             type="button"
@@ -307,19 +291,19 @@ const Contact = () => {
             )}
 
           </button>
+          */}
 
 
-          <button
+          <a
+            href="https://wa.me/94712345678"
+            target="_blank"
+            rel="noreferrer"
             className="about-inquire-btn"
-            type="button"
-            onClick={() =>
-              setSelectedGem(gems[0])
-            }
           >
 
             INQUIRE NOW
 
-          </button>
+          </a>
 
           <a
             href="/join-us"
@@ -348,8 +332,6 @@ const Contact = () => {
       =================================================== */}
 
       <section className="contact-hero">
-
-        <div className="contact-hero-overlay"></div>
 
         <div className="contact-hero-content">
 
@@ -580,9 +562,8 @@ const Contact = () => {
                   </strong>
 
                   <p>
-                    Thank you for contacting Ceylon
-                    Royal Gemstones. Our team will
-                    contact you shortly.
+                    Your message is ready in WhatsApp. Please send it there to
+                    contact Ceylon Royal Gemstones.
                   </p>
 
                 </div>
@@ -713,10 +694,9 @@ const Contact = () => {
               <button
                 type="submit"
                 className="contact-submit-btn"
-                disabled={isSubmitting}
               >
 
-                {isSubmitting ? "SENDING MESSAGE..." : "SEND MESSAGE"}
+                SEND MESSAGE
 
                 <span>
                   →

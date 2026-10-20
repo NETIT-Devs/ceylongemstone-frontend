@@ -24,69 +24,6 @@ import "./Blog.css";
 import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
 import { useManagedBlogPosts } from "../useSiteContent.js";
 
-const blogPosts = [
-  {
-    id: 1,
-    title: "The Complete Gemstone Guide: Understanding Ceylon's Finest Treasures",
-    category: "Gemstone Guide",
-    date: "September 15, 2026",
-    readTime: "8 min read",
-    image: "/blog1new.jpg",
-    excerpt: "Discover the fascinating world of Ceylon gemstones — from royal blue sapphires to rare padparadschas. Learn how to identify, evaluate, and care for these precious treasures.",
-    content: [
-      "Ceylon, now known as Sri Lanka, has been celebrated for millennia as the 'Island of Gems.' The island's rich geological history has produced some of the world's most sought-after gemstones, including the legendary Ceylon blue sapphire, the rare padparadscha sapphire, and the elusive alexandrite.",
-      "Understanding gemstones requires knowledge of the four Cs: color, clarity, cut, and carat weight. Each of these factors plays a crucial role in determining a gemstone's value and appeal. Ceylon sapphires, in particular, are renowned for their exceptional cornflower blue hue and superior clarity.",
-      "When evaluating a Ceylon gemstone, always request a certificate from a reputable gemological laboratory such as GIA, GRS, or SSEF. These certificates provide detailed information about the gemstone's origin, treatment status, and quality parameters.",
-      "Proper care of your gemstones ensures their longevity and brilliance. Store each piece separately to avoid scratches, clean with mild soap and warm water, and avoid exposure to harsh chemicals and extreme temperatures."
-    ]
-  },
-  {
-    id: 2,
-    title: "Gemstone Artistry: The Ancient Craft of Ceylon Lapidary",
-    category: "Gemstone Article",
-    date: "September 10, 2026",
-    readTime: "6 min read",
-    image: "/blog2new.jpg",
-    excerpt: "Explore the traditional art of gemstone cutting in Sri Lanka, where master lapidaries transform rough stones into dazzling works of art using techniques passed down through generations.",
-    content: [
-      "The art of gemstone cutting, or lapidary, has been practiced in Sri Lanka for over 2,500 years. The island's master cutters have perfected techniques that maximize each stone's natural beauty, fire, and brilliance.",
-      "Traditional Ceylon lapidary begins with careful examination of the rough stone. The master cutter studies the crystal's natural axes, inclusions, and color distribution to determine the optimal cut that will showcase the gemstone's finest qualities.",
-      "Unlike modern machine cutting, traditional hand-cutting allows for greater precision and customization. Each facet is carefully calculated and executed by hand, resulting in gemstones with exceptional light performance and character.",
-      "Today, Ceylon's lapidary tradition continues to thrive, blending ancient techniques with modern technology. The result is gemstones of unparalleled quality that are treasured by collectors and connoisseurs worldwide."
-    ]
-  },
-  {
-    id: 3,
-    title: "Investing in Ceylon Sapphires: A Collector's Perspective",
-    category: "Gemstone Guide",
-    date: "September 5, 2026",
-    readTime: "10 min read",
-    image: "/blog3new.jpg",
-    excerpt: "Why Ceylon sapphires continue to appreciate in value and what every collector should know before investing in these magnificent gemstones.",
-    content: [
-      "Ceylon sapphires have long been considered among the finest investments in the gemstone world. Their rarity, exceptional color, and historical significance have driven consistent appreciation in value over decades.",
-      "The most valuable Ceylon sapphires exhibit a pure, vivid cornflower blue color with excellent transparency. Stones over 5 carats of exceptional quality are increasingly rare and command significant premiums in the market.",
-      "When investing in Ceylon sapphires, provenance is key. Stones with documented origins from Sri Lanka's renowned mining regions, particularly Ratnapura and Elahera, are highly prized by collectors.",
-      "Always purchase from reputable dealers who provide independent laboratory certificates. A GIA or GRS certificate not only authenticates the stone but also documents any treatments, which significantly impacts value."
-    ]
-  },
-  {
-    id: 4,
-    title: "The Science Behind Gemstone Colors: Why Ceylon Gems Are Unique",
-    category: "Gemstone Article",
-    date: "August 28, 2026",
-    readTime: "7 min read",
-    image: "/blog4new.jpg",
-    excerpt: "Delve into the geological processes that create the extraordinary colors found in Ceylon gemstones, from trace elements to crystal structure.",
-    content: [
-      "The mesmerizing colors of Ceylon gemstones are the result of complex geological processes that span millions of years. Trace elements within the crystal lattice interact with light to produce the brilliant hues that make these gems so desirable.",
-      "Iron and titanium impurities create the iconic blue of Ceylon sapphires, while chromium produces the fiery red of rubies. The padparadscha sapphire's unique pink-orange color results from a delicate balance of trace elements and natural irradiation.",
-      "Sri Lanka's unique geological history, with its ancient metamorphic rocks and alluvial deposits, has created ideal conditions for gemstone formation. The island's gem-bearing gravels, known as 'illam,' have yielded some of the world's most famous gems.",
-      "Understanding the science behind gemstone colors not only enhances appreciation but also helps in identifying natural stones from synthetic or treated alternatives."
-    ]
-  }
-];
-
 const Blog = () => {
   const [managedBlogPosts] = useManagedBlogPosts();
   const [wishlist, setWishlist] = useSharedCollection("ceylon-wishlist");
@@ -94,7 +31,7 @@ const Blog = () => {
   const [activeDrawer, setActiveDrawer] = useState(null);
   const [isInquiryOpen, setIsInquiryOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
-  const publishedPosts = [...managedBlogPosts, ...blogPosts];
+  const publishedPosts = managedBlogPosts;
 
   return (
     <div className="blog-page">
@@ -110,8 +47,8 @@ const Blog = () => {
           <a href="/About">Our Story</a>
           <a href="/trust">Certification</a>
           <a href="/reviews">Reviews</a>
-          <a href="/contact">Contact</a>
           <a href="/blog" className="active">Blog</a>
+          <a href="/contact">Contact</a>
           <InternationalNavEntry />
           <CustomerOrdersNavLink />
         </div>
@@ -127,7 +64,7 @@ const Blog = () => {
             <FaHeart />
             {wishlist.length > 0 && <span className="about-badge">{wishlist.reduce((sum, item) => sum + item.quantity, 0)}</span>}
           </button>
-          <button
+          {/* <button
             type="button"
             className="about-nav-icon"
             title="Shopping Cart"
@@ -136,10 +73,10 @@ const Blog = () => {
           >
             <FaShoppingBag />
             {cart.length > 0 && <span className="about-badge">{cart.reduce((sum, item) => sum + item.quantity, 0)}</span>}
-          </button>
-          <button type="button" className="about-inquire-btn" onClick={() => setIsInquiryOpen(true)}>
+          </button> */}
+          <a href="https://wa.me/94712345678" target="_blank" rel="noreferrer" className="about-inquire-btn">
             INQUIRE NOW
-          </button>
+          </a>
           <a
             href="/join-us"
             className="navbar-joinus-btn"
@@ -161,7 +98,6 @@ const Blog = () => {
       <main>
         {/* Dark Hero Header Section */}
         <section className="about-hero blog-page-hero">
-          <div className="hero-overlay"></div>
           <div className="about-hero-content">
             <div className="hero-logo-wrapper">
               <BrandLogo

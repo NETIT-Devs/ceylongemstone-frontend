@@ -100,13 +100,13 @@ const CollectionDrawerActions = ({
         <strong>{formatCurrencyPrice(total, currency)} {currency}</strong>
       </div>
       {activeDrawer === "wishlist" ? (
-        <button
+        {/* <button
           type="button"
           onClick={addWishlistToCart}
           disabled={hasOutOfStockWishlistItem || isMovingToCart}
         >
           {hasOutOfStockWishlistItem ? "OUT OF STOCK" : isMovingToCart ? "ADDING..." : "ADD TO CART"}
-        </button>
+        </button> */}
       ) : (
         <button type="button" onClick={() => window.location.assign("/checkout")}>
           CHECKOUT

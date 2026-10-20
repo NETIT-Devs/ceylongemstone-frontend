@@ -10,6 +10,12 @@
   min-height: 480px;
   height: 55vh;
   padding-top: 100px;
+  background: url("/certificatehero1.jpeg") center / cover no-repeat;
+}
+
+.trust-page-hero::after,
+.trust-page-hero .hero-overlay {
+  display: none;
 }
 
 .trust-page-hero h1 {

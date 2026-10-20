@@ -338,8 +338,8 @@ const Login = () => {
           <a href="/About">Our Story</a>
           <a href="/trust">Certification</a>
           <a href="/reviews">Reviews</a>
-          <a href="/contact">Contact</a>
           <a href="/blog">Blog</a>
+          <a href="/contact">Contact</a>
           <InternationalNavEntry />
           <CustomerOrdersNavLink />
         </div>
@@ -355,7 +355,7 @@ const Login = () => {
             <FaHeart />
             {wishlist.length > 0 && <span className="about-badge">{wishlist.reduce((sum, item) => sum + item.quantity, 0)}</span>}
           </button>
-          <button
+          {/* <button
             type="button"
             className="about-nav-icon"
             title="Shopping Cart"
@@ -364,7 +364,7 @@ const Login = () => {
           >
             <FaShoppingBag />
             {cart.length > 0 && <span className="about-badge">{cart.reduce((sum, item) => sum + item.quantity, 0)}</span>}
-          </button>
+          </button> */}
           <a
             href="/join-us"
             className="navbar-joinus-btn"

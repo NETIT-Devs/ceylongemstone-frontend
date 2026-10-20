@@ -744,19 +744,19 @@ const Home = () => {
             Reviews
           </a>
 
-          <a href="/contact">
-            Contact
-          </a>
-
           <a href="/blog">
             Blog
           </a>
 
-          {showMyOrdersLink && (
+          <a href="/contact">
+            Contact
+          </a>
+
+          {/* {showMyOrdersLink && (
             <a href="/my-orders">
               My Orders
             </a>
-          )}
+          )} */}
 
           <InternationalNavEntry />
 
@@ -888,7 +888,7 @@ const Home = () => {
               CART
           ================================================= */}
 
-          <button
+          {/* <button
             className="about-nav-icon"
             title="Shopping Cart"
             onClick={() =>
@@ -906,7 +906,7 @@ const Home = () => {
 
             )}
 
-          </button>
+          </button> */}
 
 
           {/* =================================================
@@ -997,23 +997,6 @@ const Home = () => {
             ))}
           </div>
 
-          {/* HERO NAVIGATION ARROWS */}
-          <button
-            type="button"
-            className="hero-arrow-btn hero-arrow-prev"
-            onClick={() => setHeroSlideIndex((prev) => (prev - 1 + homeHeroSlides.length) % homeHeroSlides.length)}
-            aria-label="Previous slide"
-          >
-            ‹
-          </button>
-          <button
-            type="button"
-            className="hero-arrow-btn hero-arrow-next"
-            onClick={() => setHeroSlideIndex((prev) => (prev + 1) % homeHeroSlides.length)}
-            aria-label="Next slide"
-          >
-            ›
-          </button>
 
 
           <div className="hero-overlay" />
@@ -1332,7 +1315,7 @@ const Home = () => {
                       )}
                       <strong>{formatPrice(offerPrice)}</strong>
                     </div>
-                    <button
+                    {/* <button
                       type="button"
                       className={`add-to-cart-btn ${inStock ? "" : "out-of-stock"}`}
                       aria-label={
@@ -1345,7 +1328,7 @@ const Home = () => {
                     >
                       <FaShoppingBag />
                       <span>{inStock ? "ADD TO CART" : "OUT OF STOCK"}</span>
-                    </button>
+                    </button> */}
                   </div>
                 </div>
               </article>
@@ -1463,7 +1446,7 @@ const Home = () => {
                       </span>
                     )}
                   </div>
-                  <button
+                  {/* <button
                     type="button"
                     className={`add-to-cart-btn ${inStock ? "" : "out-of-stock"}`}
                     aria-label={inStock ? `Add ${item.name} to cart` : `${item.name} is out of stock`}
@@ -1472,7 +1455,7 @@ const Home = () => {
                   >
                     <FaShoppingBag />
                     <span>ADD TO CART</span>
-                  </button>
+                  </button> */}
                 </div>
               </div>
             </article>
@@ -1787,7 +1770,6 @@ const Home = () => {
                             {review.name.toUpperCase()}
                           </h4>
                           <div className="review-author-loc">
-                            <FaMapMarkerAlt className="review-pin-icon" />
                             <span>{review.location}</span>
                           </div>
                         </div>

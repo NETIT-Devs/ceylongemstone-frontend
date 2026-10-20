@@ -538,7 +538,8 @@ function Juwellery() {
       (item) => getCollectionItemKey(item) === getCollectionItemKey(selectedProduct)
     );
     const addedToCart = addedToCartProductKey === getCollectionItemKey(selectedProduct);
-    const inquiryMessage = `Hello, I'm interested in the ${selectedProduct.name} (Ref. CRJ-${selectedProduct.id}).`;
+    const jewelleryRefCode = selectedProduct.refCode || selectedProduct.ref_code || `CRJ-${selectedProduct.id}`;
+    const inquiryMessage = `Hello, I am interested in this jewellery piece:\n\nReference: ${jewelleryRefCode}\nName: ${selectedProduct.name}\nPrice: Rs ${selectedOfferPrice}\n\nPlease provide more details.`;
 
     return (
       <div className="luxury-detail-wrapper jewellery-detail-page">
@@ -572,7 +573,7 @@ function Juwellery() {
               <FaHeart />
               {wishlistCount > 0 && <span className="gem-detail-badge about-badge">{wishlistCount}</span>}
             </button>
-            <button
+            {/* <button
               type="button"
               className="gem-detail-nav-icon about-nav-icon"
               aria-label={`Cart, ${cartCount} items`}
@@ -581,7 +582,7 @@ function Juwellery() {
             >
               <FaShoppingBag />
               {cartCount > 0 && <span className="gem-detail-badge about-badge">{cartCount}</span>}
-            </button>
+            </button> */}
             <button
               type="button"
               className="gem-detail-inquire-link about-inquire-btn"
@@ -680,7 +681,7 @@ function Juwellery() {
               </div>
 
               <div className="cta-button-group">
-                <button
+                {/* <button
                   type="button"
                   className={`gold-btn ${selectedInStock ? "" : "out-of-stock"}`}
                   disabled={!selectedInStock}
@@ -692,7 +693,7 @@ function Juwellery() {
                       }}
                 >
                   <FaShoppingBag /> {selectedInStock ? (addedToCart ? 'VIEW CART' : 'ADD TO CART') : 'OUT OF STOCK'}
-                </button>
+                </button> */}
                 <button
                   type="button"
                   className={`outline-btn ${isWishlisted ? "wishlisted" : ""}`}
@@ -785,9 +786,9 @@ function Juwellery() {
           <a href="/About">Our Story</a>
           <a href="/trust">Certification</a>
           <a href="/reviews">Reviews</a>
-          <a href="/contact">Contact</a>
           <a href="/blog">Blog</a>
-          {showMyOrdersLink && <a href="/my-orders">My Orders</a>}
+          <a href="/contact">Contact</a>
+          {/* {showMyOrdersLink && <a href="/my-orders">My Orders</a>} */}
           <InternationalNavEntry />
         </div>
 
@@ -868,7 +869,7 @@ function Juwellery() {
             )}
           </button>
 
-          <button
+          {/* <button
             className="about-nav-icon"
             title="Shopping Cart"
             onClick={() => setActiveDrawer("cart")}
@@ -880,14 +881,16 @@ function Juwellery() {
                 {cartCount}
               </span>
             )}
-          </button>
+          </button> */}
 
-          <button
+          <a
+            href="https://wa.me/94712345678"
+            target="_blank"
+            rel="noreferrer"
             className="about-inquire-btn"
-            onClick={() => setInquiryProduct(shopProducts[0] || null)}
           >
             INQUIRE NOW
-          </button>
+          </a>
 
           <a
             href="/join-us"
@@ -911,9 +914,7 @@ function Juwellery() {
 
       {/* ================= HERO ================= */}
 
-      <section className="gem-hero">
-
-        <div className="gem-hero-overlay"></div>
+      <section className="gem-hero jewellery-hero">
 
         <div className="gem-hero-content">
 
@@ -1347,7 +1348,7 @@ function Juwellery() {
                             )}
                           </div>
 
-                          <button
+                          {/* <button
                             type="button"
                             className={`add-to-cart-btn ${inStock ? "" : "out-of-stock"}`}
                             aria-label={inStock ? `Add ${product.name} to cart` : `${product.name} is out of stock`}
@@ -1358,7 +1359,7 @@ function Juwellery() {
                           >
                             <FaShoppingBag />
                             <span>ADD TO CART</span>
-                          </button>
+                          </button> */}
 
                         </div>
 

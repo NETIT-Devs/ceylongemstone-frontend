@@ -310,46 +310,9 @@
 
   text-align: center;
 
-  background:
-    linear-gradient(
-      135deg,
-      rgba(6, 59, 50, 0.92),
-      rgba(6, 28, 43, 0.96)
-    ),
-    url("https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&q=80&w=1800")
-    center / cover no-repeat;
+  background: url("/juwelleryhero.jpg") center / cover no-repeat;
 
   overflow: hidden;
-}
-
-.gem-hero::after {
-  content: "";
-
-  position: absolute;
-
-  width: 650px;
-  height: 650px;
-
-  border-radius: 50%;
-
-  background:
-    radial-gradient(
-      circle,
-      rgba(201, 162, 75, 0.16),
-      transparent 68%
-    );
-}
-
-.gem-hero-overlay {
-  position: absolute;
-  inset: 0;
-
-  background:
-    radial-gradient(
-      circle at center,
-      rgba(201, 162, 75, 0.12),
-      transparent 55%
-    );
 }
 
 .gem-hero-content {
@@ -1650,12 +1613,12 @@
   background: rgba(201, 162, 75, 0.06);
 }
 
-.quality-card > svg {
+.gem-quality-section .quality-card > svg {
+  display: block;
+  margin: 0 auto 18px;
   color: #C9A24B;
 
   font-size: 28px;
-
-  margin-bottom: 18px;
 }
 
 .quality-card h3 {
@@ -2260,6 +2223,32 @@
 
 @media (max-width: 650px) {
 
+  .gem-product-card .product-card-actions {
+    box-sizing: border-box;
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+  }
+
+  .gem-product-card .product-stock-status,
+  .gem-product-card .product-view-details {
+    flex: 1 1 0;
+    box-sizing: border-box;
+    min-width: 0;
+    width: auto;
+    min-height: 30px;
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 4px;
+    font-size: 8px;
+    letter-spacing: 0.35px;
+  }
+
   .gem-search-box {
     width: calc(100% - 32px);
     grid-template-columns: 1fr;
@@ -2321,11 +2310,16 @@
   }
 
   .gem-product-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
   }
 
-  .gem-product-image-box {
-    height: 320px;
+  .gem-product-card .product-image-box {
+    height: 180px;
+  }
+
+  .gem-product-card .product-info {
+    padding: 12px;
   }
 
   .gem-quality-grid {
@@ -2396,8 +2390,12 @@
     padding: 20px;
   }
 
-  .product-image-box {
-    height: 300px;
+  .gem-product-card .product-image-box {
+    height: 145px;
+  }
+
+  .gem-product-card .product-info {
+    padding: 9px;
   }
 }
 

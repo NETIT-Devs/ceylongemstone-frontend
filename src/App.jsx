@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import Home from './Pages/Home.jsx';
 import About from './Pages/About.jsx';
 import Contact from './Pages/contact.jsx';
@@ -14,7 +14,6 @@ import Reviews from './Pages/Reviews.jsx';
 import Blog from './Pages/Blog.jsx';
 import Login from './Pages/Login.jsx';
 import { ForgotPassword, ResetPassword } from './Pages/PasswordRecovery.jsx';
-import MyOrders from './Pages/MyOrders.jsx';
 import AdminDashboard from './Pages/AdminDashboard.jsx';
 import JoinWithUs from './Pages/JoinWithUs.jsx';
 import { apiGet } from './services/api.js';
@@ -138,27 +137,7 @@ function App() {
 
   // Customer order history - requires signed in session
   if (currentPage === '/my-orders' || currentPage === '/orders') {
-    const customerSession = (() => {
-      try {
-        return JSON.parse(window.localStorage.getItem('ceylon-user') || 'null');
-      } catch {
-        return null;
-      }
-    })();
-    const adminSession = (() => {
-      try {
-        return JSON.parse(window.localStorage.getItem('ceylon-admin-session') || 'null');
-      } catch {
-        return null;
-      }
-    })();
-
-    if (customerSession?.loggedIn === true || adminSession?.accountId) {
-      return <MyOrders />;
-    }
-
-    window.location.replace('/login');
-    return null;
+    return <Navigate to="/" replace />;
   }
 
   // Join With Us Page

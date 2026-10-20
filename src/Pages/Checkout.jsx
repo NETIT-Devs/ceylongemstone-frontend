@@ -555,9 +555,9 @@ const Checkout = () => {
           <a href="/About">Our Story</a>
           <a href="/trust">Certification</a>
           <a href="/reviews">Reviews</a>
-          <a href="/contact">Contact</a>
           <a href="/blog">Blog</a>
-          {showMyOrdersLink && <a href="/my-orders">My Orders</a>}
+          <a href="/contact">Contact</a>
+          {/* {showMyOrdersLink && <a href="/my-orders">My Orders</a>} */}
           <InternationalNavEntry />
         </div>
 
@@ -576,7 +576,7 @@ const Checkout = () => {
               </span>
             )}
           </a>
-          <a
+          {/* <a
             className="about-nav-icon"
             href="/gemstones#cart"
             aria-label={`Open cart, ${cart.reduce((sum, item) => sum + item.quantity, 0)} items`}
@@ -588,14 +588,15 @@ const Checkout = () => {
                 {cart.reduce((sum, item) => sum + item.quantity, 0)}
               </span>
             )}
-          </a>
-          <button
+          </a> */}
+          <a
+            href="https://wa.me/94712345678"
+            target="_blank"
+            rel="noreferrer"
             className="about-inquire-btn"
-            type="button"
-            onClick={() => setIsInquiryOpen(true)}
           >
             INQUIRE NOW
-          </button>
+          </a>
           <a
             href="/join-us"
             className="navbar-joinus-btn"
@@ -634,9 +635,9 @@ const Checkout = () => {
                 <span>ORDER ID</span>
                 <strong>{completedOrder.id}</strong>
               </div>
-              <a className="checkout-success-action" href="/my-orders">
+              {/* <a className="checkout-success-action" href="/my-orders">
                 View My Orders
-              </a>
+              </a> */}
             </section>
           ) : cart.length === 0 ? (
             <div className="checkout-empty">

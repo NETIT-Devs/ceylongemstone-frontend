@@ -307,14 +307,7 @@
 
   min-height: 560px;
 
-  background:
-    linear-gradient(
-      135deg,
-      rgba(6, 59, 50, 0.90),
-      rgba(6, 28, 43, 0.94)
-    ),
-    url("https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&q=80&w=1600")
-    center / cover no-repeat;
+  background: url("/contact3hero.jpeg") center / cover no-repeat;
 
   display: flex;
 
@@ -325,43 +318,6 @@
   text-align: center;
 
   overflow: hidden;
-}
-
-.contact-hero::after {
-  content: "";
-
-  position: absolute;
-
-  width: 650px;
-
-  height: 650px;
-
-  border-radius: 50%;
-
-  background:
-    radial-gradient(
-      circle,
-      rgba(201, 162, 75, 0.16),
-      transparent 68%
-    );
-
-  pointer-events: none;
-}
-
-.contact-hero-overlay {
-  position: absolute;
-
-  inset: 0;
-
-  background:
-    linear-gradient(
-      180deg,
-      rgba(6, 28, 43, 0.20),
-      rgba(6, 59, 50, 0.35),
-      rgba(6, 28, 43, 0.92)
-    );
-
-  z-index: 1;
 }
 
 .contact-hero-content {
