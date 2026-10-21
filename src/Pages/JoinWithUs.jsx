@@ -240,16 +240,7 @@ export default function JoinWithUs() {
 
         <div className="about-nav-actions">
           <InternationalNavEntry mobile />
-          <button
-            type="button"
-            className="about-nav-icon"
-            aria-label={`Open wishlist, ${wishlistCount} items`}
-            title="Wishlist"
-            onClick={() => setActiveDrawer('wishlist')}
-          >
-            <FaHeart />
-            {wishlistCount > 0 && <span className="about-badge">{wishlistCount}</span>}
-          </button>
+
 
           {/* <button
             type="button"
@@ -287,32 +278,33 @@ export default function JoinWithUs() {
         </div>
       </nav>
 
-      {/* 1. BACK TO HOME */}
-      <div className="joinus-top-bar">
-        <a href="/" className="joinus-back-btn">
-          <FaArrowLeft />
-          <span>Back to Home</span>
-        </a>
-      </div>
-
       {/* 2. HERO / INTRODUCTION SECTION */}
-      <section className="joinus-hero-section">
-        <div className="joinus-hero-content">
-          <div className="joinus-luxury-tag">
-            <FaGem />
-            <span>PARTNER WITH US</span>
+      <section className="about-hero joinus-page-hero">
+        <div className="about-hero-content">
+          <div className="hero-logo-wrapper">
+            <BrandLogo
+              alt="Ceylon Royal Gemstones Logo"
+              className="hero-bright-logo"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src =
+                  "https://cdn-icons-png.flaticon.com/512/3063/3063822.png";
+              }}
+            />
+            <div className="logo-glow-effect"></div>
           </div>
+
+          <span className="gold-subtitle">
+            PARTNER WITH US
+          </span>
 
           <h1 className="joinus-hero-title">
             JOIN WITH US
             <span>CEYLON ROYAL PARTNERS</span>
           </h1>
 
-          <p className="joinus-hero-tagline">
-            Grow with us as a trusted Ceylon gemstone partner.
-          </p>
-
           <p className="joinus-hero-desc">
+            Grow with us as a trusted Ceylon gemstone partner.
             Ethical sourcing, certified gems and global support.
           </p>
 
@@ -346,30 +338,6 @@ export default function JoinWithUs() {
             >
               VIEW BENEFITS
             </a>
-          </div>
-        </div>
-
-        {/* HERO IMAGE AREA - Uses public/joinUs.jpg */}
-        <div className="joinus-hero-image-wrap">
-          <div className="joinus-hero-image-inner">
-            <img
-              src="/joinUs.jpg"
-              alt="Ceylon Royal Gemstones Partner Collaboration"
-              className="joinus-hero-img"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = '/about1.jpg';
-              }}
-            />
-            <div className="joinus-image-badge">
-              <div className="joinus-image-badge-text">
-                <h5>CEYLON ROYAL NETWORK</h5>
-                <p>Authentic Heritage • Global Excellence</p>
-              </div>
-              <div className="joinus-image-badge-icon">
-                <FaHandshake />
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -448,201 +416,201 @@ export default function JoinWithUs() {
             </div>
 
             <form onSubmit={handleSubmit}>
-                <div className="joinus-form-grid">
-                  {/* Business Name */}
-                  <div className="joinus-form-group">
-                    <label className="joinus-label" htmlFor="modal-business-name">
-                      Business Name <span aria-hidden="true">*</span>
-                    </label>
-                    <div className="joinus-input-wrap">
-                      <FaBuilding className="joinus-input-icon" />
-                      <input
-                        id="modal-business-name"
-                        type="text"
-                        className="joinus-input"
-                        placeholder="e.g. Royal Gems & Jewelry Ltd."
-                        value={businessName}
-                        onChange={(e) => setBusinessName(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  {/* Email Address */}
-                  <div className="joinus-form-group">
-                    <label className="joinus-label" htmlFor="modal-business-email">
-                      Email Address <span aria-hidden="true">*</span>
-                    </label>
-                    <div className="joinus-input-wrap">
-                      <FaEnvelope className="joinus-input-icon" />
-                      <input
-                        id="modal-business-email"
-                        type="email"
-                        className="joinus-input"
-                        placeholder="e.g. partner@gemstonetrading.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  {/* Business Location */}
-                  <div className="joinus-form-group">
-                    <label className="joinus-label" htmlFor="modal-business-location">
-                      Location <span aria-hidden="true">*</span>
-                    </label>
-                    <div className="joinus-input-wrap">
-                      <FaMapMarkerAlt className="joinus-input-icon" />
-                      <input
-                        id="modal-business-location"
-                        type="text"
-                        className="joinus-input"
-                        placeholder="City, country"
-                        value={location}
-                        onChange={(e) => setLocation(e.target.value)}
-                        autoComplete="country-name"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  {/* Contact Number */}
-                  <div className="joinus-form-group">
-                    <label className="joinus-label" htmlFor="modal-business-phone">
-                      Phone Number <span aria-hidden="true">*</span>
-                    </label>
-                    <div className="joinus-input-wrap">
-                      <FaPhoneAlt className="joinus-input-icon" />
-                      <input
-                        id="modal-business-phone"
-                        type="tel"
-                        className="joinus-input"
-                        placeholder="e.g. +94 77 123 4567 / +1 (555) 000-1234"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        autoComplete="tel"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  {/* Type of Gemstones (Multi-select) */}
-                  <div className="joinus-form-group full-width">
-                    <div className="joinus-label" id="gemstone-types-label">
-                      Types of Gemstones <span aria-hidden="true">*</span>
-                      <span className="joinus-label-optional">(select all that apply)</span>
-                    </div>
-                    <div className="joinus-gem-pills" role="group" aria-labelledby="gemstone-types-label">
-                      {GEMSTONE_OPTIONS.map((gem) => {
-                        const isSelected = selectedGemstones.includes(gem);
-                        return (
-                          <button
-                            key={gem}
-                            type="button"
-                            className={`joinus-gem-pill ${isSelected ? 'selected' : ''}`}
-                            onClick={() => toggleGemstone(gem)}
-                            aria-pressed={isSelected}
-                          >
-                            {isSelected && <FaCheck className="joinus-gem-pill-icon" />}
-                            <span>{gem}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {selectedGemstones.includes('Other') && (
-                      <div className="joinus-input-wrap joinus-other-gemstone">
-                        <FaGem className="joinus-input-icon" />
-                        <input
-                          aria-label="Specify other gemstone types"
-                          type="text"
-                          className="joinus-input"
-                          placeholder="Please specify other gemstone types..."
-                          value={otherGemstone}
-                          onChange={(e) => setOtherGemstone(e.target.value)}
-                          required
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Certificate Upload (Image) */}
-                  <div className="joinus-form-group full-width">
-                    <div className="joinus-label">
-                      Certificate Upload (Image)
-                      <span className="joinus-label-optional">(business license or gemology certificate)</span>
-                    </div>
+              <div className="joinus-form-grid">
+                {/* Business Name */}
+                <div className="joinus-form-group">
+                  <label className="joinus-label" htmlFor="modal-business-name">
+                    Business Name <span aria-hidden="true">*</span>
+                  </label>
+                  <div className="joinus-input-wrap">
+                    <FaBuilding className="joinus-input-icon" />
                     <input
-                      id="modal-certificate-upload"
-                      type="file"
-                      ref={fileInputRef}
-                      accept="image/png, image/jpeg, image/jpg, image/webp"
-                      className="joinus-file-input"
-                      onChange={(e) => handleFileChange(e.target.files?.[0])}
+                      id="modal-business-name"
+                      type="text"
+                      className="joinus-input"
+                      placeholder="e.g. Royal Gems & Jewelry Ltd."
+                      value={businessName}
+                      onChange={(e) => setBusinessName(e.target.value)}
+                      required
                     />
-
-                    {certificatePreview ? (
-                      <div className="joinus-preview-wrap">
-                        <div className="joinus-preview-left">
-                          <img
-                            src={certificatePreview}
-                            alt="Certificate preview"
-                            className="joinus-preview-thumb"
-                          />
-                          <div className="joinus-preview-info">
-                            <div className="joinus-preview-name">{certificateFile?.name}</div>
-                            <div className="joinus-preview-size">
-                              {(certificateFile?.size ? certificateFile.size / 1024 : 0).toFixed(1)} KB • Image
-                            </div>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          className="joinus-preview-remove"
-                          onClick={removeCertificate}
-                          title="Remove file"
-                          aria-label="Remove uploaded image"
-                        >
-                          <FaTimes />
-                        </button>
-                      </div>
-                    ) : (
-                      <div
-                        className={`joinus-upload-area ${isDragging ? 'is-dragging' : ''}`}
-                        onClick={() => fileInputRef.current?.click()}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault();
-                            fileInputRef.current?.click();
-                          }
-                        }}
-                        role="button"
-                        tabIndex={0}
-                        aria-label="Upload business license or gemology certificate image"
-                        onDragOver={handleDragOver}
-                        onDragLeave={handleDragLeave}
-                        onDrop={handleDrop}
-                      >
-                        <div className="joinus-upload-prompt">
-                          <FaCloudUploadAlt className="joinus-upload-icon" />
-                          <div className="joinus-upload-text">
-                            Drag and drop certificate image here, or <span>browse file</span>
-                          </div>
-                          <div className="joinus-upload-hint">
-                            Accepts JPG, PNG, WEBP (Max 10MB). Attach the image in WhatsApp after it opens.
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Submit Application Button */}
-                  <div className="joinus-submit-wrap">
-                    <button type="submit" className="joinus-submit-btn">
-                      SUBMIT APPLICATION
-                    </button>
                   </div>
                 </div>
+
+                {/* Email Address */}
+                <div className="joinus-form-group">
+                  <label className="joinus-label" htmlFor="modal-business-email">
+                    Email Address <span aria-hidden="true">*</span>
+                  </label>
+                  <div className="joinus-input-wrap">
+                    <FaEnvelope className="joinus-input-icon" />
+                    <input
+                      id="modal-business-email"
+                      type="email"
+                      className="joinus-input"
+                      placeholder="e.g. partner@gemstonetrading.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Business Location */}
+                <div className="joinus-form-group">
+                  <label className="joinus-label" htmlFor="modal-business-location">
+                    Location <span aria-hidden="true">*</span>
+                  </label>
+                  <div className="joinus-input-wrap">
+                    <FaMapMarkerAlt className="joinus-input-icon" />
+                    <input
+                      id="modal-business-location"
+                      type="text"
+                      className="joinus-input"
+                      placeholder="City, country"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      autoComplete="country-name"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Contact Number */}
+                <div className="joinus-form-group">
+                  <label className="joinus-label" htmlFor="modal-business-phone">
+                    Phone Number <span aria-hidden="true">*</span>
+                  </label>
+                  <div className="joinus-input-wrap">
+                    <FaPhoneAlt className="joinus-input-icon" />
+                    <input
+                      id="modal-business-phone"
+                      type="tel"
+                      className="joinus-input"
+                      placeholder="e.g. +94 77 123 4567 / +1 (555) 000-1234"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      autoComplete="tel"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Type of Gemstones (Multi-select) */}
+                <div className="joinus-form-group full-width">
+                  <div className="joinus-label" id="gemstone-types-label">
+                    Types of Gemstones <span aria-hidden="true">*</span>
+                    <span className="joinus-label-optional">(select all that apply)</span>
+                  </div>
+                  <div className="joinus-gem-pills" role="group" aria-labelledby="gemstone-types-label">
+                    {GEMSTONE_OPTIONS.map((gem) => {
+                      const isSelected = selectedGemstones.includes(gem);
+                      return (
+                        <button
+                          key={gem}
+                          type="button"
+                          className={`joinus-gem-pill ${isSelected ? 'selected' : ''}`}
+                          onClick={() => toggleGemstone(gem)}
+                          aria-pressed={isSelected}
+                        >
+                          {isSelected && <FaCheck className="joinus-gem-pill-icon" />}
+                          <span>{gem}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {selectedGemstones.includes('Other') && (
+                    <div className="joinus-input-wrap joinus-other-gemstone">
+                      <FaGem className="joinus-input-icon" />
+                      <input
+                        aria-label="Specify other gemstone types"
+                        type="text"
+                        className="joinus-input"
+                        placeholder="Please specify other gemstone types..."
+                        value={otherGemstone}
+                        onChange={(e) => setOtherGemstone(e.target.value)}
+                        required
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Certificate Upload (Image) */}
+                <div className="joinus-form-group full-width">
+                  <div className="joinus-label">
+                    Certificate Upload (Image)
+                    <span className="joinus-label-optional">(business license or gemology certificate)</span>
+                  </div>
+                  <input
+                    id="modal-certificate-upload"
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/png, image/jpeg, image/jpg, image/webp"
+                    className="joinus-file-input"
+                    onChange={(e) => handleFileChange(e.target.files?.[0])}
+                  />
+
+                  {certificatePreview ? (
+                    <div className="joinus-preview-wrap">
+                      <div className="joinus-preview-left">
+                        <img
+                          src={certificatePreview}
+                          alt="Certificate preview"
+                          className="joinus-preview-thumb"
+                        />
+                        <div className="joinus-preview-info">
+                          <div className="joinus-preview-name">{certificateFile?.name}</div>
+                          <div className="joinus-preview-size">
+                            {(certificateFile?.size ? certificateFile.size / 1024 : 0).toFixed(1)} KB • Image
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="joinus-preview-remove"
+                        onClick={removeCertificate}
+                        title="Remove file"
+                        aria-label="Remove uploaded image"
+                      >
+                        <FaTimes />
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      className={`joinus-upload-area ${isDragging ? 'is-dragging' : ''}`}
+                      onClick={() => fileInputRef.current?.click()}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          fileInputRef.current?.click();
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      aria-label="Upload business license or gemology certificate image"
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                    >
+                      <div className="joinus-upload-prompt">
+                        <FaCloudUploadAlt className="joinus-upload-icon" />
+                        <div className="joinus-upload-text">
+                          Drag and drop certificate image here, or <span>browse file</span>
+                        </div>
+                        <div className="joinus-upload-hint">
+                          Accepts JPG, PNG, WEBP (Max 10MB). Attach the image in WhatsApp after it opens.
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Submit Application Button */}
+                <div className="joinus-submit-wrap">
+                  <button type="submit" className="joinus-submit-btn">
+                    SUBMIT APPLICATION
+                  </button>
+                </div>
+              </div>
             </form>
           </div>
         </div>

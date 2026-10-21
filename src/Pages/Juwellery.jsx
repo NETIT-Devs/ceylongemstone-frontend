@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import ShopNavDropdown from "../components/ShopNavDropdown.jsx";
 import BrandLogo from "../components/BrandLogo.jsx";
 import {
@@ -21,6 +22,7 @@ import {
   FaFacebookF,
   FaArrowLeft
 } from "react-icons/fa";
+import { GiDiamondRing } from "react-icons/gi";
 
 import "./Gemstones.css";
 import "./GemstoneDetail.css";
@@ -444,7 +446,6 @@ function Juwellery() {
         normalizeCollectionItem({ ...product, quantity: 1 })
       ];
     });
-    setActiveDrawer("wishlist");
   };
 
   const addToCart = async (product) => {
@@ -979,7 +980,7 @@ function Juwellery() {
               >
 
                 <div className="category-gem-icon">
-                  <FaGem />
+                  <GiDiamondRing />
                 </div>
 
                 <span>{category}</span>
@@ -1098,7 +1099,7 @@ function Juwellery() {
 
             <div className="filter-title">
               <h3>FILTER COLLECTION</h3>
-              <FaGem />
+              <GiDiamondRing />
             </div>
 
             <div className="filter-group">
@@ -1592,8 +1593,7 @@ function Juwellery() {
 
       {/* ================= DRAWER ================= */}
 
-      {activeDrawer && (
-
+      {activeDrawer && createPortal(
         <div
           className="gem-drawer-backdrop"
           onClick={() => setActiveDrawer(null)}
@@ -1710,7 +1710,8 @@ function Juwellery() {
 
           </div>
 
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ================= INQUIRY FORM ================= */}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export const getCollectionItemKey = (item) =>
   item.productKey ||
@@ -34,6 +34,7 @@ const readCollection = (storageKey) => {
 
 export const useSharedCollection = (storageKey) => {
   const [items, setItems] = useState(() => readCollection(storageKey));
+  const itemsRef = useRef(items);
 
   useEffect(() => {
     window.localStorage.setItem(
@@ -45,13 +46,40 @@ export const useSharedCollection = (storageKey) => {
   useEffect(() => {
     const syncCollection = (event) => {
       if (event.key === storageKey) {
-        setItems(readCollection(storageKey));
+        const nextItems = readCollection(storageKey);
+        itemsRef.current = nextItems;
+        setItems(nextItems);
+      }
+    };
+
+    const syncSameTabCollection = (event) => {
+      if (event.detail?.storageKey === storageKey) {
+        itemsRef.current = event.detail.items;
+        setItems(event.detail.items);
       }
     };
 
     window.addEventListener("storage", syncCollection);
-    return () => window.removeEventListener("storage", syncCollection);
+    window.addEventListener("ceylon-collection-change", syncSameTabCollection);
+    return () => {
+      window.removeEventListener("storage", syncCollection);
+      window.removeEventListener("ceylon-collection-change", syncSameTabCollection);
+    };
   }, [storageKey]);
 
-  return [items, setItems];
+  const setCollection = useCallback((nextValue) => {
+    const nextItems = typeof nextValue === "function"
+      ? nextValue(itemsRef.current)
+      : nextValue;
+    const normalizedItems = nextItems.map(normalizeCollectionItem);
+
+    itemsRef.current = normalizedItems;
+    setItems(normalizedItems);
+    window.localStorage.setItem(storageKey, JSON.stringify(normalizedItems));
+    window.dispatchEvent(new CustomEvent("ceylon-collection-change", {
+      detail: { storageKey, items: normalizedItems }
+    }));
+  }, [storageKey]);
+
+  return [items, setCollection];
 };

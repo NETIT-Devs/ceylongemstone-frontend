@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import ShopNavDropdown from "../components/ShopNavDropdown.jsx";
 import BrandLogo from "../components/BrandLogo.jsx";
 import {
@@ -531,7 +532,6 @@ function Gemstones() {
         normalizeCollectionItem({ ...product, quantity: 1 })
       ];
     });
-    setActiveDrawer("wishlist");
   };
 
   const addToCart = async (product) => {
@@ -1580,8 +1580,7 @@ function Gemstones() {
 
       {/* ================= DRAWER ================= */}
 
-      {activeDrawer && (
-
+      {activeDrawer && createPortal(
         <div
           className="gem-drawer-backdrop"
           onClick={() => setActiveDrawer(null)}
@@ -1698,7 +1697,8 @@ function Gemstones() {
 
           </div>
 
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ================= INQUIRY FORM ================= */}

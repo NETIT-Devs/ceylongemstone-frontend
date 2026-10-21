@@ -24,9 +24,6 @@ import {
 
 import "./Home.css";
 import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
-import hero1Img from "../assets/hero1.jpeg";
-import hero3Img from "/BlueHero.png";
-import hero4Img from "/HeroNew.jpeg";
 import CollectionDrawerActions from "../components/CollectionDrawerActions.jsx";
 import ProductOfferPrice from "../components/ProductOfferPrice.jsx";
 import InternationalNavEntry from "../components/InternationalNavEntry.jsx";
@@ -64,31 +61,10 @@ const getReviewInitials = (review) => {
 
 // =====================================================
 // =====================================================
-// HERO SLIDES (Image Slideshow)
+// HERO SLIDES (Loaded dynamically from backend)
 // =====================================================
 
-const heroSlides = [
-  {
-    id: 1,
-    image: hero1Img,
-    alt: "Royal Blue Sapphire"
-  },
-  {
-    id: 2,
-    image: "/hero2.png",
-    alt: "Ceylon Gemstone"
-  },
-  {
-    id: 3,
-    image: hero3Img,
-    alt: "Ceylon Royal Sapphire Cluster"
-  },
-  {
-    id: 4,
-    image: hero4Img,
-    alt: "Rare Ceylon Green Gemstones"
-  }
-];
+const heroSlides = [];
 
 
 // =====================================================
@@ -424,9 +400,12 @@ const Home = () => {
   // HERO IMAGE SLIDESHOW
   // =====================================================
 
-  const activeHeroSlideIndex = heroSlideIndex % homeHeroSlides.length;
+  const activeHeroSlideIndex = homeHeroSlides.length
+    ? heroSlideIndex % homeHeroSlides.length
+    : 0;
 
   useEffect(() => {
+    if (!homeHeroSlides.length) return;
     const heroTimer = setInterval(() => {
       setHeroSlideIndex(
         (prev) => (prev + 1) % homeHeroSlides.length

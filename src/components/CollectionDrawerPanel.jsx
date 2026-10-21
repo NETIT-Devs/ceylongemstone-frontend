@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { FaGem, FaTimes, FaTrash } from "react-icons/fa";
 import { getCollectionItemKey } from "../useSharedCollection.js";
 import { useCustomerCart } from "../services/customerCart.js";
@@ -35,7 +36,7 @@ const CollectionDrawerPanel = ({
     ));
   };
 
-  return (
+  return createPortal(
     <div className="gem-drawer-backdrop" onClick={() => setActiveDrawer(null)}>
       <aside
         className="gem-drawer"
@@ -107,7 +108,8 @@ const CollectionDrawerPanel = ({
           setActiveDrawer={setActiveDrawer}
         />
       </aside>
-    </div>
+    </div>,
+    document.body
   );
 };
 

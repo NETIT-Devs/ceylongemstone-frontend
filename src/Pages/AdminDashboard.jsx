@@ -2241,15 +2241,6 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
 
         <div className="about-nav-actions">
           <InternationalNavEntry mobile />
-          <button
-            type="button"
-            className="about-nav-icon"
-            title="Wishlist"
-            onClick={() => setActiveDrawer("wishlist")}
-          >
-            <FaHeart />
-            {wishlistCount > 0 && <span className="about-badge">{wishlistCount}</span>}
-          </button>
           {/* <button
             type="button"
             className="about-nav-icon"
