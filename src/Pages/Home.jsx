@@ -1,15 +1,11 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import ShopNavDropdown from "../components/ShopNavDropdown.jsx";
 import BrandLogo from "../components/BrandLogo.jsx";
-import { motion } from "framer-motion";
 
 import {
   FaHeart,
   FaShoppingBag,
-  FaShieldAlt,
-  FaShippingFast,
   FaGem,
-  FaLock,
   FaTimes,
   FaTrash,
   FaStar,
@@ -60,14 +56,6 @@ const getReviewInitials = (review) => {
 };
 
 // =====================================================
-// =====================================================
-// HERO SLIDES (Loaded dynamically from backend)
-// =====================================================
-
-const heroSlides = [];
-
-
-// =====================================================
 // HERITAGE SLIDES (Videos with poster fallbacks)
 // =====================================================
 
@@ -109,10 +97,6 @@ const Home = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [heroSlideIndex, setHeroSlideIndex] = useState(0);
   const [managedHeroSlides, setManagedHeroSlides] = useState([]);
-  const homeHeroSlides = useMemo(
-    () => [...heroSlides, ...managedHeroSlides],
-    [managedHeroSlides]
-  );
 
   useEffect(() => {
     let isActive = true;
@@ -128,9 +112,8 @@ const Home = () => {
           setManagedHeroSlides(data.banners
             .filter((banner) => String(banner.media_type).toUpperCase() === "IMAGE")
             .map((banner) => ({
-              id: `banner-${banner.id}`,
-              image: resolveMediaUrl(banner.media_url),
-              alt: banner.title
+              ...banner,
+              media_url: resolveMediaUrl(banner.media_url)
             })));
         }
       } catch (error) {
@@ -236,7 +219,6 @@ const Home = () => {
   const homeShopProducts = useMemo(
     () => backendGemstones
       .filter((gemstone) =>
-        Number(gemstone.status) !== 0 &&
         (!gemstone.approval_status || gemstone.approval_status === "approved")
       )
       .map((gemstone) => {
@@ -378,7 +360,7 @@ const Home = () => {
       el.muted = true;
       el.defaultMuted = true;
       if (idx === currentSlide) {
-        el.play().catch(() => {});
+        el.play().catch(() => { });
       } else {
         el.pause();
       }
@@ -400,20 +382,24 @@ const Home = () => {
   // HERO IMAGE SLIDESHOW
   // =====================================================
 
-  const activeHeroSlideIndex = homeHeroSlides.length
-    ? heroSlideIndex % homeHeroSlides.length
+  const activeHeroSlideIndex = managedHeroSlides.length
+    ? heroSlideIndex % managedHeroSlides.length
     : 0;
+  const activeHeroSlide = managedHeroSlides[activeHeroSlideIndex];
+  const heroTitleParts = activeHeroSlide?.title?.match(/^(Discover the)\s*(.*)$/i);
+  const subtitleWorldIndex = activeHeroSlide?.subtitle?.search(/world['’]s/i) ?? -1;
 
   useEffect(() => {
-    if (!homeHeroSlides.length) return;
+    if (managedHeroSlides.length < 2) return undefined;
+
     const heroTimer = setInterval(() => {
       setHeroSlideIndex(
-        (prev) => (prev + 1) % homeHeroSlides.length
+        (prev) => (prev + 1) % managedHeroSlides.length
       );
     }, 5000);
 
     return () => clearInterval(heroTimer);
-  }, [homeHeroSlides.length]);
+  }, [managedHeroSlides.length]);
 
   useEffect(() => {
     const handleHashScroll = () => {
@@ -796,10 +782,9 @@ const Home = () => {
                     type="button"
                     key={code}
                     className={
-                      `currency-option ${
-                        currency === code
-                          ? "selected"
-                          : ""
+                      `currency-option ${currency === code
+                        ? "selected"
+                        : ""
                       }`
                     }
                     onClick={() => {
@@ -935,93 +920,107 @@ const Home = () => {
       {/* =====================================================
           FIRST SCREEN / HERO & TRUST FOLD
       ====================================================== */}
-      <div className="hero-viewport-fold">
+      {managedHeroSlides.length > 0 && (
+        <div className="hero-viewport-fold">
 
-        {/* HERO SECTION */}
-        <section
-          className="gem-hero"
-          id="home"
-        >
+          {/* HERO SECTION */}
+          <section
+            className="gem-hero"
+            id="home"
+          >
 
-          {/* HERO IMAGE SLIDESHOW */}
-          <div className="hero-slides-wrapper">
-            {homeHeroSlides.map((slide, idx) => (
-              <img
-                key={slide.id}
-                src={slide.image}
-                alt={slide.alt || "Ceylon Royal Gemstones Hero"}
-                className={`hero-slide-img ${activeHeroSlideIndex === idx ? "active" : ""}`}
-                loading={idx === 0 ? "eager" : "lazy"}
-                decoding="async"
-                onError={(e) => {
-                  e.target.style.display = "none";
-                }}
-              />
-            ))}
-          </div>
+            {/* HERO IMAGE SLIDESHOW */}
+            <div className="hero-slides-wrapper">
+              {managedHeroSlides.map((slide, idx) => (
+                <img
+                  key={slide.id}
+                  src={slide.media_url}
+                  alt={slide.title || ""}
+                  className={`hero-slide-img ${activeHeroSlideIndex === idx ? "active" : ""}`}
+                  loading={idx === 0 ? "eager" : "lazy"}
+                  decoding="async"
+                />
+              ))}
+            </div>
 
-          {/* HERO SLIDE DOTS */}
-          {homeHeroSlides.length > 1 && (
+            {/* HERO SLIDE DOTS */}
             <div className="hero-slide-dots">
-              {homeHeroSlides.map((slide, idx) => (
+              {managedHeroSlides.map((slide, idx) => (
                 <span
                   key={slide.id}
                   className={`hero-dot ${activeHeroSlideIndex === idx ? "active" : ""}`}
                   onClick={() => setHeroSlideIndex(idx)}
-                  title={slide.alt}
+                  title={slide.title || ""}
                   aria-label={`Slide ${idx + 1}`}
                 />
               ))}
             </div>
-          )}
-
-          <div className="hero-overlay" />
-
-          <div className="hero-glow glow-one" />
-
-          <div className="hero-glow glow-two" />
-        </section>
 
 
-        {/* =====================================================
-            HERO TRUST BAR
-        ====================================================== */}
 
-        <div className="hero-trust-bar">
-          <div className="trust-bar-item">
-            <FaShieldAlt className="trust-bar-icon" />
-            <div>
-              <h4>100% Certified Natural</h4>
-              <p>Authentic Sri Lankan Gemstones</p>
+            <div className="hero-overlay" />
+
+            <div className="hero-main-container center-layout flex flex-col items-start text-left">
+              <div className="hero-content home-hero-copy flex w-full max-w-[680px] flex-col items-start text-left">
+                {activeHeroSlide?.badge && (
+                  <div className="hero-badge">
+                    <span className="badge-dot" />
+                    {activeHeroSlide.badge}
+                  </div>
+                )}
+
+                {activeHeroSlide?.title && (
+                  <h1 className="w-full max-w-xl break-words leading-tight [overflow-wrap:anywhere]">
+                    {heroTitleParts ? (
+                      <>
+                        <span className="text-white">{heroTitleParts[1]}</span>
+                        {heroTitleParts[2] && (
+                          <>
+                            {" "}
+                            <span className="gold-gradient">{heroTitleParts[2]}</span>
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <span className="gold-gradient">{activeHeroSlide.title}</span>
+                    )}
+                  </h1>
+                )}
+
+                {activeHeroSlide?.subtitle && (
+                  <p className="max-w-md line-clamp-2">
+                    {subtitleWorldIndex >= 0 ? (
+                      <>
+                        {activeHeroSlide.subtitle.slice(0, subtitleWorldIndex)}
+                        <br />
+                        {activeHeroSlide.subtitle.slice(subtitleWorldIndex)}
+                      </>
+                    ) : activeHeroSlide.subtitle}
+                  </p>
+                )}
+
+                {(activeHeroSlide?.button_text && activeHeroSlide?.button_link) ||
+                  (activeHeroSlide?.secondary_button_text && activeHeroSlide?.secondary_button_link) ? (
+                  <div className="hero-actions flex flex-wrap items-center gap-4">
+                    {activeHeroSlide.button_text && activeHeroSlide.button_link && (
+                      <a href={activeHeroSlide.button_link} className="btn-primary">
+                        {activeHeroSlide.button_text}
+                      </a>
+                    )}
+                    {activeHeroSlide.secondary_button_text && activeHeroSlide.secondary_button_link && (
+                      <a href={activeHeroSlide.secondary_button_link} className="btn-primary">
+                        {activeHeroSlide.secondary_button_text}
+                      </a>
+                    )}
+                  </div>
+                ) : null}
+              </div>
             </div>
-          </div>
 
-          <div className="trust-bar-item">
-            <FaShippingFast className="trust-bar-icon" />
-            <div>
-              <h4>Worldwide Express Shipping</h4>
-              <p>Safe & Secure Delivery</p>
-            </div>
-          </div>
+          </section>
 
-          <div className="trust-bar-item">
-            <FaGem className="trust-bar-icon" />
-            <div>
-              <h4>GIA / GRS Certified</h4>
-              <p>International Lab Reports</p>
-            </div>
-          </div>
-
-          <div className="trust-bar-item">
-            <FaLock className="trust-bar-icon" />
-            <div>
-              <h4>Secure Payments</h4>
-              <p>Your Trust, Our Priority</p>
-            </div>
-          </div>
         </div>
-
-      </div>
+      )}
 
 
       {/* =====================================================
@@ -1222,94 +1221,92 @@ const Home = () => {
               : originalPrice;
 
             return (
-            <article className="gem-product-card" key={item.id}>
-              <div className="product-image-box">
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  loading="lazy"
-                  onError={(event) => {
-                    event.currentTarget.src = "/logo.png";
-                  }}
-                />
-                <span className="product-treatment">{item.treatment}</span>
-                {hasDiscount ? (
-                  <span className="product-discount-label">
-                    {discountRate}% OFF
-                  </span>
-                ) : offerItem.discountLabel?.trim() ? (
-                  <span className="product-discount-label">{offerItem.discountLabel}</span>
-                ) : null}
-                <button
-                  type="button"
-                  className={`product-wishlist ${
-                    wishlist.some(
+              <article className="gem-product-card" key={item.id}>
+                <div className="product-image-box">
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    loading="lazy"
+                    onError={(event) => {
+                      event.currentTarget.src = "/logo.png";
+                    }}
+                  />
+                  <span className="product-treatment">{item.treatment}</span>
+                  {hasDiscount ? (
+                    <span className="product-discount-label">
+                      {discountRate}% OFF
+                    </span>
+                  ) : offerItem.discountLabel?.trim() ? (
+                    <span className="product-discount-label">{offerItem.discountLabel}</span>
+                  ) : null}
+                  <button
+                    type="button"
+                    className={`product-wishlist ${wishlist.some(
                       (wishlistItem) =>
                         getCollectionItemKey(wishlistItem) === getCollectionItemKey(item)
                     )
                       ? "liked"
                       : ""
-                  }`}
-                  aria-label={`${
-                    wishlist.some(
+                      }`}
+                    aria-label={`${wishlist.some(
                       (wishlistItem) =>
                         getCollectionItemKey(wishlistItem) === getCollectionItemKey(item)
                     )
                       ? "Remove from"
                       : "Add to"
-                  } wishlist: ${item.name}`}
-                  onClick={() => toggleFeaturedWishlist(item)}
-                >
-                  <FaHeart />
-                </button>
-              </div>
+                      } wishlist: ${item.name}`}
+                    onClick={() => toggleFeaturedWishlist(item)}
+                  >
+                    <FaHeart />
+                  </button>
+                </div>
 
-              <div className="product-info">
-                <span className="product-category">{item.category}</span>
-                <h3>
-                  <a
-                    className="product-name-link"
-                    href={`/jewellery?product=${item.id}`}
-                  >
-                    {item.name}
-                  </a>
-                </h3>
-                <div className="product-details">
-                  <span>{item.color}</span>
-                  <span>{item.shape}</span>
-                </div>
-                <div className="product-card-actions">
-                  <button
-                    type="button"
-                    className={`product-stock-status ${inStock ? "in-stock" : "out-of-stock"}`}
-                    disabled
-                    aria-label={`${item.name} ${inStock ? "available" : "out of stock"}`}
-                  >
-                    {inStock ? "AVAILABLE" : "OUT OF STOCK"}
-                  </button>
-                  <button
-                    type="button"
-                    className="product-view-details"
-                    onClick={() => window.location.assign(`/jewellery?product=${item.id}`)}
-                  >
-                    VIEW DETAILS
-                  </button>
-                </div>
-                <div className="product-bottom">
-                  <div className={`product-prices ${hasDiscount ? "has-discount" : ""}`}>
-                    {hasDiscount && (
-                      <del className="product-original-price">
-                        {formatPrice(originalPrice)}
-                      </del>
-                    )}
-                    <strong>{formatPrice(offerPrice)}</strong>
-                    {offerEndDate && (
-                      <span className="product-offer-end-date">
-                        Offer ends {offerEndDate}
-                      </span>
-                    )}
+                <div className="product-info">
+                  <span className="product-category">{item.category}</span>
+                  <h3>
+                    <a
+                      className="product-name-link"
+                      href={`/jewellery?product=${item.id}`}
+                    >
+                      {item.name}
+                    </a>
+                  </h3>
+                  <div className="product-details">
+                    <span>{item.color}</span>
+                    <span>{item.shape}</span>
                   </div>
-                  {/* <button
+                  <div className="product-card-actions">
+                    <button
+                      type="button"
+                      className={`product-stock-status ${inStock ? "in-stock" : "out-of-stock"}`}
+                      disabled
+                      aria-label={`${item.name} ${inStock ? "available" : "out of stock"}`}
+                    >
+                      {inStock ? "AVAILABLE" : "OUT OF STOCK"}
+                    </button>
+                    <button
+                      type="button"
+                      className="product-view-details"
+                      onClick={() => window.location.assign(`/jewellery?product=${item.id}`)}
+                    >
+                      VIEW DETAILS
+                    </button>
+                  </div>
+                  <div className="product-bottom">
+                    <div className={`product-prices ${hasDiscount ? "has-discount" : ""}`}>
+                      {hasDiscount && (
+                        <del className="product-original-price">
+                          {formatPrice(originalPrice)}
+                        </del>
+                      )}
+                      <strong>{formatPrice(offerPrice)}</strong>
+                      {offerEndDate && (
+                        <span className="product-offer-end-date">
+                          Offer ends {offerEndDate}
+                        </span>
+                      )}
+                    </div>
+                    {/* <button
                     type="button"
                     className={`add-to-cart-btn ${inStock ? "" : "out-of-stock"}`}
                     aria-label={inStock ? `Add ${item.name} to cart` : `${item.name} is out of stock`}
@@ -1319,9 +1316,9 @@ const Home = () => {
                     <FaShoppingBag />
                     <span>ADD TO CART</span>
                   </button> */}
+                  </div>
                 </div>
-              </div>
-            </article>
+              </article>
             );
           })}
         </div>
@@ -1403,10 +1400,9 @@ const Home = () => {
                   <span
                     key={index}
                     className={
-                      `dot-full ${
-                        currentSlide === index
-                          ? "active"
-                          : ""
+                      `dot-full ${currentSlide === index
+                        ? "active"
+                        : ""
                       }`
                     }
                     onClick={() =>

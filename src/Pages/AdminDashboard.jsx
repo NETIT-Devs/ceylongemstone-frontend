@@ -154,11 +154,8 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
   const [backendGems, setBackendGems] = useState([]);
   const [backendCategories, setBackendCategories] = useState([]);
   const [databaseGemApprovals, setDatabaseGemApprovals] = useState([]);
-  const [databaseJewelleryApprovals, setDatabaseJewelleryApprovals] = useState([]);
   const [gemApprovalsError, setGemApprovalsError] = useState("");
-  const [jewelleryApprovalsError, setJewelleryApprovalsError] = useState("");
   const [gemApprovalsLoading, setGemApprovalsLoading] = useState(false);
-  const [jewelleryApprovalsLoading, setJewelleryApprovalsLoading] = useState(false);
   const [categoriesError, setCategoriesError] = useState("");
   const [gemCategoryFilter, setGemCategoryFilter] = useState("all");
   const filteredBackendGems = backendGems.filter((gem) =>
@@ -181,7 +178,6 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       ...gemProductOverrides[String(gem.id)]
     })),
     ...backendGems
-      .filter((gem) => Number(gem.status) !== 0)
       .map((gem) => ({
         ...gem,
         id: Number(gem.id),
@@ -362,7 +358,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
   ];
   const storefrontJewelleryList = jewelleryList.filter((item) =>
     item.isDbItem
-      ? ["active", "approved"].includes(String(item.status || "").toLowerCase())
+      ? ["active", "approved", "out_of_stock"].includes(String(item.status || "").toLowerCase())
       : !["pending", "rejected", "inactive", "draft"].includes(String(item.status || "").toLowerCase())
   );
 
@@ -375,9 +371,9 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       const response = await apiGet(`/api/dashboard/stats?${params.toString()}`);
       const data = await readGemApiResponse(response, "Unable to load dashboard statistics.");
       if (!data.data || !Number.isFinite(Number(data.data.active_gemstones)) ||
-          !Number.isFinite(Number(data.data.active_jewellery)) ||
-          !Number.isFinite(Number(data.data.total_orders)) ||
-          !Number.isFinite(Number(data.data.shipments_in_transit))) {
+        !Number.isFinite(Number(data.data.active_jewellery)) ||
+        !Number.isFinite(Number(data.data.total_orders)) ||
+        !Number.isFinite(Number(data.data.shipments_in_transit))) {
         throw new Error("The dashboard statistics service returned invalid data.");
       }
       setDashboardStats({
@@ -446,25 +442,6 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       return false;
     } finally {
       setGemApprovalsLoading(false);
-    }
-  }, []);
-
-  const refreshJewelleryApprovals = useCallback(async () => {
-    setJewelleryApprovalsLoading(true);
-    setJewelleryApprovalsError("");
-    try {
-      const response = await apiGet("/api/jewellery/pending-approvals");
-      const data = await readGemApiResponse(response, "Unable to load pending jewellery approvals.");
-      if (!Array.isArray(data.data)) {
-        throw new Error("The jewellery approval service returned invalid data.");
-      }
-      setDatabaseJewelleryApprovals(data.data);
-      return true;
-    } catch (error) {
-      setJewelleryApprovalsError(error instanceof Error ? error.message : "Unable to load pending jewellery approvals.");
-      return false;
-    } finally {
-      setJewelleryApprovalsLoading(false);
     }
   }, []);
 
@@ -755,10 +732,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
         refreshShippingMethods(),
         refreshLowStock(),
         ...(isSuperAdmin
-          ? [
-              refreshGemApprovals(),
-              refreshJewelleryApprovals()
-            ]
+          ? [refreshGemApprovals()]
           : [])
       ])
     );
@@ -769,7 +743,6 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     refreshGems,
     refreshGemApprovals,
     refreshJewellery,
-    refreshJewelleryApprovals,
     refreshLowStock,
     refreshReviews,
     refreshShippingMethods,
@@ -789,7 +762,17 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
   const [heroSlidesError, setHeroSlidesError] = useState("");
   const [heroSlideSaving, setHeroSlideSaving] = useState(false);
   const [managedBlogPosts, setManagedBlogPosts] = useManagedBlogPosts();
-  const [newHeroSlide, setNewHeroSlide] = useState({ alt: "", image: "" });
+  const [blogPostSaving, setBlogPostSaving] = useState(false);
+  const [newHeroSlide, setNewHeroSlide] = useState({
+    alt: "",
+    badge: "",
+    subtitle: "",
+    button_text: "",
+    button_link: "",
+    secondary_button_text: "",
+    secondary_button_link: "",
+    image: ""
+  });
   const [editingHeroSlideId, setEditingHeroSlideId] = useState(null);
   const [newBlogPost, setNewBlogPost] = useState({
     title: "",
@@ -812,13 +795,19 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       setManagedHeroSlides(data.banners
         .filter((banner) => String(banner.media_type).toUpperCase() === "IMAGE")
         .map((banner) => ({
-        id: banner.id,
-        alt: banner.title,
-        image: banner.media_url,
-        mediaType: banner.media_type,
-        sortOrder: Number(banner.sort_order) || 0,
-        status: Number(banner.status) === 1
-      })));
+          id: banner.id,
+          alt: banner.title,
+          badge: banner.badge || "",
+          subtitle: banner.subtitle || "",
+          button_text: banner.button_text || "",
+          button_link: banner.button_link ?? banner.link_url ?? "",
+          secondary_button_text: banner.secondary_button_text || "",
+          secondary_button_link: banner.secondary_button_link || "",
+          image: banner.media_url,
+          mediaType: banner.media_type,
+          sortOrder: Number(banner.sort_order) || 0,
+          status: Number(banner.status) === 1
+        })));
     } catch (error) {
       setHeroSlidesError(
         error instanceof Error ? error.message : "Unable to load homepage hero slides."
@@ -884,6 +873,12 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       const banner = managedHeroSlides.find((slide) => slide.id === editingHeroSlideId);
       const payload = {
         title: newHeroSlide.alt.trim(),
+        badge: newHeroSlide.badge.trim(),
+        subtitle: newHeroSlide.subtitle.trim(),
+        button_text: newHeroSlide.button_text.trim(),
+        button_link: newHeroSlide.button_link.trim(),
+        secondary_button_text: newHeroSlide.secondary_button_text.trim(),
+        secondary_button_link: newHeroSlide.secondary_button_link.trim(),
         media_type: "IMAGE",
         media_url: mediaUrl,
         sort_order: banner?.sortOrder ?? managedHeroSlides.length,
@@ -904,7 +899,16 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
 
       await refreshHeroSlides();
       setEditingHeroSlideId(null);
-      setNewHeroSlide({ alt: "", image: "" });
+      setNewHeroSlide({
+        alt: "",
+        badge: "",
+        subtitle: "",
+        button_text: "",
+        button_link: "",
+        secondary_button_text: "",
+        secondary_button_link: "",
+        image: ""
+      });
       showCustomAlert(
         editingHeroSlideId
           ? "The homepage hero slide has been updated."
@@ -925,16 +929,38 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
 
   const handleEditHeroSlide = (slide) => {
     setEditingHeroSlideId(slide.id);
-    setNewHeroSlide({ alt: slide.alt || "", image: slide.image || "" });
-    document.getElementById("hero-slide-title")?.focus();
+    setNewHeroSlide({
+      alt: slide.alt || "",
+      badge: slide.badge || "",
+      subtitle: slide.subtitle || "",
+      button_text: slide.button_text || "",
+      button_link: slide.button_link || "",
+      secondary_button_text: slide.secondary_button_text || "",
+      secondary_button_link: slide.secondary_button_link || "",
+      image: slide.image || ""
+    });
+    document.getElementById("hero-slide-editor")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
+    document.getElementById("hero-slide-title")?.focus({ preventScroll: true });
   };
 
   const handleCancelHeroSlideEdit = () => {
     setEditingHeroSlideId(null);
-    setNewHeroSlide({ alt: "", image: "" });
+    setNewHeroSlide({
+      alt: "",
+      badge: "",
+      subtitle: "",
+      button_text: "",
+      button_link: "",
+      secondary_button_text: "",
+      secondary_button_link: "",
+      image: ""
+    });
   };
 
-  const handleAddBlogPost = (event) => {
+  const handleAddBlogPost = async (event) => {
     event.preventDefault();
     const paragraphs = newBlogPost.content
       .split(/\r?\n/)
@@ -950,25 +976,89 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       return;
     }
 
+    if (!editingBlogPostId) {
+      setBlogPostSaving(true);
+      try {
+        const imageBlob = await (await fetch(newBlogPost.image)).blob();
+        const formData = new FormData();
+        formData.append("title", newBlogPost.title.trim());
+        formData.append("category", newBlogPost.category);
+        formData.append("summary", newBlogPost.excerpt.trim());
+        formData.append("content", paragraphs.join("\n\n"));
+        formData.append("image", imageBlob, "blog-cover.jpg");
+
+        const response = await apiRequest("/api/blogs", {
+          method: "POST",
+          body: formData
+        });
+        let result;
+        try {
+          result = await response.json();
+        } catch {
+          throw new Error("The blog service returned an invalid response.");
+        }
+        if (!response.ok || result?.success !== true || !result.blog_id) {
+          throw new Error(result?.message || "Unable to publish the blog post.");
+        }
+
+        const post = {
+          id: result.blog_id,
+          title: newBlogPost.title.trim(),
+          category: newBlogPost.category,
+          date: new Date().toLocaleDateString(undefined, {
+            year: "numeric",
+            month: "long",
+            day: "numeric"
+          }),
+          readTime: `${Math.max(1, Math.ceil(paragraphs.join(" ").split(/\s+/).length / 200))} min read`,
+          image: result.image || newBlogPost.image,
+          excerpt: newBlogPost.excerpt.trim(),
+          content: paragraphs
+        };
+        setManagedBlogPosts((current) => [post, ...current]);
+        setNewBlogPost({
+          title: "",
+          category: "Gemstone Guide",
+          excerpt: "",
+          content: "",
+          image: ""
+        });
+        showCustomAlert(
+          "The article has been saved to the database and published.",
+          "Blog Post Published",
+          "success"
+        );
+      } catch (error) {
+        showCustomAlert(
+          error instanceof Error ? error.message : "Unable to publish the blog post.",
+          "Blog Post Publish Failed",
+          "warning"
+        );
+      } finally {
+        setBlogPostSaving(false);
+      }
+      return;
+    }
+
     const post = {
-      id: editingBlogPostId || `admin-blog-${Date.now()}`,
+      id: editingBlogPostId,
       title: newBlogPost.title.trim(),
       category: newBlogPost.category,
       date: editingBlogPostId
         ? managedBlogPosts.find((item) => item.id === editingBlogPostId)?.date
         : new Date().toLocaleDateString(undefined, {
-            year: "numeric",
-            month: "long",
-            day: "numeric"
-          }),
+          year: "numeric",
+          month: "long",
+          day: "numeric"
+        }),
       readTime: `${Math.max(1, Math.ceil(paragraphs.join(" ").split(/\s+/).length / 200))} min read`,
       image: newBlogPost.image,
       excerpt: newBlogPost.excerpt.trim(),
       content: paragraphs
     };
-    setManagedBlogPosts((current) => editingBlogPostId
-      ? current.map((item) => item.id === editingBlogPostId ? post : item)
-      : [post, ...current]);
+    setManagedBlogPosts((current) =>
+      current.map((item) => item.id === editingBlogPostId ? post : item)
+    );
     setEditingBlogPostId(null);
     setNewBlogPost({
       title: "",
@@ -977,13 +1067,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       content: "",
       image: ""
     });
-    showCustomAlert(
-      editingBlogPostId
-        ? "The article has been updated on the Blog page."
-        : "The article has been published on the Blog page.",
-      editingBlogPostId ? "Blog Post Updated" : "Blog Post Published",
-      "success"
-    );
+    showCustomAlert("The article has been updated on the Blog page.", "Blog Post Updated", "success");
   };
 
   const handleEditBlogPost = (post) => {
@@ -1031,7 +1115,16 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
             await refreshHeroSlides();
             if (String(editingHeroSlideId) === String(id)) {
               setEditingHeroSlideId(null);
-              setNewHeroSlide({ alt: "", image: "" });
+              setNewHeroSlide({
+                alt: "",
+                badge: "",
+                subtitle: "",
+                button_text: "",
+                button_link: "",
+                secondary_button_text: "",
+                secondary_button_link: "",
+                image: ""
+              });
             }
           } catch (error) {
             showCustomAlert(
@@ -1914,44 +2007,14 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
   };
 
-  const handleJewelleryApproval = async (submissionId, status, isDbItem = false) => {
-    const isDb = isDbItem || databaseJewelleryApprovals.some((item) => item.id === submissionId);
-    if (isDb) {
-      try {
-        const res = await apiPut(`/api/jewellery/${submissionId}/status`, { status });
-        await readGemApiResponse(res, `Failed to update status to ${status}`);
-        const itemObj = databaseJewelleryApprovals.find((item) => item.id === submissionId);
-        const [approvalsRefreshed] = await Promise.all([
-          refreshJewelleryApprovals(),
-          refreshJewellery()
-        ]);
-        if (!approvalsRefreshed) {
-          showCustomAlert(
-            "Jewellery status was updated, but the pending approval list could not be refreshed.",
-            "Approval Updated",
-            "warning"
-          );
-          return;
-        }
-        showCustomAlert(
-          `Jewellery request "${itemObj?.product_name || `#${submissionId}`}" has been ${
-            status === "approved" ? "approved and is now available in the shop." : "rejected."
-          }`,
-          `Jewellery ${status === "approved" ? "Approved" : "Rejected"}`,
-          status === "approved" ? "success" : "warning"
-        );
-      } catch (err) {
-        showCustomAlert(err.message || "Failed to update jewellery status.", "Error", "danger");
-      }
-    } else {
-      setJewellerySubmissions((current) =>
-        current.map((submission) =>
-          submission.id === submissionId
-            ? { ...submission, status, reviewedAt: new Date().toISOString() }
-            : submission
-        )
-      );
-    }
+  const handleJewelleryApproval = (submissionId, status) => {
+    setJewellerySubmissions((current) =>
+      current.map((submission) =>
+        submission.id === submissionId
+          ? { ...submission, status, reviewedAt: new Date().toISOString() }
+          : submission
+      )
+    );
   };
 
   const handleDeleteCertificate = (certificate, gemstoneName) => {
@@ -2169,32 +2232,9 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     })),
     ...gemSubmissions.filter((submission) => submission.status === "pending")
   ];
-  const pendingJewelleryApprovals = [
-    ...databaseJewelleryApprovals.map((item) => ({
-        id: item.id,
-        isDb: true,
-        jewellery: {
-          id: item.id,
-          name: item.product_name,
-          category: item.jewellery_type || "Jewellery",
-          color: item.color || "—",
-          shape: item.gemstone_type
-            ? `${item.gemstone_type} • ${item.material || ""}`
-            : (item.material || item.product_code || "Fine Jewellery"),
-          price: item.price,
-          currency: item.currency || "USD",
-          image: resolveMediaUrl(item.image_url) || "/BlueBracelete.jpg",
-          stock: item.stock_quantity,
-          handcrafted: item.is_handcrafted,
-          product_code: item.product_code
-        },
-        status: item.status,
-        submittedAt: item.created_at
-      })),
-    ...jewellerySubmissions.filter(
-      (submission) => submission.status === "pending"
-    )
-  ];
+  const pendingJewelleryApprovals = jewellerySubmissions.filter(
+    (submission) => submission.status === "pending"
+  );
   const currentAdmin = readAdminSession();
   const visibleAdminAccounts = adminAccounts.filter((account) => {
     const matchesCurrentId =
@@ -3144,21 +3184,21 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                   <h2><FaCheckCircle /> Gem Approval</h2>
                   <p>Review gemstones submitted by Admins before they appear in the shop.</p>
                 </div>
-                  <div className="stock-alert-heading-actions">
-                    <span className="admin-live-note">{pendingGemApprovals.length} PENDING APPROVALS</span>
-                    <button type="button" className="admin-action-btn" onClick={refreshGemApprovals} disabled={gemApprovalsLoading}>
-                      {gemApprovalsLoading ? "Loading…" : "Refresh"}
-                    </button>
-                  </div>
+                <div className="stock-alert-heading-actions">
+                  <span className="admin-live-note">{pendingGemApprovals.length} PENDING APPROVALS</span>
+                  <button type="button" className="admin-action-btn" onClick={refreshGemApprovals} disabled={gemApprovalsLoading}>
+                    {gemApprovalsLoading ? "Loading…" : "Refresh"}
+                  </button>
                 </div>
-                {gemApprovalsError && (
-                  <p className="admin-empty-state" role="alert">
-                    {gemApprovalsError}{" "}
-                    <button type="button" className="admin-action-btn" onClick={refreshGemApprovals}>Retry</button>
-                  </p>
-                )}
+              </div>
+              {gemApprovalsError && (
+                <p className="admin-empty-state" role="alert">
+                  {gemApprovalsError}{" "}
+                  <button type="button" className="admin-action-btn" onClick={refreshGemApprovals}>Retry</button>
+                </p>
+              )}
 
-                <div className="admin-table-wrapper">
+              <div className="admin-table-wrapper">
                 <table className="admin-table gem-approval-table">
                   <thead>
                     <tr>
@@ -3248,19 +3288,8 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                   <h2><FaCheckCircle /> Jewellery Approval</h2>
                   <p>Review jewellery items submitted by Admins before they appear in the shop.</p>
                 </div>
-                <div className="stock-alert-heading-actions">
-                  <span className="admin-live-note">{pendingJewelleryApprovals.length} PENDING APPROVALS</span>
-                  <button type="button" className="admin-action-btn" onClick={refreshJewelleryApprovals} disabled={jewelleryApprovalsLoading}>
-                    {jewelleryApprovalsLoading ? "Loading…" : "Refresh"}
-                  </button>
-                </div>
+                <span className="admin-live-note">{pendingJewelleryApprovals.length} PENDING APPROVALS</span>
               </div>
-              {jewelleryApprovalsError && (
-                <p className="admin-empty-state" role="alert">
-                  {jewelleryApprovalsError}{" "}
-                  <button type="button" className="admin-action-btn" onClick={refreshJewelleryApprovals}>Retry</button>
-                </p>
-              )}
               <div className="admin-table-wrapper">
                 <table className="admin-table gem-approval-table">
                   <thead>
@@ -3315,14 +3344,14 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                             <button
                               type="button"
                               className="gem-approval-approve"
-                              onClick={() => handleJewelleryApproval(submission.id, "approved", submission.isDb)}
+                              onClick={() => handleJewelleryApproval(submission.id, "approved")}
                             >
                               <FaCheckCircle /> Approve
                             </button>
                             <button
                               type="button"
                               className="gem-approval-reject"
-                              onClick={() => handleJewelleryApproval(submission.id, "rejected", submission.isDb)}
+                              onClick={() => handleJewelleryApproval(submission.id, "rejected")}
                             >
                               <FaTimes /> Reject
                             </button>
@@ -3333,9 +3362,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                     {pendingJewelleryApprovals.length === 0 && (
                       <tr>
                         <td className="admin-empty-state" colSpan="5">
-                          {jewelleryApprovalsLoading
-                            ? "Loading database approvals…"
-                            : "There are no jewellery items waiting for approval."}
+                          There are no jewellery submissions waiting for approval.
                         </td>
                       </tr>
                     )}
@@ -3515,9 +3542,16 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                       id="new-gem-description"
                       placeholder="Brief description of this gemstone..."
                       rows={3}
+                      maxLength={300}
                       value={newGem.description}
                       onChange={(event) => setNewGem({ ...newGem, description: event.target.value })}
                     />
+                    <span className="gem-description-counter" aria-live="polite">
+                      {newGem.description.length}/300 characters
+                    </span>
+                    <span className="gem-description-helper">
+                      Maximum 300 characters allowed to maintain optimal storefront display.
+                    </span>
                   </div>
                   <section className="gem-media-section">
                     <div>
@@ -3644,43 +3678,48 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredBackendGems.map((gem) => (
-                          <tr key={gem.id}>
-                            <td>
-                              <strong>{gem.name}</strong>
-                              {gem.gemstone_id && <div className="table-subtext">{gem.gemstone_id}</div>}
-                            </td>
-                            <td><span className="gem-category-pill">{gem.category_name || "Uncategorized"}</span></td>
-                            <td>{gem.carat ? `${gem.carat} ct` : "—"}</td>
-                            <td className="gold-text">
-                              {gem.price == null ? "—" : `$${Number(gem.price).toLocaleString()}`}
-                            </td>
-                            <td>{Number(gem.stock ?? 0)}</td>
-                            <td>
-                              <span className={`gem-database-status ${isGemstoneActive(gem.status) ? "active" : "inactive"}`}>
-                                {isGemstoneActive(gem.status) ? "Available" : "Inactive"}
-                              </span>
-                            </td>
-                            <td>
-                              <div className="gem-inventory-row-actions">
-                                <button
-                                  type="button"
-                                  className="admin-action-btn gem-edit-btn"
-                                  onClick={() => handleEditLiveGem(gem)}
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  type="button"
-                                  className="gem-delete-btn"
-                                  onClick={() => handleDeleteGem(gem.id)}
-                                >
-                                  <FaTrash /> Delete
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
+                        {filteredBackendGems.map((gem) => {
+                          const stock = Number(gem.stock ?? 0);
+                          const hasStock = Number.isFinite(stock) && stock > 0;
+
+                          return (
+                            <tr key={gem.id}>
+                              <td>
+                                <strong>{gem.name}</strong>
+                                {gem.gemstone_id && <div className="table-subtext">{gem.gemstone_id}</div>}
+                              </td>
+                              <td><span className="gem-category-pill">{gem.category_name || "Uncategorized"}</span></td>
+                              <td>{gem.carat ? `${gem.carat} ct` : "—"}</td>
+                              <td className="gold-text">
+                                {gem.price == null ? "—" : `$${Number(gem.price).toLocaleString()}`}
+                              </td>
+                              <td>{Number.isFinite(stock) ? stock : 0}</td>
+                              <td>
+                                <span className={`gem-database-status ${hasStock ? "active" : "out-of-stock"}`}>
+                                  {hasStock ? "Available" : "Out of Stock"}
+                                </span>
+                              </td>
+                              <td>
+                                <div className="gem-inventory-row-actions">
+                                  <button
+                                    type="button"
+                                    className="admin-action-btn gem-edit-btn"
+                                    onClick={() => handleEditLiveGem(gem)}
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="gem-delete-btn"
+                                    onClick={() => handleDeleteGem(gem.id)}
+                                  >
+                                    <FaTrash /> Delete
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -3810,84 +3849,84 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
 
                   return (
                     <div className="admin-gem-card" key={gem.id}>
-                    <img
-                      src={resolveMediaUrl(gem.image)}
-                      alt={gem.name}
-                    />
-                    <div className="admin-gem-body">
-                      <span className="gem-tag">{gem.tag || "NATURAL CEYLON"}</span>
-                      {reviewStatus && (
-                        <span className={`gem-review-status status-${reviewStatus}`}>
-                          {reviewStatus}
-                        </span>
-                      )}
-                      <h3>{gem.name}</h3>
-                      <p>
-                        {gem.category || gem.category_name || "Gemstone"}
-                        {gem.carat ? ` · ${gem.carat} Ct` : ""}
-                        {gem.origin ? ` · ${gem.origin}` : ""}
-                      </p>
-                      <div className={`admin-gem-prices ${hasDiscount ? "has-discount" : ""}`}>
+                      <img
+                        src={resolveMediaUrl(gem.image)}
+                        alt={gem.name}
+                      />
+                      <div className="admin-gem-body">
+                        <span className="gem-tag">{gem.tag || "NATURAL CEYLON"}</span>
+                        {reviewStatus && (
+                          <span className={`gem-review-status status-${reviewStatus}`}>
+                            {reviewStatus}
+                          </span>
+                        )}
+                        <h3>{gem.name}</h3>
+                        <p>
+                          {gem.category || gem.category_name || "Gemstone"}
+                          {gem.carat ? ` · ${gem.carat} Ct` : ""}
+                          {gem.origin ? ` · ${gem.origin}` : ""}
+                        </p>
+                        <div className={`admin-gem-prices ${hasDiscount ? "has-discount" : ""}`}>
+                          {hasDiscount && (
+                            <del className="product-original-price">
+                              ${originalPrice.toLocaleString()} USD
+                            </del>
+                          )}
+                          <strong className="gem-price">
+                            ${offerPrice.toLocaleString()} USD
+                          </strong>
+                          {offerEndDate && (
+                            <small className="admin-gem-offer-end-date">Offer ends {offerEndDate}</small>
+                          )}
+                        </div>
                         {hasDiscount && (
-                          <del className="product-original-price">
-                            ${originalPrice.toLocaleString()} USD
-                          </del>
+                          <span className="admin-gem-discount-badge">
+                            <FaPercent aria-hidden="true" />
+                            <span>{discountRate}% OFF</span>
+                          </span>
                         )}
-                        <strong className="gem-price">
-                          ${offerPrice.toLocaleString()} USD
-                        </strong>
-                        {offerEndDate && (
-                          <small className="admin-gem-offer-end-date">Offer ends {offerEndDate}</small>
-                        )}
-                      </div>
-                      {hasDiscount && (
-                        <span className="admin-gem-discount-badge">
-                          <FaPercent aria-hidden="true" />
-                          <span>{discountRate}% OFF</span>
+                        <span className={`admin-gem-stock ${availableStock > 0 ? "in-stock" : "out-of-stock"}`}>
+                          {availableStock > 0 ? `In stock: ${availableStock}` : "Out of stock"}
                         </span>
-                      )}
-                      <span className={`admin-gem-stock ${availableStock > 0 ? "in-stock" : "out-of-stock"}`}>
-                        {availableStock > 0 ? `In stock: ${availableStock}` : "Out of stock"}
-                      </span>
-                      <div className="admin-gem-actions">
-                        <button
-                          type="button"
-                          className="admin-action-btn gem-certificate-btn"
-                          disabled={!certificatesLoaded}
-                          onClick={() => openCertificateModal(
-                            gem,
-                            certificatesByGemstone[String(gem.inventoryId || gem.id)] || null
-                          )}
-                        >
-                          <FaFileInvoice />
-                          {certificatesLoaded
-                            ? certificatesByGemstone[String(gem.inventoryId || gem.id)]
-                              ? "Edit Certificate"
-                              : "Add Certificate"
-                            : "Loading…"}
-                        </button>
-                        <button
-                          type="button"
-                          className="admin-action-btn gem-edit-btn"
-                          style={{ justifyContent: "center", padding: "8px" }}
-                          onClick={() => (
-                            gem.inventoryId
-                              ? handleEditLiveGem(gem)
-                              : handleEditGem(gem)
-                          )}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          className="gem-delete-btn"
-                          onClick={() => handleDeleteGem(gem.id)}
-                        >
-                          <FaTrash /> Remove
-                        </button>
+                        <div className="admin-gem-actions">
+                          <button
+                            type="button"
+                            className="admin-action-btn gem-certificate-btn"
+                            disabled={!certificatesLoaded}
+                            onClick={() => openCertificateModal(
+                              gem,
+                              certificatesByGemstone[String(gem.inventoryId || gem.id)] || null
+                            )}
+                          >
+                            <FaFileInvoice />
+                            {certificatesLoaded
+                              ? certificatesByGemstone[String(gem.inventoryId || gem.id)]
+                                ? "Edit Certificate"
+                                : "Add Certificate"
+                              : "Loading…"}
+                          </button>
+                          <button
+                            type="button"
+                            className="admin-action-btn gem-edit-btn"
+                            style={{ justifyContent: "center", padding: "8px" }}
+                            onClick={() => (
+                              gem.inventoryId
+                                ? handleEditLiveGem(gem)
+                                : handleEditGem(gem)
+                            )}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            className="gem-delete-btn"
+                            onClick={() => handleDeleteGem(gem.id)}
+                          >
+                            <FaTrash /> Remove
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
                   );
                 })}
               </div>
@@ -3916,9 +3955,9 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                     <button type="button" className="admin-action-btn" onClick={refreshJewellery}>Retry</button>
                   </p>
                 ) : backendJewellery.length === 0 && !jewelleryLoading ? (
-                    <p className="admin-empty-state">No jewellery items in the database yet. Use the form above to add one.</p>
+                  <p className="admin-empty-state">No jewellery items in the database yet. Use the form above to add one.</p>
                 ) : filteredBackendJewellery.length === 0 && !jewelleryLoading ? (
-                    <p className="admin-empty-state">No jewellery items found for this type.</p>
+                  <p className="admin-empty-state">No jewellery items found for this type.</p>
                 ) : (
                   <div className="admin-table-wrapper">
                     <table className="admin-table gem-management-table jewellery-management-table">
@@ -3963,34 +4002,12 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                               </span>
                             </td>
                             <td>
-                              <span className={`gem-database-status jewellery-row-status ${item.status || "pending"}`}>
-                                {item.status ? item.status.toUpperCase() : "PENDING"}
+                              <span className={`gem-database-status jewellery-row-status ${Number(item.stock_quantity) > 0 ? "active" : "out-of-stock"}`}>
+                                {Number(item.stock_quantity) > 0 ? "ACTIVE" : "OUT OF STOCK"}
                               </span>
                             </td>
                             <td>
                               <div className="jewellery-row-actions">
-                                {isSuperAdmin && item.status === "pending" && (
-                                  <>
-                                    <button
-                                      type="button"
-                                      className="admin-action-btn jewellery-row-approve-btn"
-                                      style={{ backgroundColor: "#1e7e34", color: "#fff", borderColor: "#1e7e34", padding: "4px 8px" }}
-                                      onClick={() => handleJewelleryApproval(item.id, "approved", true)}
-                                      title="Approve Request"
-                                    >
-                                      <FaCheckCircle /> Approve
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="admin-action-btn jewellery-row-reject-btn"
-                                      style={{ backgroundColor: "#bd2130", color: "#fff", borderColor: "#bd2130", padding: "4px 8px" }}
-                                      onClick={() => handleJewelleryApproval(item.id, "rejected", true)}
-                                      title="Reject Request"
-                                    >
-                                      <FaTimes /> Reject
-                                    </button>
-                                  </>
-                                )}
                                 <button
                                   type="button"
                                   className="admin-action-btn gem-edit-btn jewellery-row-edit-btn"
@@ -4027,256 +4044,263 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                   aria-labelledby={editingDbJewelleryId !== null ? "edit-jewellery-title" : undefined}
                   onClick={editingDbJewelleryId !== null ? (event) => event.stopPropagation() : undefined}
                 >
-              <div className={`add-gem-card${editingDbJewelleryId !== null ? " jewellery-edit-form-card" : ""}`} style={{ marginTop: editingDbJewelleryId !== null ? 0 : "2rem" }}>
-                {editingDbJewelleryId !== null ? (
-                  <div className="admin-account-modal-heading">
-                    <div>
-                      <span>LIVE JEWELLERY INVENTORY</span>
-                      <h3 id="edit-jewellery-title">Edit Jewellery</h3>
-                    </div>
-                    <button
-                      type="button"
-                      className="admin-modal-close"
-                      aria-label="Close Edit Jewellery modal"
-                      disabled={jewellerySaving}
-                      onClick={closeDbJewelleryEdit}
-                    >
-                      <FaTimes />
-                    </button>
-                  </div>
-                ) : (
-                  <h2><FaPlus /> {isSuperAdmin ? "Add Jewellery to Database" : "Submit Jewellery Request"}</h2>
-                )}
-                {(editingDbJewelleryId || !isSuperAdmin) && (
-                  <p>
-                    {editingDbJewelleryId
-                      ? "Update the details below and click Save."
-                      : "Enter jewellery details to submit a new request. It will be saved in the database and sent to Super Admin for approval."}
-                  </p>
-                )}
-                <form onSubmit={handleSaveJewellery} className="add-gem-form gemstone-form">
-                  <div className="gem-form-row">
-                    <div className="form-group">
-                      <label htmlFor="jwl-product-name">Product Name *</label>
-                      <input
-                        id="jwl-product-name"
-                        type="text"
-                        value={newJewellery.product_name}
-                        onChange={(e) => setNewJewellery({ ...newJewellery, product_name: e.target.value })}
-                        placeholder="e.g. Blue Sapphire Necklace"
-                        required
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="jwl-type">Jewellery Type</label>
-                      <select
-                        id="jwl-type"
-                        value={newJewellery.jewellery_type}
-                        onChange={(e) => setNewJewellery({ ...newJewellery, jewellery_type: e.target.value })}
-                      >
-                        <option value="Necklaces">Necklaces</option>
-                        <option value="Bracelets">Bracelets</option>
-                        <option value="Rings">Rings</option>
-                        <option value="Earrings">Earrings</option>
-                        <option value="Pendants">Pendants</option>
-                        <option value="Brooches">Brooches</option>
-                        <option value="Other">Other</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="jwl-gemstone-type">Gemstone Type</label>
-                      <input
-                        id="jwl-gemstone-type"
-                        type="text"
-                        value={newJewellery.gemstone_type}
-                        onChange={(e) => setNewJewellery({ ...newJewellery, gemstone_type: e.target.value })}
-                        placeholder="e.g. Blue Sapphire"
-                      />
-                    </div>
-                  </div>
-                  <div className="gem-form-row">
-                    <div className="form-group">
-                      <label htmlFor="jwl-color">Color</label>
-                      <input
-                        id="jwl-color"
-                        type="text"
-                        value={newJewellery.color}
-                        onChange={(e) => setNewJewellery({ ...newJewellery, color: e.target.value })}
-                        placeholder="e.g. Royal Blue"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="jwl-material">Material</label>
-                      <input
-                        id="jwl-material"
-                        type="text"
-                        value={newJewellery.material}
-                        onChange={(e) => setNewJewellery({ ...newJewellery, material: e.target.value })}
-                        placeholder="e.g. 18K Gold"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="jwl-image-url">Image URL / File</label>
-                      <input
-                        id="jwl-image-url"
-                        type="text"
-                        value={newJewellery.image_url}
-                        onChange={(e) => setNewJewellery({ ...newJewellery, image_url: e.target.value })}
-                        placeholder="https://... or /uploads/gemstones/..."
-                      />
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        style={{ marginTop: "6px", fontSize: "11px", color: "#6a7b77" }}
-                        onChange={(event) => setJewelleryImageFile(event.target.files?.[0] || null)}
-                      />
-                      {jewelleryImageFile && <small className="jewellery-selected-image">Selected: {jewelleryImageFile.name}</small>}
-                    </div>
-                  </div>
-                  <div className="gem-form-row">
-                    <div className="form-group">
-                      <label htmlFor="jwl-price">Price *</label>
-                      <input
-                        id="jwl-price"
-                        type="number"
-                        min="0.01"
-                        step="0.01"
-                        value={newJewellery.price}
-                        onChange={(e) => setNewJewellery({ ...newJewellery, price: e.target.value })}
-                        placeholder="e.g. 1500.00"
-                        required
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="jwl-currency">Currency</label>
-                      <select
-                        id="jwl-currency"
-                        value={newJewellery.currency}
-                        onChange={(e) => setNewJewellery({ ...newJewellery, currency: e.target.value })}
-                      >
-                        <option value="USD">USD</option>
-                        <option value="LKR">LKR</option>
-                        <option value="EUR">EUR</option>
-                        <option value="GBP">GBP</option>
-                        <option value="AED">AED</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="jwl-stock">Stock Quantity</label>
-                      <input
-                        id="jwl-stock"
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={newJewellery.stock_quantity}
-                        onChange={(e) => setNewJewellery({ ...newJewellery, stock_quantity: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <div className="gem-form-row">
-                    <div className="form-group">
-                      <label htmlFor="jwl-offer-rate">Offer Rate (%)</label>
-                      <input
-                        id="jwl-offer-rate"
-                        type="number"
-                        min="1"
-                        max="100"
-                        step="0.01"
-                        value={newJewellery.offer_rate}
-                        onChange={(e) => setNewJewellery({ ...newJewellery, offer_rate: e.target.value })}
-                        placeholder="Leave blank for no offer"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="jwl-offer-start">Offer Start Date</label>
-                      <input
-                        id="jwl-offer-start"
-                        type="date"
-                        value={newJewellery.offer_start_date}
-                        onChange={(e) => setNewJewellery({ ...newJewellery, offer_start_date: e.target.value })}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="jwl-offer-end">Offer End Date</label>
-                      <input
-                        id="jwl-offer-end"
-                        type="date"
-                        value={newJewellery.offer_end_date}
-                        onChange={(e) => setNewJewellery({ ...newJewellery, offer_end_date: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <div className="gem-form-row">
-                    <div className="form-group">
-                      <label htmlFor="jwl-status">Status</label>
-                      <select
-                        id="jwl-status"
-                        value={newJewellery.status}
-                        onChange={(e) => setNewJewellery({ ...newJewellery, status: e.target.value })}
-                      >
-                        <option value="active">Active (Live on Frontend)</option>
-                        <option value="approved">Approved</option>
-                        <option value="pending">Pending Approval</option>
-                        <option value="inactive">Inactive</option>
-                        <option value="draft">Draft</option>
-                      </select>
-                    </div>
-                    <div className="form-group" style={{ display: "flex", alignItems: "center", gap: "0.75rem", paddingTop: "1.5rem" }}>
-                      <input
-                        id="jwl-handcrafted"
-                        type="checkbox"
-                        checked={newJewellery.is_handcrafted}
-                        onChange={(e) => setNewJewellery({ ...newJewellery, is_handcrafted: e.target.checked })}
-                        style={{ width: "18px", height: "18px", accentColor: "#b58c36" }}
-                      />
-                      <label htmlFor="jwl-handcrafted" style={{ margin: 0 }}>Handcrafted</label>
-                    </div>
-                  </div>
-                  <div className="form-group gem-description-field">
-                    <label htmlFor="jwl-description">Description</label>
-                    <textarea
-                      id="jwl-description"
-                      rows={3}
-                      value={newJewellery.description}
-                      onChange={(e) => setNewJewellery({ ...newJewellery, description: e.target.value })}
-                      placeholder="Brief description of this jewellery item…"
-                    />
-                  </div>
-                  <div className="add-gem-form-actions gem-submit-actions">
-                    <button type="submit" className="add-gem-submit-btn gem-submit-btn" disabled={jewellerySaving}>
-                      {jewellerySaving
-                        ? "Saving…"
-                        : editingDbJewelleryId
-                          ? <><FaPlus /> SAVE CHANGES</>
-                          : <><FaPlus /> ADD JEWELLERY ITEM</>}
-                    </button>
-                    {editingDbJewelleryId !== null && (
-                      <button type="button" className="gem-edit-cancel-btn" onClick={closeDbJewelleryEdit} disabled={jewellerySaving}>
-                        Cancel
-                      </button>
+                  <div className={`add-gem-card${editingDbJewelleryId !== null ? " jewellery-edit-form-card" : ""}`} style={{ marginTop: editingDbJewelleryId !== null ? 0 : "2rem" }}>
+                    {editingDbJewelleryId !== null ? (
+                      <div className="admin-account-modal-heading">
+                        <div>
+                          <span>LIVE JEWELLERY INVENTORY</span>
+                          <h3 id="edit-jewellery-title">Edit Jewellery</h3>
+                        </div>
+                        <button
+                          type="button"
+                          className="admin-modal-close"
+                          aria-label="Close Edit Jewellery modal"
+                          disabled={jewellerySaving}
+                          onClick={closeDbJewelleryEdit}
+                        >
+                          <FaTimes />
+                        </button>
+                      </div>
+                    ) : (
+                      <h2><FaPlus /> {isSuperAdmin ? "Add Jewellery to Database" : "Submit Jewellery Request"}</h2>
                     )}
+                    {(editingDbJewelleryId || !isSuperAdmin) && (
+                      <p>
+                        {editingDbJewelleryId
+                          ? "Update the details below and click Save."
+                          : "Enter jewellery details to submit a new request. It will be saved in the database and sent to Super Admin for approval."}
+                      </p>
+                    )}
+                    <form onSubmit={handleSaveJewellery} className="add-gem-form gemstone-form">
+                      <div className="gem-form-row">
+                        <div className="form-group">
+                          <label htmlFor="jwl-product-name">Product Name *</label>
+                          <input
+                            id="jwl-product-name"
+                            type="text"
+                            value={newJewellery.product_name}
+                            onChange={(e) => setNewJewellery({ ...newJewellery, product_name: e.target.value })}
+                            placeholder="e.g. Blue Sapphire Necklace"
+                            required
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label htmlFor="jwl-type">Jewellery Type</label>
+                          <select
+                            id="jwl-type"
+                            value={newJewellery.jewellery_type}
+                            onChange={(e) => setNewJewellery({ ...newJewellery, jewellery_type: e.target.value })}
+                          >
+                            <option value="Necklaces">Necklaces</option>
+                            <option value="Bracelets">Bracelets</option>
+                            <option value="Rings">Rings</option>
+                            <option value="Earrings">Earrings</option>
+                            <option value="Pendants">Pendants</option>
+                            <option value="Brooches">Brooches</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+                        <div className="form-group">
+                          <label htmlFor="jwl-gemstone-type">Gemstone Type</label>
+                          <input
+                            id="jwl-gemstone-type"
+                            type="text"
+                            value={newJewellery.gemstone_type}
+                            onChange={(e) => setNewJewellery({ ...newJewellery, gemstone_type: e.target.value })}
+                            placeholder="e.g. Blue Sapphire"
+                          />
+                        </div>
+                      </div>
+                      <div className="gem-form-row">
+                        <div className="form-group">
+                          <label htmlFor="jwl-color">Color</label>
+                          <input
+                            id="jwl-color"
+                            type="text"
+                            value={newJewellery.color}
+                            onChange={(e) => setNewJewellery({ ...newJewellery, color: e.target.value })}
+                            placeholder="e.g. Royal Blue"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label htmlFor="jwl-material">Material</label>
+                          <input
+                            id="jwl-material"
+                            type="text"
+                            value={newJewellery.material}
+                            onChange={(e) => setNewJewellery({ ...newJewellery, material: e.target.value })}
+                            placeholder="e.g. 18K Gold"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label htmlFor="jwl-image-url">Image URL / File</label>
+                          <input
+                            id="jwl-image-url"
+                            type="text"
+                            value={newJewellery.image_url}
+                            onChange={(e) => setNewJewellery({ ...newJewellery, image_url: e.target.value })}
+                            placeholder="https://... or /uploads/gemstones/..."
+                          />
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            style={{ marginTop: "6px", fontSize: "11px", color: "#6a7b77" }}
+                            onChange={(event) => setJewelleryImageFile(event.target.files?.[0] || null)}
+                          />
+                          {jewelleryImageFile && <small className="jewellery-selected-image">Selected: {jewelleryImageFile.name}</small>}
+                        </div>
+                      </div>
+                      <div className="gem-form-row">
+                        <div className="form-group">
+                          <label htmlFor="jwl-price">Price *</label>
+                          <input
+                            id="jwl-price"
+                            type="number"
+                            min="0.01"
+                            step="0.01"
+                            value={newJewellery.price}
+                            onChange={(e) => setNewJewellery({ ...newJewellery, price: e.target.value })}
+                            placeholder="e.g. 1500.00"
+                            required
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label htmlFor="jwl-currency">Currency</label>
+                          <select
+                            id="jwl-currency"
+                            value={newJewellery.currency}
+                            onChange={(e) => setNewJewellery({ ...newJewellery, currency: e.target.value })}
+                          >
+                            <option value="USD">USD</option>
+                            <option value="LKR">LKR</option>
+                            <option value="EUR">EUR</option>
+                            <option value="GBP">GBP</option>
+                            <option value="AED">AED</option>
+                          </select>
+                        </div>
+                        <div className="form-group">
+                          <label htmlFor="jwl-stock">Stock Quantity</label>
+                          <input
+                            id="jwl-stock"
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={newJewellery.stock_quantity}
+                            onChange={(e) => setNewJewellery({ ...newJewellery, stock_quantity: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                      <div className="gem-form-row">
+                        <div className="form-group">
+                          <label htmlFor="jwl-offer-rate">Offer Rate (%)</label>
+                          <input
+                            id="jwl-offer-rate"
+                            type="number"
+                            min="1"
+                            max="100"
+                            step="0.01"
+                            value={newJewellery.offer_rate}
+                            onChange={(e) => setNewJewellery({ ...newJewellery, offer_rate: e.target.value })}
+                            placeholder="Leave blank for no offer"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label htmlFor="jwl-offer-start">Offer Start Date</label>
+                          <input
+                            id="jwl-offer-start"
+                            type="date"
+                            value={newJewellery.offer_start_date}
+                            onChange={(e) => setNewJewellery({ ...newJewellery, offer_start_date: e.target.value })}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label htmlFor="jwl-offer-end">Offer End Date</label>
+                          <input
+                            id="jwl-offer-end"
+                            type="date"
+                            value={newJewellery.offer_end_date}
+                            onChange={(e) => setNewJewellery({ ...newJewellery, offer_end_date: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                      <div className="gem-form-row">
+                        <div className="form-group">
+                          <label htmlFor="jwl-status">Status</label>
+                          <select
+                            id="jwl-status"
+                            value={newJewellery.status}
+                            onChange={(e) => setNewJewellery({ ...newJewellery, status: e.target.value })}
+                          >
+                            <option value="active">Active (Live on Frontend)</option>
+                            <option value="approved">Approved</option>
+                            <option value="pending">Pending Approval</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="draft">Draft</option>
+                          </select>
+                        </div>
+                        <div className="form-group" style={{ display: "flex", alignItems: "center", gap: "0.75rem", paddingTop: "1.5rem" }}>
+                          <input
+                            id="jwl-handcrafted"
+                            type="checkbox"
+                            checked={newJewellery.is_handcrafted}
+                            onChange={(e) => setNewJewellery({ ...newJewellery, is_handcrafted: e.target.checked })}
+                            style={{ width: "18px", height: "18px", accentColor: "#b58c36" }}
+                          />
+                          <label htmlFor="jwl-handcrafted" style={{ margin: 0 }}>Handcrafted</label>
+                        </div>
+                      </div>
+                      <div className="form-group gem-description-field">
+                        <label htmlFor="jwl-description">Description</label>
+                        <textarea
+                          id="jwl-description"
+                          rows={3}
+                          maxLength={300}
+                          value={newJewellery.description}
+                          onChange={(e) => setNewJewellery({ ...newJewellery, description: e.target.value })}
+                          placeholder="Brief description of this jewellery item…"
+                        />
+                        <span className="gem-description-counter" aria-live="polite">
+                          {newJewellery.description.length}/300 characters
+                        </span>
+                        <span className="gem-description-helper">
+                          Maximum 300 characters allowed to maintain optimal storefront display.
+                        </span>
+                      </div>
+                      <div className="add-gem-form-actions gem-submit-actions">
+                        <button type="submit" className="add-gem-submit-btn gem-submit-btn" disabled={jewellerySaving}>
+                          {jewellerySaving
+                            ? "Saving…"
+                            : editingDbJewelleryId
+                              ? <><FaPlus /> SAVE CHANGES</>
+                              : <><FaPlus /> ADD JEWELLERY ITEM</>}
+                        </button>
+                        {editingDbJewelleryId !== null && (
+                          <button type="button" className="gem-edit-cancel-btn" onClick={closeDbJewelleryEdit} disabled={jewellerySaving}>
+                            Cancel
+                          </button>
+                        )}
+                      </div>
+                    </form>
                   </div>
-                </form>
-              </div>
                 </section>
               </div>
 
-                <div className="gem-management-toolbar jewellery-management-toolbar">
-                  <label htmlFor="jewellery-type-filter">Filter inventory by jewellery type</label>
-                  <select
-                    id="jewellery-type-filter"
-                    value={jewelleryTypeFilter}
-                    onChange={(event) => setJewelleryTypeFilter(event.target.value)}
-                  >
-                    <option value="all">All Jewellery</option>
-                    {["Necklaces", "Bracelets", "Rings", "Earrings", "Pendants", "Brooches", "Other"].map((type) => (
-                      <option key={type} value={type}>{type}</option>
-                    ))}
-                  </select>
-                  <span>{filteredBackendJewellery.length} of {backendJewellery.length} database items</span>
-                </div>
+              <div className="gem-management-toolbar jewellery-management-toolbar">
+                <label htmlFor="jewellery-type-filter">Filter inventory by jewellery type</label>
+                <select
+                  id="jewellery-type-filter"
+                  value={jewelleryTypeFilter}
+                  onChange={(event) => setJewelleryTypeFilter(event.target.value)}
+                >
+                  <option value="all">All Jewellery</option>
+                  {["Necklaces", "Bracelets", "Rings", "Earrings", "Pendants", "Brooches", "Other"].map((type) => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+                <span>{filteredBackendJewellery.length} of {backendJewellery.length} database items</span>
+              </div>
 
-                {/* STOREFRONT JEWELLERY COLLECTION */}
+              {/* STOREFRONT JEWELLERY COLLECTION */}
               <div className="admin-section-heading" style={{ marginTop: "2rem" }}>
                 <div>
                   <h2><FaGem /> Storefront Jewellery Collection ({storefrontJewelleryList.length})</h2>
@@ -4365,7 +4389,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
               {heroSlidesError && (
                 <p className="admin-form-error" role="alert">{heroSlidesError}</p>
               )}
-              <div className="add-gem-card">
+              <div className="add-gem-card" id="hero-slide-editor">
                 <div className="blog-editor-heading">
                   <div>
                     <span>HOMEPAGE CONTENT</span>
@@ -4385,7 +4409,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                 <form className="blog-editor-form hero-slide-editor-form" onSubmit={handleAddHeroSlide}>
                   <div className="blog-editor-main">
                     <div className="form-group">
-                      <label htmlFor="hero-slide-title">Slide title / image description</label>
+                      <label htmlFor="hero-slide-title">Banner title</label>
                       <input
                         id="hero-slide-title"
                         value={newHeroSlide.alt}
@@ -4393,13 +4417,86 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                           ...current,
                           alt: event.target.value
                         }))}
-                        placeholder="e.g. Rare Ceylon Blue Sapphire"
+                        placeholder="e.g. DISCOVER THE BEAUTY WITHIN"
                         required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="hero-slide-badge">Badge</label>
+                      <input
+                        id="hero-slide-badge"
+                        value={newHeroSlide.badge}
+                        onChange={(event) => setNewHeroSlide((current) => ({
+                          ...current,
+                          badge: event.target.value
+                        }))}
+                        placeholder="e.g. AUTHENTIC • RARE • TIMELESS"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="hero-slide-subtitle">Subtitle</label>
+                      <textarea
+                        id="hero-slide-subtitle"
+                        value={newHeroSlide.subtitle}
+                        onChange={(event) => setNewHeroSlide((current) => ({
+                          ...current,
+                          subtitle: event.target.value
+                        }))}
+                        placeholder="Discover exceptional gemstones from Sri Lanka..."
+                        rows={3}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="hero-slide-button-text">Button text</label>
+                      <input
+                        id="hero-slide-button-text"
+                        value={newHeroSlide.button_text}
+                        onChange={(event) => setNewHeroSlide((current) => ({
+                          ...current,
+                          button_text: event.target.value
+                        }))}
+                        placeholder="e.g. Explore Collection"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="hero-slide-button-link">Button link</label>
+                      <input
+                        id="hero-slide-button-link"
+                        value={newHeroSlide.button_link}
+                        onChange={(event) => setNewHeroSlide((current) => ({
+                          ...current,
+                          button_link: event.target.value
+                        }))}
+                        placeholder="e.g. /shop"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="hero-slide-secondary-button-text">Second button text</label>
+                      <input
+                        id="hero-slide-secondary-button-text"
+                        value={newHeroSlide.secondary_button_text}
+                        onChange={(event) => setNewHeroSlide((current) => ({
+                          ...current,
+                          secondary_button_text: event.target.value
+                        }))}
+                        placeholder="e.g. Join Us"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="hero-slide-secondary-button-link">Second button link</label>
+                      <input
+                        id="hero-slide-secondary-button-link"
+                        value={newHeroSlide.secondary_button_link}
+                        onChange={(event) => setNewHeroSlide((current) => ({
+                          ...current,
+                          secondary_button_link: event.target.value
+                        }))}
+                        placeholder="e.g. /join-us"
                       />
                     </div>
                     <div className="hero-slide-editor-note">
                       <FaCheckCircle />
-                      <span>Use a concise, descriptive title to provide accessible image text.</span>
+                      <span>Banner title is also used as the image description for accessibility.</span>
                     </div>
                   </div>
                   <aside className="blog-editor-sidebar">
@@ -4642,9 +4739,16 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                       <span className="admin-image-help">Recommended landscape image · up to 10 MB.</span>
                     </div>
                     <div className="blog-editor-publish">
-                      <button type="submit" className="add-gem-submit-btn blog-submit-btn">
-                        {editingBlogPostId ? <FaCheckCircle /> : <FaPlus />}
-                        {editingBlogPostId ? "SAVE ARTICLE CHANGES" : "PUBLISH BLOG POST"}
+                      <button
+                        type="submit"
+                        className="add-gem-submit-btn blog-submit-btn"
+                        disabled={blogPostSaving}
+                      >
+                        {blogPostSaving
+                          ? "PUBLISHING…"
+                          : editingBlogPostId
+                            ? <><FaCheckCircle /> SAVE ARTICLE CHANGES</>
+                            : <><FaPlus /> PUBLISH BLOG POST</>}
                       </button>
                       <span>Your article will appear on the public Blog page.</span>
                     </div>
@@ -5054,9 +5158,16 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                 <textarea
                   id="edit-gem-description"
                   rows={3}
+                  maxLength={300}
                   value={editGem.description}
                   onChange={(event) => setEditGem({ ...editGem, description: event.target.value })}
                 />
+                <span className="gem-description-counter" aria-live="polite">
+                  {editGem.description.length}/300 characters
+                </span>
+                <span className="gem-description-helper">
+                  Maximum 300 characters allowed to maintain optimal storefront display.
+                </span>
               </div>
               <section className="gem-media-section">
                 <div>

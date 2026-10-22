@@ -464,10 +464,12 @@ const JewelleryDetail = ({ gem }) => {
             </div>
           </div>
 
-          <h2 className="gem-about-heading">ABOUT THIS PIECE</h2>
-          <p className="gem-narrative">
-            {gemDescription}
-          </p>
+          <section className="jewellery-about-card">
+            <h2 className="gem-about-heading">ABOUT THIS JEWELLERY</h2>
+            <p className="gem-narrative jewellery-description text-stone-700 leading-relaxed break-words overflow-hidden">
+              {gemDescription}
+            </p>
+          </section>
 
           <div className="quick-specs-grid">
             <div className="spec-chip">

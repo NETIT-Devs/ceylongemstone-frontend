@@ -178,11 +178,35 @@
   flex: 0 0 50px;
 }
 
-.stat-icon.gold { background: #fdf8eb; color: #c9a24b; border: 1px solid #eedda6; }
-.stat-icon.green { background: #eef7f2; color: #117346; border: 1px solid #bce4cf; }
-.stat-icon.blue { background: #eef4fc; color: #1a62d6; border: 1px solid #c4dafb; }
-.stat-icon.amber { background: #fdf5e8; color: #d97706; border: 1px solid #fcd34d; }
-.stat-icon.purple { background: #f3eefc; color: #7c3aed; border: 1px solid #ddd0f8; }
+.stat-icon.gold {
+  background: #fdf8eb;
+  color: #c9a24b;
+  border: 1px solid #eedda6;
+}
+
+.stat-icon.green {
+  background: #eef7f2;
+  color: #117346;
+  border: 1px solid #bce4cf;
+}
+
+.stat-icon.blue {
+  background: #eef4fc;
+  color: #1a62d6;
+  border: 1px solid #c4dafb;
+}
+
+.stat-icon.amber {
+  background: #fdf5e8;
+  color: #d97706;
+  border: 1px solid #fcd34d;
+}
+
+.stat-icon.purple {
+  background: #f3eefc;
+  color: #7c3aed;
+  border: 1px solid #ddd0f8;
+}
 
 .admin-role-pill.super-admin-pill {
   background: #fdf5e6;
@@ -354,6 +378,7 @@
     opacity: 0;
     transform: translateY(-4px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -436,15 +461,41 @@
   word-break: normal;
 }
 
-.admin-orders-table th:nth-child(1) { width: 8%; }
-.admin-orders-table th:nth-child(2) { width: 15%; }
-.admin-orders-table th:nth-child(3) { width: 10%; }
-.admin-orders-table th:nth-child(4) { width: 8%; }
-.admin-orders-table th:nth-child(5) { width: 10%; }
-.admin-orders-table th:nth-child(6) { width: 12%; }
-.admin-orders-table th:nth-child(7) { width: 12%; }
-.admin-orders-table th:nth-child(8) { width: 12%; }
-.admin-orders-table th:nth-child(9) { width: 13%; }
+.admin-orders-table th:nth-child(1) {
+  width: 8%;
+}
+
+.admin-orders-table th:nth-child(2) {
+  width: 15%;
+}
+
+.admin-orders-table th:nth-child(3) {
+  width: 10%;
+}
+
+.admin-orders-table th:nth-child(4) {
+  width: 8%;
+}
+
+.admin-orders-table th:nth-child(5) {
+  width: 10%;
+}
+
+.admin-orders-table th:nth-child(6) {
+  width: 12%;
+}
+
+.admin-orders-table th:nth-child(7) {
+  width: 12%;
+}
+
+.admin-orders-table th:nth-child(8) {
+  width: 12%;
+}
+
+.admin-orders-table th:nth-child(9) {
+  width: 13%;
+}
 
 .admin-orders-table .status-pill {
   white-space: nowrap;
@@ -477,7 +528,7 @@
   gap: 6px;
 }
 
-.order-actions > button {
+.order-actions>button {
   box-sizing: border-box;
   width: min(112px, 100%);
   max-width: 100%;
@@ -608,7 +659,7 @@
   gap: 16px;
 }
 
-.certificate-edit-form > label {
+.certificate-edit-form>label {
   display: grid;
   gap: 6px;
   color: #273b37;
@@ -700,7 +751,7 @@
   font-size: 12px;
 }
 
-.gem-management-toolbar > span {
+.gem-management-toolbar>span {
   margin-left: auto;
   color: #e4c77f;
   font-size: 11px;
@@ -795,6 +846,12 @@
   color: #76634d;
 }
 
+.gem-database-status.out-of-stock {
+  border-color: #f5c2c7;
+  background: #f8d7da;
+  color: #842029;
+}
+
 .gem-category-error {
   display: flex;
   align-items: center;
@@ -823,7 +880,7 @@
   flex-direction: column;
 }
 
-.jewellery-management-layout > * {
+.jewellery-management-layout>* {
   order: 3;
 }
 
@@ -851,15 +908,41 @@
   word-break: normal;
 }
 
-.jewellery-management-table th:nth-child(1) { width: 17%; }
-.jewellery-management-table th:nth-child(2) { width: 9%; }
-.jewellery-management-table th:nth-child(3) { width: 14%; }
-.jewellery-management-table th:nth-child(4) { width: 10%; }
-.jewellery-management-table th:nth-child(5) { width: 10%; }
-.jewellery-management-table th:nth-child(6) { width: 6%; }
-.jewellery-management-table th:nth-child(7) { width: 9%; }
-.jewellery-management-table th:nth-child(8) { width: 9%; }
-.jewellery-management-table th:nth-child(9) { width: 16%; }
+.jewellery-management-table th:nth-child(1) {
+  width: 17%;
+}
+
+.jewellery-management-table th:nth-child(2) {
+  width: 9%;
+}
+
+.jewellery-management-table th:nth-child(3) {
+  width: 14%;
+}
+
+.jewellery-management-table th:nth-child(4) {
+  width: 10%;
+}
+
+.jewellery-management-table th:nth-child(5) {
+  width: 10%;
+}
+
+.jewellery-management-table th:nth-child(6) {
+  width: 6%;
+}
+
+.jewellery-management-table th:nth-child(7) {
+  width: 9%;
+}
+
+.jewellery-management-table th:nth-child(8) {
+  width: 9%;
+}
+
+.jewellery-management-table th:nth-child(9) {
+  width: 16%;
+}
 
 .jewellery-management-table td:nth-child(8) .gem-database-status {
   display: flex;
@@ -1030,6 +1113,21 @@
   grid-column: 1 / -1;
 }
 
+.gem-description-counter {
+  display: block;
+  margin-top: 4px;
+  color: #68736e;
+  font-size: 12px;
+  text-align: right;
+}
+
+.gem-description-helper {
+  display: block;
+  margin-top: 3px;
+  color: #68736e;
+  font-size: 12px;
+}
+
 .gem-media-section {
   display: grid;
   gap: 14px;
@@ -1060,7 +1158,7 @@
   gap: 15px;
 }
 
-.gem-offer-section > .form-group {
+.gem-offer-section>.form-group {
   min-width: 0;
 }
 
@@ -1264,7 +1362,7 @@
   gap: 8px;
 }
 
-.admin-gem-actions > button {
+.admin-gem-actions>button {
   flex: 1;
   min-width: 92px;
 }
@@ -1335,6 +1433,7 @@
 }
 
 @media (max-width: 1024px) {
+
   .admin-stats-grid,
   .add-gem-form,
   .admin-gems-grid {
@@ -1365,6 +1464,7 @@
 }
 
 @media (max-width: 600px) {
+
   .admin-stats-grid,
   .add-gem-form,
   .admin-gems-grid {
@@ -1395,7 +1495,7 @@
     flex-direction: column-reverse;
   }
 
-  .gem-submit-actions > button {
+  .gem-submit-actions>button {
     width: 100%;
   }
 
@@ -1442,7 +1542,7 @@
   margin-bottom: 20px;
 }
 
-.payment-overview > div {
+.payment-overview>div {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1492,7 +1592,7 @@
   font-size: 12px;
 }
 
-.admin-table-toolbar > span {
+.admin-table-toolbar>span {
   margin-left: auto;
   color: #72827e;
   font-size: 11px;
@@ -1761,18 +1861,18 @@
   color: #d2ad56;
 }
 
-.super-admin-profile > div {
+.super-admin-profile>div {
   display: grid;
   gap: 5px;
   min-width: 0;
 }
 
-.super-admin-profile > div span {
+.super-admin-profile>div span {
   color: #72827e;
   font-size: 10px;
 }
 
-.super-admin-profile > div strong {
+.super-admin-profile>div strong {
   overflow: hidden;
   color: #061c2b;
   font-size: 12px;
@@ -1861,7 +1961,7 @@
   background: #ffffff;
 }
 
-.admin-account-toolbar > span {
+.admin-account-toolbar>span {
   color: #64716d;
   font-size: 11px;
 }
@@ -2055,7 +2155,7 @@
   margin: 0;
 }
 
-.admin-account-details > div {
+.admin-account-details>div {
   display: grid;
   gap: 6px;
   min-width: 0;
@@ -2154,7 +2254,7 @@
     grid-template-columns: 40px minmax(0, 1fr);
   }
 
-  .super-admin-profile > div {
+  .super-admin-profile>div {
     grid-column: 2;
   }
 
@@ -2326,7 +2426,7 @@
   box-shadow: 0 5px 14px rgba(4, 29, 26, 0.06);
 }
 
-.stock-alert-row > img {
+.stock-alert-row>img {
   width: 48px;
   height: 48px;
   border: 1px solid #eee8d9;
@@ -2478,7 +2578,7 @@
     padding: 9px;
   }
 
-  .stock-alert-row > img {
+  .stock-alert-row>img {
     width: 42px;
     height: 42px;
   }
@@ -2556,7 +2656,7 @@
   min-width: 0;
 }
 
-.task-create-form label > span {
+.task-create-form label>span {
   color: #556360;
   font-size: 10px;
   font-weight: 700;
@@ -2749,13 +2849,25 @@
 }
 
 @keyframes royalFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes royalScaleIn {
-  from { transform: scale(0.94) translateY(12px); opacity: 0; }
-  to { transform: scale(1) translateY(0); opacity: 1; }
+  from {
+    transform: scale(0.94) translateY(12px);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
 }
 
 /* ORDER INVOICE & TRACKING DOSSIER MODAL */
@@ -3146,9 +3258,11 @@
   .invoice-grid {
     grid-template-columns: 1fr;
   }
+
   .order-invoice-header {
     padding: 16px;
   }
+
   .order-invoice-body {
     padding: 18px 16px;
   }
@@ -3205,7 +3319,7 @@
     padding: 16px;
   }
 
-  .admin-stat-card > div:last-child {
+  .admin-stat-card>div:last-child {
     min-width: 0;
     overflow-wrap: anywhere;
   }
@@ -3243,7 +3357,7 @@
     gap: 10px;
   }
 
-  .admin-section-heading > *,
+  .admin-section-heading>*,
   .admin-section-heading h2,
   .admin-section-heading p {
     min-width: 0;
@@ -3271,7 +3385,7 @@
     min-width: 0;
   }
 
-  .gem-management-toolbar > span {
+  .gem-management-toolbar>span {
     margin-left: 0;
   }
 
@@ -3280,7 +3394,7 @@
     flex-wrap: wrap;
   }
 
-  .admin-table-toolbar > span {
+  .admin-table-toolbar>span {
     margin-left: 0;
   }
 
@@ -3394,7 +3508,7 @@
   border-bottom: 1px solid #eee9dc;
 }
 
-.blog-editor-heading > div > span {
+.blog-editor-heading>div>span {
   color: #9a741f;
   font-size: 9px;
   font-weight: 800;
@@ -3680,7 +3794,7 @@
   color: #9ba49e;
 }
 
-.blog-editor-main > .form-group textarea {
+.blog-editor-main>.form-group textarea {
   min-height: 96px;
 }
 
@@ -3835,7 +3949,7 @@
   text-align: center;
 }
 
-.blog-editor-publish > span {
+.blog-editor-publish>span {
   color: #7a8580;
   font-size: 10px;
   line-height: 1.5;
@@ -4014,7 +4128,7 @@
     align-items: flex-start;
   }
 
-  .admin-orders-table .order-actions > button {
+  .admin-orders-table .order-actions>button {
     padding: 6px 12px;
     white-space: normal;
   }
@@ -4040,7 +4154,7 @@
     padding: 14px;
   }
 
-  .super-admin-page .super-admin-profile > div {
+  .super-admin-page .super-admin-profile>div {
     grid-column: 2;
   }
 
@@ -4051,7 +4165,7 @@
     padding: 12px;
   }
 
-  .super-admin-page .admin-account-toolbar > span {
+  .super-admin-page .admin-account-toolbar>span {
     line-height: 1.5;
     overflow-wrap: anywhere;
   }
@@ -4078,7 +4192,7 @@
     gap: 10px;
   }
 
-  .super-admin-page .admin-account-modal-heading > div {
+  .super-admin-page .admin-account-modal-heading>div {
     min-width: 0;
   }
 

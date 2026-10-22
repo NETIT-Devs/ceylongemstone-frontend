@@ -110,6 +110,12 @@ const GemstoneDetail = ({ gem }) => {
     certificateUrl
   );
   const firstImageUrl = galleryViews[0]?.url || resolveMediaUrl(gem?.image) || '';
+  const hasDimensions = [gem?.length, gem?.width, gem?.height].some(
+    (dimension) => dimension !== null && dimension !== undefined && dimension !== ''
+  );
+  const dimensions = hasDimensions
+    ? `${gem?.length ?? '—'} x ${gem?.width ?? '—'} x ${gem?.height ?? '—'} mm`
+    : 'Not provided';
 
   const [activeMedia, setActiveMedia] = useState({
     type: 'image',
@@ -554,10 +560,12 @@ const GemstoneDetail = ({ gem }) => {
             )}
           </div>
 
-          <h2 className="gem-about-heading">ABOUT THE GEM</h2>
-          <p className="gem-narrative">
-            {gemDescription}
-          </p>
+          <section className="gemstone-about-card">
+            <h2 className="gem-about-heading">ABOUT THE GEM</h2>
+            <p className="gem-narrative gemstone-description text-stone-700 leading-relaxed break-words">
+              {gemDescription}
+            </p>
+          </section>
 
           <div className="quick-specs-grid">
             <div className="spec-chip">
@@ -666,6 +674,10 @@ const GemstoneDetail = ({ gem }) => {
               <div className="spec-row">
                 <span className="spec-name">Weight (Carats)</span>
                 <span className="spec-value">{gem.carat || 'Available upon request'}</span>
+              </div>
+              <div className="spec-row">
+                <span className="spec-name">Dimensions (L x W x H)</span>
+                <span className="spec-value">{dimensions}</span>
               </div>
               <div className="spec-row">
                 <span className="spec-name">Shape / Cut</span>

@@ -100,7 +100,9 @@ function Juwellery() {
 
   const shopProducts = useMemo(
     () => backendJewellery
-      .filter((item) => ["approved", "active"].includes(item.status))
+      .filter((item) => ["approved", "active", "out_of_stock"].includes(
+        String(item.status || "").toLowerCase()
+      ))
       .map((item) => {
         const stockQuantity = Number(item.stock_quantity);
         const rawPrice = Number(item.price);
@@ -120,7 +122,7 @@ function Juwellery() {
             : (item.jewellery_type || "Jewellery"),
           cut: Number(item.is_handcrafted) === 1 ? "Handcrafted" : "Precision Crafted",
           treatment: Number(item.is_handcrafted) === 1 ? "Handcrafted" : "Fine Jewellery",
-          material: item.material || "18K Gold",
+          material: item.material || "",
           gemstone_type: item.gemstone_type || "",
           description: item.description || "",
           price,
@@ -645,14 +647,14 @@ function Juwellery() {
                 )}
               </div>
 
-              <h2 className="gem-about-heading" style={{ color: "#152923" }}>
-                ABOUT THIS JEWELLERY
-              </h2>
-              <p className="gem-narrative" style={{ color: "#65736d" }}>
-                Crafted in a {selectedProduct.shape.toLowerCase()} style, this{" "}
-                {selectedProduct.color.toLowerCase()} jewellery piece showcases
-                its gemstone.
-              </p>
+              <div className="p-4 bg-[#fbf9f4] border border-[#e8e0d1] rounded-lg my-3 break-words overflow-hidden">
+                <h2 className="gem-about-heading" style={{ color: "#152923" }}>
+                  ABOUT THIS JEWELLERY
+                </h2>
+                <p className="gem-narrative jewellery-description text-stone-700 leading-relaxed break-words overflow-hidden">
+                  {selectedProduct.description}
+                </p>
+              </div>
 
               <div className="quick-specs-grid">
                 <div className="spec-chip">
@@ -727,6 +729,10 @@ function Juwellery() {
                 <div className="spec-row">
                   <span className="spec-name">Jewellery Type</span>
                   <span className="spec-value">{selectedProduct.category}</span>
+                </div>
+                <div className="spec-row">
+                  <span className="spec-name">Material</span>
+                  <span className="spec-value">{selectedProduct.material || "—"}</span>
                 </div>
                 <div className="spec-row">
                   <span className="spec-name">Gemstone Color</span>

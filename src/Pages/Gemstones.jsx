@@ -135,8 +135,7 @@ function Gemstones() {
 
         const inventoryProducts = result.data
           .filter((gemstone) =>
-            Number(gemstone.status) !== 0 &&
-            (!gemstone.approval_status || gemstone.approval_status === "approved")
+            !gemstone.approval_status || gemstone.approval_status === "approved"
           )
           .map((gemstone) => {
             const galleryViews = (gemstone.galleryViews || []).map((view) => ({

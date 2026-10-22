@@ -912,14 +912,6 @@
   letter-spacing: 0.8px;
 }
 
-.luxury-detail-wrapper .gem-narrative {
-  color: #586760;
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-}
-
 .luxury-detail-wrapper .sku-badge {
   background: #f7f4ec;
   color: #806522;

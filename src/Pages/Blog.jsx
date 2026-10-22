@@ -23,6 +23,7 @@ import "./About.css";
 import "./Blog.css";
 import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
 import { useManagedBlogPosts } from "../useSiteContent.js";
+import { resolveMediaUrl } from "../services/api.js";
 
 const Blog = () => {
   const [managedBlogPosts] = useManagedBlogPosts();
@@ -128,7 +129,7 @@ const Blog = () => {
             {publishedPosts.map((post) => (
               <article className="blog-page-card" key={post.id}>
                 <div className="blog-page-card-image">
-                  <img src={post.image} alt={post.title} />
+                  <img src={resolveMediaUrl(post.image)} alt={post.title} />
                   <span className="blog-page-card-category">{post.category}</span>
                 </div>
                 <div className="blog-page-card-body">
@@ -164,7 +165,7 @@ const Blog = () => {
                 ×
               </button>
               <div className="blog-modal-image">
-                <img src={selectedPost.image} alt={selectedPost.title} />
+                <img src={resolveMediaUrl(selectedPost.image)} alt={selectedPost.title} />
               </div>
               <div className="blog-modal-content">
                 <span className="blog-modal-category">{selectedPost.category}</span>
