@@ -49,8 +49,8 @@ function InventoryGemstoneRoute({ gemstoneId }) {
             category: result.data.category_name || 'Gemstone',
             treatment: result.data.treatment_status,
             basePriceUSD: Number(result.data.price) || 0,
-            stockQuantity: Number.isSafeInteger(Number(result.data.stock))
-              ? Math.max(0, Number(result.data.stock))
+            stock_quantity: Number.isSafeInteger(Number(result.data.stock_quantity))
+              ? Math.max(0, Number(result.data.stock_quantity))
               : 0,
             videoUrl: result.data.videoUrl || result.data.video_url,
           });

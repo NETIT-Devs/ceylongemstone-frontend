@@ -169,7 +169,7 @@ const GemstoneDetail = ({ gem }) => {
 
   const addProductToCart = async (product) => {
     const productKey = getCollectionItemKey(product);
-    const stockQuantity = Number(product.stockQuantity ?? product.stock);
+    const stockQuantity = Number(product.stock_quantity);
     if (!Number.isSafeInteger(stockQuantity) || stockQuantity < 1) return false;
     const cartItem = cart.find((item) => getCollectionItemKey(item) === productKey);
 
@@ -226,7 +226,7 @@ const GemstoneDetail = ({ gem }) => {
     setActiveDrawer('cart');
   };
 
-  const gemStockQuantity = Number(gem?.stockQuantity ?? gem?.stock);
+  const gemStockQuantity = Number(gem?.stock_quantity);
   const gemInStock = Number.isSafeInteger(gemStockQuantity) && gemStockQuantity > 0;
 
   const toggleGemWishlist = () => {

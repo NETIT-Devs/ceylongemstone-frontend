@@ -6,11 +6,11 @@ export const LOW_STOCK_THRESHOLD = 3;
 export const DEFAULT_GEM_STOCK = 1;
 
 const getActiveStock = (item) => {
-  if (item.stockQuantity === undefined || item.stockQuantity === null) {
+  if (item.stock_quantity === undefined || item.stock_quantity === null) {
     return null;
   }
 
-  const quantity = Number(item.stockQuantity);
+  const quantity = Number(item.stock_quantity);
   return Number.isSafeInteger(quantity) && quantity >= 0 ? quantity : null;
 };
 

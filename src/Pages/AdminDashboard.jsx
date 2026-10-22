@@ -67,6 +67,7 @@ import "./AdminDashboard.css";
 import "./About.css";
 import MobileSiteMenu from "../components/MobileSiteMenu.jsx";
 
+// Parse the API response and surface invalid payloads as readable errors.
 const readGemApiResponse = async (response, fallbackMessage) => {
   let data;
   try {
@@ -82,9 +83,11 @@ const readGemApiResponse = async (response, fallbackMessage) => {
   return data;
 };
 
+// Treat boolean and numeric API values consistently when checking gemstone status.
 const isGemstoneActive = (status) =>
   status === true || Number(status) === 1;
 
+// Format a date using local calendar fields for date input controls.
 const toLocalDateInputValue = (date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -92,6 +95,7 @@ const toLocalDateInputValue = (date) => {
   return `${year}-${month}-${day}`;
 };
 
+// Build the date bounds used by the dashboard's reporting presets.
 const getDateRangeForPreset = (preset) => {
   const today = new Date();
   const endDate = toLocalDateInputValue(today);
@@ -112,6 +116,7 @@ const getDateRangeForPreset = (preset) => {
   };
 };
 
+// Prefill shipment details, reusing an existing shipment when available.
 const createShipmentForm = (order, existingShipment, shippingMethods) => {
   const defaultDelivery = new Date();
   defaultDelivery.setDate(defaultDelivery.getDate() + 5);
@@ -131,11 +136,13 @@ const createShipmentForm = (order, existingShipment, shippingMethods) => {
 };
 
 const AdminDashboard = ({ isSuperAdmin = false }) => {
+  // Shared storefront collections and navigation drawer state.
   const [wishlist, setWishlist] = useSharedCollection("ceylon-wishlist");
   const [cart, setCart] = useSharedCollection("ceylon-cart");
   const [activeDrawer, setActiveDrawer] = useState(null);
   const [isInquiryOpen, setIsInquiryOpen] = useState(false);
 
+  // Dashboard tab, metrics, and order reporting date-range state.
   const [activeTab, setActiveTab] = useState("ORDERS");
   const [dashboardStats, setDashboardStats] = useState({
     gemstoneInventory: 0,
@@ -150,6 +157,8 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
   const [appliedDateRange, setAppliedDateRange] = useState(() =>
     getDateRangeForPreset("this-month")
   );
+
+  // Backend orders, gemstone inventory, categories, and approval state.
   const [adminOrders, setAdminOrders] = useState([]);
   const [backendGems, setBackendGems] = useState([]);
   const [backendCategories, setBackendCategories] = useState([]);
@@ -196,6 +205,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     (gem) => !gem.approval_status || gem.approval_status === "approved"
   );
 
+  // Inventory, review, payment, and admin-account management state.
   const [inventory] = useGemInventory(products);
   const [stockAdditions, setStockAdditions] = useState({});
   const [lowStockItems, setLowStockItems] = useState([]);
@@ -239,6 +249,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
   const [trackingCopied, setTrackingCopied] = useState(false);
   const [dialogState, setDialogState] = useState(null);
 
+  // Display a dismissible information or warning dialog.
   const showCustomAlert = (message, title = "Ceylon Royal Gemstones", icon = "info") => {
     setDialogState({
       isOpen: true,
@@ -249,6 +260,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     });
   };
 
+  // Display a confirmation dialog and run the action only after confirmation.
   const showCustomConfirm = (message, onConfirm, title = "Confirm Action", icon = "danger") => {
     setDialogState({
       isOpen: true,
@@ -263,7 +275,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     });
   };
 
-  // New Gem Form State
+  // Forms and edit state for gemstones, jewellery, and certificates.
   const [newGem, setNewGem] = useState({
     name: "",
     category_id: "",
@@ -277,7 +289,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     shape: "",
     origin: "Ratnapura, Sri Lanka",
     price: "",
-    stock: "1",
+    stock_quantity: "1",
     treatment_status: "Unheated",
     description: "",
     status: "available",
@@ -316,7 +328,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
   const [certificateFile, setCertificateFile] = useState(null);
   const [certificateDeleting, setCertificateDeleting] = useState(null);
 
-  // ─── Backend jewellery state ────────────────────────────────────────────────
+  // Backend jewellery inventory and combined storefront/admin display lists.
   const [backendJewellery, setBackendJewellery] = useState([]);
   const [jewelleryLoading, setJewelleryLoading] = useState(false);
   const [jewelleryError, setJewelleryError] = useState("");
@@ -362,6 +374,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       : !["pending", "rejected", "inactive", "draft"].includes(String(item.status || "").toLowerCase())
   );
 
+  // Load dashboard totals for the currently applied reporting date range.
   const refreshDashboardStats = useCallback(async () => {
     try {
       const params = new URLSearchParams({
@@ -389,7 +402,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
   }, [appliedDateRange.startDate, appliedDateRange.endDate]);
 
-  // helper – re-fetch gems list
+  // Reload gemstone inventory and refresh dashboard totals.
   const refreshGems = useCallback(async () => {
     setGemsLoading(true);
     setGemstonesError("");
@@ -410,6 +423,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
   }, [refreshDashboardStats]);
 
+  // Load gemstone categories used by inventory forms and filters.
   const refreshCategories = useCallback(async () => {
     setCategoriesError("");
     try {
@@ -426,6 +440,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
   }, []);
 
+  // Load pending gemstone submissions for the approval panel.
   const refreshGemApprovals = useCallback(async () => {
     setGemApprovalsLoading(true);
     setGemApprovalsError("");
@@ -445,6 +460,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
   }, []);
 
+  // Load low-stock inventory and update its loading and error state.
   const refreshLowStock = useCallback(async () => {
     setLowStockLoading(true);
     setLowStockError("");
@@ -464,6 +480,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
   }, []);
 
+  // Refresh dashboard totals on mount and ignore updates after effect cleanup.
   useEffect(() => {
     let isCurrent = true;
 
@@ -476,6 +493,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     };
   }, [refreshDashboardStats]);
 
+  // Update the draft and applied range when a reporting preset is selected.
   const selectDateRangePreset = (preset) => {
     setDateRangePreset(preset);
     if (preset !== "custom") {
@@ -485,6 +503,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
   };
 
+  // Apply a custom range only when both dates are present and ordered correctly.
   const applyCustomDateRange = (event) => {
     event.preventDefault();
     if (
@@ -497,6 +516,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
   };
 
+  // Load certificates and group them by gemstone ID for quick lookup.
   const refreshCertificates = useCallback(async () => {
     setCertificatesError("");
     try {
@@ -522,7 +542,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
   }, []);
 
-  // ─── Refresh backend jewellery list ──────────────────────────────────────────
+  // Reload jewellery records and update the dashboard inventory totals.
   const refreshJewellery = useCallback(async () => {
     setJewelleryLoading(true);
     setJewelleryError("");
@@ -541,6 +561,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
   }, [refreshDashboardStats]);
 
+  // Load customer reviews and normalize the fields used by the review table.
   const refreshReviews = useCallback(async () => {
     setReviewsLoading(true);
     setReviewsError("");
@@ -568,6 +589,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
   }, []);
 
+  // Load admin accounts for super administrators and sync the local account cache.
   const refreshAdminAccounts = useCallback(async () => {
     if (!isSuperAdmin) return false;
 
@@ -609,7 +631,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
   }, [isSuperAdmin]);
 
-  // ─── Refresh Shipping Methods ───────────────────────────────────────────────
+  // Load active shipping options used by shipment forms.
   const refreshShippingMethods = useCallback(async () => {
     try {
       const response = await apiGet("/api/shipping");
@@ -623,7 +645,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
   }, []);
 
-  // ─── Refresh Shipments ──────────────────────────────────────────────────────
+  // Load shipments and store the latest results for order mapping.
   const refreshShipments = useCallback(async () => {
     try {
       const response = await apiGet("/api/shipping/shipments");
@@ -639,7 +661,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
   }, []);
 
-  // ─── Refresh Backend Orders & Payments Ledger ───────────────────────────────
+  // Load orders for the applied date range and derive shipment/payment display data.
   const refreshOrders = useCallback(async () => {
     setOrdersLoading(true);
     setOrdersError("");
@@ -720,6 +742,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     refreshDashboardStats
   ]);
 
+  // Load the dashboard's inventory, review, shipping, and approval data on mount.
   useEffect(() => {
     Promise.resolve().then(() =>
       Promise.all([
@@ -749,10 +772,12 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     refreshShipments
   ]);
 
+  // Reload orders whenever the applied reporting range changes.
   useEffect(() => {
     Promise.resolve().then(() => refreshOrders());
   }, [refreshOrders]);
 
+  // Refresh administrator accounts when the user's access level changes.
   useEffect(() => {
     Promise.resolve().then(() => refreshAdminAccounts());
   }, [refreshAdminAccounts]);
@@ -783,6 +808,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
   });
   const [editingBlogPostId, setEditingBlogPostId] = useState(null);
 
+  // Load hero banners and map API records into the slide editor's data shape.
   const refreshHeroSlides = useCallback(async () => {
     setHeroSlidesLoading(true);
     setHeroSlidesError("");
@@ -817,10 +843,12 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
   }, []);
 
+  // Fetch hero slides when the refresh handler is ready.
   useEffect(() => {
     Promise.resolve().then(() => refreshHeroSlides());
   }, [refreshHeroSlides]);
 
+  // Process a selected product image and store the prepared image in its form.
   const handleProductImageSelection = async (event, setForm) => {
     const input = event.currentTarget;
     const file = input.files?.[0];
@@ -840,6 +868,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
   };
 
+  // Validate, upload if needed, and create or update a homepage hero slide.
   const handleAddHeroSlide = async (event) => {
     event.preventDefault();
     if (!newHeroSlide.alt.trim() || !newHeroSlide.image) {
@@ -927,6 +956,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
   };
 
+  // Load a selected hero slide into the editor and focus its title field.
   const handleEditHeroSlide = (slide) => {
     setEditingHeroSlideId(slide.id);
     setNewHeroSlide({
@@ -946,6 +976,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     document.getElementById("hero-slide-title")?.focus({ preventScroll: true });
   };
 
+  // Clear the hero slide editor and exit edit mode.
   const handleCancelHeroSlideEdit = () => {
     setEditingHeroSlideId(null);
     setNewHeroSlide({
@@ -960,6 +991,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     });
   };
 
+  // Validate blog content, then publish a new post or update an existing one.
   const handleAddBlogPost = async (event) => {
     event.preventDefault();
     const paragraphs = newBlogPost.content
@@ -1070,6 +1102,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     showCustomAlert("The article has been updated on the Blog page.", "Blog Post Updated", "success");
   };
 
+  // Populate the blog editor with an existing post's content.
   const handleEditBlogPost = (post) => {
     setEditingBlogPostId(post.id);
     setNewBlogPost({
@@ -1084,6 +1117,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     document.getElementById("blog-post-title")?.focus();
   };
 
+  // Clear the blog editor and exit edit mode.
   const handleCancelBlogEdit = () => {
     setEditingBlogPostId(null);
     setNewBlogPost({
@@ -1095,6 +1129,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     });
   };
 
+  // Confirm removal, then delete a banner or remove a managed blog post.
   const handleRemoveSiteContent = (kind, id) => {
     const isHeroSlide = kind === "hero slide";
     showCustomConfirm(
@@ -1152,6 +1187,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     );
   };
 
+  // Update an order status in the backend or in the local display state.
   const handleStatusChange = async (orderId, newStatus, dbId) => {
     if (dbId) {
       try {
@@ -1172,6 +1208,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     );
   };
 
+  // Prevent invalid cancellations and confirm before updating an order.
   const handleCancelOrder = (order) => {
     if (order.status === "DELIVERED") {
       showCustomAlert("Delivered orders cannot be cancelled.", "Action Restricted", "warning");
@@ -1214,6 +1251,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     );
   };
 
+  // Update payment status and synchronize the related order record.
   const handlePaymentStatusChange = async (paymentId, newStatus, orderDbId) => {
     const payment = payments.find((item) => item.id === paymentId);
     if (!payment) return;
@@ -1246,12 +1284,14 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     );
   };
 
+  // Open the shipment editor with saved details or generated defaults.
   const handleOpenShipmentModal = (order) => {
     const existingShipment = backendShipments.find((s) => Number(s.order_id) === Number(order.dbId));
     setActiveShipmentOrder(order);
     setShipmentForm(createShipmentForm(order, existingShipment, shippingMethods));
   };
 
+  // Validate shipment details and create or update the order's shipment.
   const handleSaveShipment = async (e) => {
     e.preventDefault();
     if (!activeShipmentOrder) return;
@@ -1314,6 +1354,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
   };
 
+  // Validate and create an administrator account for super-admin users.
   const handleAddAdminAccount = async (event) => {
     event.preventDefault();
     if (!isSuperAdmin) {
@@ -1370,6 +1411,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
   };
 
+  // Change an administrator account's active status.
   const handleAdminAccountStatus = async (accountId, status) => {
     if (!isSuperAdmin) {
       showCustomAlert("Only Super Administrators can modify admin accounts.", "Access Restricted", "warning");
@@ -1413,6 +1455,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
   };
 
+  // Confirm account removal and prevent deleting the currently signed-in admin.
   const handleDeleteAdminAccount = (account) => {
     if (!isSuperAdmin) {
       showCustomAlert("Only Super Administrators can remove admin accounts.", "Access Restricted", "warning");
@@ -1463,6 +1506,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     );
   };
 
+  // Confirm and remove a customer review.
   const handleDeleteReview = (review) => {
     showCustomConfirm(
       `Are you sure you want to delete the review submitted by ${review.name}?`,
@@ -1487,6 +1531,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     );
   };
 
+  // Change a review's visibility or moderation status.
   const handleReviewStatus = async (review, status) => {
     setUpdatingReviewId(review.id);
     try {
@@ -1509,6 +1554,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
   };
 
+  // Load a storefront gemstone into the new/edit gemstone form.
   const handleEditGem = (gem) => {
     setEditingGemId(gem.id);
     setNewGem({
@@ -1529,6 +1575,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  // Populate the backend gemstone editor, including gallery media and offer dates.
   const handleEditLiveGem = (gem) => {
     setEditingGemId(gem.id);
     setEditGem({
@@ -1545,7 +1592,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       origin: gem.origin || "",
       treatment_status: gem.treatment_status || "Unheated",
       price: gem.price == null ? "" : String(gem.price),
-      stock: gem.stock == null ? "0" : String(gem.stock),
+      stock_quantity: gem.stock_quantity == null ? "0" : String(gem.stock_quantity),
       description: gem.description || "",
       status: isGemstoneActive(gem.status) ? "available" : "unavailable",
       discountRate: gem.offer_rate == null ? "" : String(gem.offer_rate),
@@ -1564,6 +1611,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     setEditGemFiles({});
   };
 
+  // Close the gemstone editor unless a save is currently in progress.
   const closeLiveGemEdit = () => {
     if (gemSaving) return;
     setEditGem(null);
@@ -1571,6 +1619,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     setEditGemFiles({});
   };
 
+  // Validate and submit a new gemstone with its selected media files.
   const handleAddGem = async (e) => {
     e.preventDefault();
     const form = e.currentTarget;
@@ -1584,13 +1633,13 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       newGem.width,
       newGem.height,
       newGem.price,
-      newGem.stock
+      newGem.stock_quantity
     ].filter((value) => value !== "" && value != null);
     if (
       !newGem.price ||
       Number(newGem.price) <= 0 ||
       numericValues.some((value) => !Number.isFinite(Number(value)) || Number(value) < 0) ||
-      !Number.isInteger(Number(newGem.stock || 0))
+      !Number.isInteger(Number(newGem.stock_quantity || 0))
     ) {
       showCustomAlert(
         "Enter a valid non-negative price, carat, dimensions, and whole-number stock quantity.",
@@ -1599,6 +1648,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       );
       return;
     }
+    // Require both offer dates whenever an offer rate is provided.
     if (newGem.discountRate && (!newGem.offerStartDate || !newGem.offerEndDate)) {
       showCustomAlert("Choose both offer start and end dates.", "Offer Dates Required", "warning");
       return;
@@ -1614,6 +1664,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       showCustomAlert("Offer rate must be between 1 and 100.", "Invalid Offer Rate", "warning");
       return;
     }
+    // Ensure the offer end date is on or after its start date.
     if (
       newGem.discountRate &&
       newGem.offerStartDate > newGem.offerEndDate
@@ -1637,7 +1688,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
         origin: newGem.origin || null,
         treatment_status: newGem.treatment_status || null,
         price: Number(newGem.price),
-        stock: Number(newGem.stock || 1),
+        stock_quantity: Number(newGem.stock_quantity || 1),
         description: newGem.description || null,
         status: newGem.status || "available",
         offer_rate: newGem.discountRate ? Number(newGem.discountRate) : null,
@@ -1685,7 +1736,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
         height: "",
         origin: "Ratnapura, Sri Lanka",
         price: "",
-        stock: "1",
+        stock_quantity: "1",
         clarity: "",
         cut: "",
         shape: "",
@@ -1709,6 +1760,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
   };
 
+  // Validate and update an existing backend gemstone and any replacement media.
   const handleSaveLiveGem = async (e) => {
     e.preventDefault();
     if (!editGem || editingGemId == null) return;
@@ -1717,7 +1769,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       return;
     }
 
-    const numericFields = ["carat", "length", "width", "height", "price", "stock"];
+    const numericFields = ["carat", "length", "width", "height", "price", "stock_quantity"];
     const invalidNumericValue = numericFields.some((field) => {
       const value = editGem[field];
       return value !== "" && (!Number.isFinite(Number(value)) || Number(value) < 0);
@@ -1726,7 +1778,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       !editGem.price ||
       Number(editGem.price) <= 0 ||
       invalidNumericValue ||
-      !Number.isInteger(Number(editGem.stock || 0))
+      !Number.isInteger(Number(editGem.stock_quantity || 0))
     ) {
       showCustomAlert(
         "Enter a valid positive price, non-negative dimensions, and whole-number stock quantity.",
@@ -1748,6 +1800,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       showCustomAlert("Offer rate must be between 1 and 100.", "Invalid Offer Rate", "warning");
       return;
     }
+    // Ensure the edited offer end date is on or after its start date.
     if (editGem.discountRate && editGem.offerStartDate > editGem.offerEndDate) {
       showCustomAlert("Offer end date must be on or after the start date.", "Invalid Offer Dates", "warning");
       return;
@@ -1769,7 +1822,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
         origin: editGem.origin || "",
         treatment_status: editGem.treatment_status || "",
         price: Number(editGem.price),
-        stock: Number(editGem.stock || 0),
+        stock_quantity: Number(editGem.stock_quantity || 0),
         description: editGem.description || "",
         status: editGem.status,
         offer_rate: editGem.discountRate || "",
@@ -1800,6 +1853,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
   };
 
+  // Approve or reject a backend submission, or update a local submission.
   const handleGemApproval = async (submissionId, status, isDbItem = false) => {
     if (isDbItem) {
       try {
@@ -1839,6 +1893,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     );
   };
 
+  // Restore the jewellery form to its defaults and clear edit/upload state.
   const resetJewelleryForm = () => {
     setNewJewellery({
       product_name: "",
@@ -1861,11 +1916,13 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     setJewelleryImageFile(null);
   };
 
+  // Close the jewellery editor unless a save is currently in progress.
   const closeDbJewelleryEdit = () => {
     if (jewellerySaving) return;
     resetJewelleryForm();
   };
 
+  // Populate the jewellery form from either a backend or legacy storefront item.
   const handleEditJewellery = (item) => {
     // DB item (has product_code)
     if (item.product_code !== undefined) {
@@ -1913,6 +1970,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     setActiveTab("JEWELLERY");
   };
 
+  // Validate offer dates and product details before creating or updating jewellery.
   const handleSaveJewellery = async (event) => {
     event.preventDefault();
     if (!newJewellery.product_name.trim()) {
@@ -1939,6 +1997,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       showCustomAlert("Choose both offer start and end dates.", "Offer Dates Required", "warning");
       return;
     }
+    // Ensure the jewellery offer end date is on or after its start date.
     if (
       newJewellery.offer_rate &&
       newJewellery.offer_start_date > newJewellery.offer_end_date
@@ -2007,6 +2066,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
   };
 
+  // Record the review decision for a locally stored jewellery submission.
   const handleJewelleryApproval = (submissionId, status) => {
     setJewellerySubmissions((current) =>
       current.map((submission) =>
@@ -2017,6 +2077,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     );
   };
 
+  // Confirm certificate removal, then refresh the gemstone certificate cache.
   const handleDeleteCertificate = (certificate, gemstoneName) => {
     showCustomConfirm(
       `Permanently delete the certificate for "${gemstoneName}"? This will also remove its uploaded file when it is stored on this server.`,
@@ -2046,6 +2107,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     );
   };
 
+  // Open the certificate form with either existing values or empty defaults.
   const openCertificateModal = (gem, certificate = null) => {
     setCertificateFile(null);
     setEditCertificate({
@@ -2060,12 +2122,14 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     });
   };
 
+  // Close the certificate form unless a save is currently in progress.
   const closeCertificateModal = () => {
     if (certificateSaving) return;
     setEditCertificate(null);
     setCertificateFile(null);
   };
 
+  // Save certificate metadata and its optional uploaded file.
   const handleSaveCertificate = async (event) => {
     event.preventDefault();
     if (!editCertificate) return;
@@ -2098,6 +2162,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
   };
 
+  // Confirm deletion and remove the jewellery record from its data source.
   const handleDeleteJewellery = (itemId, isDbItem = false) => {
     showCustomConfirm(
       "Permanently delete this jewellery item from the database?",
@@ -2130,6 +2195,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     );
   };
 
+  // Validate the requested stock addition and update the selected inventory item.
   const handleRestockItem = async (item) => {
     const itemKey = `${item.item_type}-${item.id}`;
     const quantity = Number(stockAdditions[itemKey] ?? 1);
@@ -2176,6 +2242,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     }
   };
 
+  // Confirm gemstone deletion and refresh inventory after the API request.
   const handleDeleteGem = (gemId) => {
     showCustomConfirm(
       "Are you sure you want to permanently remove this certified gemstone from inventory?",
@@ -2201,11 +2268,13 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     );
   };
 
+  // End the current admin session and return to the login screen.
   const handleAdminLogout = () => {
     endAdminSession();
     window.location.href = "/";
   };
 
+  // Derive counts and filtered collections used by dashboard cards and tables.
   const wishlistCount = wishlist.reduce((sum, item) => sum + item.quantity, 0);
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const settledRevenue = payments
@@ -2247,6 +2316,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
     return !matchesCurrentId && !matchesCurrentEmail;
   });
 
+  // Render the shared navigation, dashboard summary, tab panels, and dialogs.
   return (
     <div className={`admin-page${isSuperAdmin ? " super-admin-page" : ""}`}>
       {/* NAVBAR */}
@@ -2349,6 +2419,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
             </div>
           </section>
 
+          {/* Choose a preset or validated custom period for order reporting. */}
           <section className="admin-date-filter" aria-label="Dashboard date range filter">
             <div className="admin-date-filter-heading">
               <span className="reporting-period-label">
@@ -2444,6 +2515,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
           </section>
 
           {/* STATS OVERVIEW CARDS */}
+          {/* Summarize inventory, orders, and shipment activity for the selected period. */}
           <div className={`admin-stats-grid ${isSuperAdmin ? "admin-stats-6cols" : "admin-stats-5cols"}`}>
             <div className="admin-stat-card" style={{ cursor: "pointer" }} onClick={() => setActiveTab("ORDERS")}>
               <div className="stat-icon gold"><FaShoppingBag /></div>
@@ -2510,6 +2582,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
           </div>
 
           {/* TAB NAVIGATION BUTTONS */}
+          {/* Switch between operational panels available to the current admin role. */}
           <div className="admin-tabs">
             <button
               type="button"
@@ -2608,6 +2681,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
           </div>
 
           {/* TAB 1: ORDERS MANAGEMENT */}
+          {/* Review customer orders, update order status, and manage dispatches. */}
           {activeTab === "ORDERS" && (
             <section className="admin-section">
               <div className="admin-section-heading" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "1.2rem" }}>
@@ -2772,6 +2846,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
             </section>
           )}
 
+          {/* Review payment records and reconcile payment status with orders. */}
           {isSuperAdmin && activeTab === "PAYMENTS" && (
             <section className="admin-section">
               <div className="admin-section-heading">
@@ -2845,6 +2920,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
             </section>
           )}
 
+          {/* Moderate customer reviews and manage their published status. */}
           {activeTab === "REVIEWS" && (
             <section className="admin-section">
               <div className="admin-section-heading">
@@ -2942,6 +3018,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
             </section>
           )}
 
+          {/* Allow super administrators to create and manage admin accounts. */}
           {isSuperAdmin && activeTab === "ACCOUNTS" && (
             <section className="admin-section">
               <div className="admin-section-heading">
@@ -2966,6 +3043,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                 </button>
               </div>
 
+              {/* Show the create-admin form when the super admin opens it. */}
               {isAdminFormOpen && (
                 <div className="admin-modal-backdrop" onClick={() => setIsAdminFormOpen(false)}>
                   <section className="admin-account-modal" role="dialog" aria-modal="true" aria-labelledby="create-admin-title" onClick={(event) => event.stopPropagation()}>
@@ -3034,6 +3112,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                 </table>
               </div>
 
+              {/* Show the selected administrator's account details. */}
               {selectedAdminAccount && (
                 <div className="admin-modal-backdrop" onClick={() => setSelectedAdminAccount(null)}>
                   <section className="admin-account-modal admin-account-details-modal" role="dialog" aria-modal="true" aria-labelledby="admin-details-title" onClick={(event) => event.stopPropagation()}>
@@ -3063,6 +3142,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
             </section>
           )}
 
+          {/* Monitor low-stock products and add inventory quantities. */}
           {activeTab === "STOCK" && (
             <section className="admin-section">
               <div className="admin-section-heading stock-alert-heading">
@@ -3177,6 +3257,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
             </section>
           )}
 
+          {/* Review pending gemstone submissions before they appear in the shop. */}
           {isSuperAdmin && activeTab === "GEM_APPROVAL" && (
             <section className="admin-section">
               <div className="admin-section-heading">
@@ -3281,6 +3362,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
             </section>
           )}
 
+          {/* Review pending jewellery submissions before publication. */}
           {isSuperAdmin && activeTab === "JEWELLERY_APPROVAL" && (
             <section className="admin-section">
               <div className="admin-section-heading">
@@ -3373,6 +3455,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
           )}
 
           {/* TAB 2: GEMS MANAGEMENT */}
+          {/* Create and manage gemstone inventory, details, images, and certificates. */}
           {activeTab === "GEMS" && (
             <section className="admin-section">
               {/* ADD NEW GEM FORM */}
@@ -3525,14 +3608,14 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                       />
                     </div>
                     <div className="form-group">
-                      <label htmlFor="new-gem-stock">Stock Quantity</label>
+                      <label htmlFor="new-gem-stock-quantity">Stock Quantity</label>
                       <input
-                        id="new-gem-stock"
+                        id="new-gem-stock-quantity"
                         type="number"
                         min="0"
                         step="1"
-                        value={newGem.stock}
-                        onChange={(event) => setNewGem({ ...newGem, stock: event.target.value })}
+                        value={newGem.stock_quantity}
+                        onChange={(event) => setNewGem({ ...newGem, stock_quantity: event.target.value })}
                       />
                     </div>
                   </div>
@@ -3672,15 +3755,15 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                           <th>Category</th>
                           <th>Carat</th>
                           <th>Price</th>
-                          <th>Stock</th>
+                          <th>Stock Quantity</th>
                           <th>Status</th>
                           <th>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {filteredBackendGems.map((gem) => {
-                          const stock = Number(gem.stock ?? 0);
-                          const hasStock = Number.isFinite(stock) && stock > 0;
+                          const stockQuantity = Number(gem.stock_quantity ?? 0);
+                          const hasStock = Number.isFinite(stockQuantity) && stockQuantity > 0;
 
                           return (
                             <tr key={gem.id}>
@@ -3693,7 +3776,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                               <td className="gold-text">
                                 {gem.price == null ? "—" : `$${Number(gem.price).toLocaleString()}`}
                               </td>
-                              <td>{Number.isFinite(stock) ? stock : 0}</td>
+                              <td>{Number.isFinite(stockQuantity) ? stockQuantity : 0}</td>
                               <td>
                                 <span className={`gem-database-status ${hasStock ? "active" : "out-of-stock"}`}>
                                   {hasStock ? "Available" : "Out of Stock"}
@@ -3844,7 +3927,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                     ? formatProductOfferEndDate(offerProduct)
                     : "";
                   const availableStock = gem.inventoryId
-                    ? Number(gem.stock ?? 0)
+                    ? Number(gem.stock_quantity ?? 0)
                     : Number(inventory[getCollectionItemKey(gem)] ?? 0);
 
                   return (
@@ -3933,6 +4016,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
             </section>
           )}
 
+          {/* Create and manage jewellery products, pricing, offers, and stock. */}
           {activeTab === "JEWELLERY" && (
             <section className="admin-section jewellery-management-layout">
               {/* ── DATABASE JEWELLERY LIVE TABLE ─────────────────────────── */}
@@ -4375,6 +4459,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
             </section>
           )}
 
+          {/* Manage homepage hero slides and their linked call-to-action content. */}
           {activeTab === "HERO_SLIDES" && (
             <section className="admin-section">
               <div className="admin-section-heading">
@@ -4609,6 +4694,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
             </section>
           )}
 
+          {/* Create, edit, and remove blog posts shown on the public site. */}
           {activeTab === "BLOG" && (
             <section className="admin-section">
               <div className="admin-section-heading">
@@ -4857,10 +4943,12 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
         setCart={setCart}
       />
 
+      {/* Render the site inquiry dialog when requested from the dashboard. */}
       {isInquiryOpen && (
         <SiteInquiryModal source={isSuperAdmin ? "Super Admin Portal" : "Admin Portal"} onClose={() => setIsInquiryOpen(false)} />
       )}
 
+      {/* Add or edit a gemstone's certificate information and uploaded file. */}
       {editCertificate && (
         <div className="admin-modal-backdrop certificate-modal-backdrop" onClick={closeCertificateModal}>
           <section
@@ -4970,6 +5058,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
         </div>
       )}
 
+      {/* Edit a backend gemstone and its inventory, offer dates, and media. */}
       {editGem && (
         <div
           className="admin-modal-backdrop gem-edit-modal-backdrop"
@@ -5131,14 +5220,14 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
                   />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="edit-gem-stock">Stock Quantity</label>
+                  <label htmlFor="edit-gem-stock-quantity">Stock Quantity</label>
                   <input
-                    id="edit-gem-stock"
+                    id="edit-gem-stock-quantity"
                     type="number"
                     min="0"
                     step="1"
-                    value={editGem.stock}
-                    onChange={(event) => setEditGem({ ...editGem, stock: event.target.value })}
+                    value={editGem.stock_quantity}
+                    onChange={(event) => setEditGem({ ...editGem, stock_quantity: event.target.value })}
                   />
                 </div>
               </div>
@@ -5262,6 +5351,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       )}
 
       {/* LUXURY ORDER INVOICE & TRACKING DOSSIER MODAL */}
+      {/* Display the selected order's invoice, customer, payment, and tracking details. */}
       {selectedOrderDetails && (
         <div className="royal-modal-backdrop" onClick={() => setSelectedOrderDetails(null)}>
           <div
@@ -5410,6 +5500,7 @@ const AdminDashboard = ({ isSuperAdmin = false }) => {
       )}
 
       {/* LUXURY SHIPMENT & LOGISTICS TRACKING MANAGEMENT MODAL */}
+      {/* Create or update courier, tracking, and delivery details for an order. */}
       {activeShipmentOrder && (
         <div className="royal-modal-backdrop" onClick={() => !shipmentSaving && setActiveShipmentOrder(null)}>
           <div

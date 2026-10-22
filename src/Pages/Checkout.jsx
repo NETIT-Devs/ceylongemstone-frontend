@@ -299,7 +299,10 @@ const Checkout = () => {
         return Number(inventoryQuantity);
       }
 
-      const productQuantity = Number(item.stockQuantity);
+      const isJewellery = item.itemType === "jewellery" || item.item_type === "jewellery";
+      const productQuantity = Number(
+        isJewellery ? item.stockQuantity : item.stock_quantity
+      );
       return Number.isFinite(productQuantity) ? productQuantity : 0;
     };
     const unavailableItem = user?.id

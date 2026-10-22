@@ -223,7 +223,7 @@ const Home = () => {
       )
       .map((gemstone) => {
         const price = Number(gemstone.price);
-        const stockQuantity = Number(gemstone.stock);
+        const stockQuantity = Number(gemstone.stock_quantity);
         const offerRate = gemstone.discountRate ?? gemstone.offer_rate;
         const galleryViews = (gemstone.galleryViews || []).map((view) => ({
           ...view,
@@ -238,7 +238,7 @@ const Home = () => {
           treatment: normalizeTreatment(gemstone.treatment_status),
           price: Number.isFinite(price) ? price : 0,
           basePriceUSD: Number.isFinite(price) ? price : 0,
-          stockQuantity: Number.isSafeInteger(stockQuantity)
+          stock_quantity: Number.isSafeInteger(stockQuantity)
             ? Math.max(0, stockQuantity)
             : 0,
           image: resolveMediaUrl(

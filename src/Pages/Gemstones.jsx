@@ -152,8 +152,8 @@ function Gemstones() {
               productKey: `inventory-gemstone-${gemstone.id}`,
               category: gemstone.category_name || "Gemstone",
               treatment: normalizeTreatment(gemstone.treatment_status),
-              stockQuantity: Number.isSafeInteger(Number(gemstone.stock))
-                ? Math.max(0, Number(gemstone.stock))
+              stock_quantity: Number.isSafeInteger(Number(gemstone.stock_quantity))
+                ? Math.max(0, Number(gemstone.stock_quantity))
                 : 0,
               price: Number(gemstone.price) || 0,
               image,

@@ -1,3 +1,4 @@
+/* Base layout and navigation for the admin dashboard. */
 .admin-page {
   min-height: 100vh;
   background: #f7f5ef;
@@ -228,6 +229,7 @@
   font-family: "Cinzel", serif;
 }
 
+/* Reporting period controls and custom date-range inputs. */
 .admin-date-filter {
   display: flex;
   align-items: center;
@@ -720,6 +722,7 @@
   }
 }
 
+/* Gemstone inventory filters, status labels, and table actions. */
 .gem-management-toolbar {
   display: flex;
   align-items: center;
@@ -875,6 +878,7 @@
   border-color: #d8c58f;
 }
 
+/* Jewellery inventory table layout and row-level actions. */
 .jewellery-management-layout {
   display: flex;
   flex-direction: column;
@@ -1504,6 +1508,7 @@
   }
 }
 
+/* Payment, review, and approval table controls. */
 .admin-tabs {
   flex-wrap: wrap;
 }
@@ -1789,6 +1794,7 @@
   color: #a33342;
 }
 
+/* Shared order, payment, and shipment status badges. */
 .status-pill {
   display: inline-flex;
   align-items: center;
@@ -1841,6 +1847,7 @@
   border: 1px solid #a7f3d0;
 }
 
+/* Super-admin profile, account forms, account tables, and dialogs. */
 .super-admin-profile {
   display: grid;
   grid-template-columns: 42px repeat(3, minmax(0, 1fr));
@@ -2243,6 +2250,8 @@
   background: #eef4f6;
 }
 
+/* Payment and task status labels plus empty-state messages. */
+
 @media (max-width: 1024px) {
   .admin-account-form {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2312,6 +2321,7 @@
   text-align: center;
 }
 
+/* Low-stock inventory alerts and restock controls. */
 .stock-alert-heading-actions {
   display: flex;
   align-items: center;
@@ -2553,6 +2563,7 @@
   opacity: 0.65;
 }
 
+/* Stack stock alert groups on smaller screens. */
 @media (max-width: 900px) {
   .stock-alert-heading-actions {
     align-self: flex-start;
@@ -2610,12 +2621,15 @@
   }
 }
 
+/* Task creation form, filters, and task list rows. */
 .task-filters {
   display: inline-flex;
   flex: 0 0 auto;
   border: 1px solid #dcd5c4;
   background: #ffffff;
 }
+
+
 
 .task-filters button {
   min-height: 34px;
@@ -2830,6 +2844,7 @@
   }
 }
 
+/* Shared visual treatment for custom modal backdrops and transitions. */
 /* ========================================================
    ATTRACTIVE ROYAL MODALS & CUSTOM POPUPS (REPLACING BROWSER ALERTS)
    ======================================================== */
@@ -3268,6 +3283,7 @@
   }
 }
 
+/* Responsive dashboard layout for tablets and compact devices. */
 @media (max-width: 768px) {
   .admin-main {
     padding: 24px 0 48px;
@@ -3498,6 +3514,7 @@
   }
 }
 
+/* Blog post cards and editor layout, including the cover-image picker. */
 .blog-editor-heading {
   display: flex;
   align-items: center;
@@ -3643,6 +3660,7 @@
   color: #66746f;
   font-size: 11px;
   line-height: 1.55;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -3960,6 +3978,7 @@
   min-height: 330px;
 }
 
+/* Hero slide editor validation, image picker, and supporting notes. */
 .admin-form-error {
   margin: 0 0 14px;
   padding: 10px 12px;
@@ -4060,6 +4079,7 @@
   }
 }
 
+/* Convert the wide order table into compact labeled rows on mobile. */
 @media (max-width: 900px) {
   .admin-table-wrapper.order-table-wrapper {
     overflow: visible;
