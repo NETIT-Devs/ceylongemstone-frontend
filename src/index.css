@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
+:root {
+  --subpage-hero-height: clamp(500px, 84vh, 840px);
+}
+
 html, body {
   margin: 0;
   padding: 0;
@@ -16,7 +20,46 @@ html, body {
   min-height: 100%;
 }
 
+body :is(
+  .about-hero,
+  .contact-hero,
+  .gem-hero.gemstone-collection-hero,
+  .gem-hero.jewellery-hero,
+  .trust-page-hero,
+  .reviews-page-hero,
+  .blog-page-hero,
+  .about-hero.joinus-page-hero,
+  .international-hero
+) {
+  height: var(--subpage-hero-height);
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+body :is(
+  .about-hero,
+  .contact-hero,
+  .gemstone-collection-hero,
+  .jewellery-hero,
+  .trust-page-hero,
+  .reviews-page-hero,
+  .blog-page-hero,
+  .joinus-page-hero,
+  .international-hero
+)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(6, 28, 43, 0.48), rgba(4, 29, 26, 0.42));
+}
+
 @media (max-width: 768px) {
+  :root {
+    --subpage-hero-height: clamp(470px, 80vh, 680px);
+  }
+
   html,
   body {
     max-width: 100%;

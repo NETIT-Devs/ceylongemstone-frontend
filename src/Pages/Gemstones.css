@@ -324,6 +324,11 @@
   overflow: hidden;
 }
 
+.gem-hero.gemstone-collection-hero {
+  height: var(--subpage-hero-height);
+  min-height: 0;
+}
+
 .gem-hero.jewellery-hero {
   background:
     linear-gradient(rgba(6, 28, 43, 0.18), rgba(6, 28, 43, 0.24)),

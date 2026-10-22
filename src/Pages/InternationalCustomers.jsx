@@ -65,11 +65,6 @@ const InternationalCustomers = () => {
     setCurrency(nextCurrency);
   };
 
-  const indicativePrice = (usdAmount) => {
-    const selected = currencies[currency] || currencies.USD;
-    return `${selected.symbol}${Math.round(usdAmount * selected.rate).toLocaleString("en-US")}`;
-  };
-
   const wishlistCount = wishlist.reduce((sum, item) => sum + item.quantity, 0);
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -192,39 +187,26 @@ const InternationalCustomers = () => {
       </nav>
 
       <main>
-        <section className="international-intro">
-          <div className="international-intro-copy">
-            <p className="international-eyebrow">INTERNATIONAL CUSTOMER DESK</p>
-            <h1>Buying Ceylon gems from abroad</h1>
-            <p className="international-lead">
+        <section className="international-hero">
+          <div className="international-hero-content">
+            <div className="international-hero-logo">
+              <BrandLogo alt="Ceylon Royal Gemstones" />
+            </div>
+            <span className="international-hero-subtitle">INTERNATIONAL CUSTOMER DESK</span>
+            <h1>Buying Ceylon Gems <strong>From Abroad</strong></h1>
+            <p className="international-hero-description">
               Get destination-specific delivery, import and gemstone guidance before you decide.
             </p>
             <a
               href="https://wa.me/94712345678?text=Hi%2C%20I%20would%20like%20to%20book%20a%20video%20consultation."
-              className="international-book-consultation"
+              className="international-hero-cta"
               target="_blank"
               rel="noreferrer"
             >
               Book a Video Consultation
             </a>
+            <div className="international-hero-line" />
           </div>
-          <figure className="international-gem-image">
-            <video controls autoPlay muted loop playsInline aria-label="Ceylon gemstone cutting and craftsmanship">
-              <source src="/INv1.mp4" type="video/mp4" />
-              Your browser does not support video playback.
-            </video>
-            <figcaption>Ceylon gemstone cutting and craftsmanship</figcaption>
-          </figure>
-        </section>
-
-        <section className="international-currency-band" aria-label="Indicative currency display">
-          <div>
-            <span>DISPLAY CURRENCY</span>
-            <strong>{currency}</strong>
-          </div>
-          <p>Example reference price</p>
-          <strong className="international-price">{indicativePrice(12500)}</strong>
-          <small>Indicative conversion only. Final invoice currency and amount are confirmed with your quote.</small>
         </section>
 
         <section className="international-services" aria-label="International customer information">

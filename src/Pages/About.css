@@ -252,10 +252,8 @@
 
   width: 100%;
 
-  height: 100vh;
-  height: 100dvh;
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: var(--subpage-hero-height);
+  min-height: 0;
 
   background:
     linear-gradient(
@@ -1768,9 +1766,8 @@
   /* HERO */
 
   .about-hero {
-    height: auto;
-    min-height: 100vh;
-    min-height: 100dvh;
+    height: var(--subpage-hero-height);
+    min-height: 0;
   }
 
   .about-hero-content {

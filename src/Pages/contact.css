@@ -303,11 +303,9 @@
 
   width: 100%;
 
-  height: 100vh;
-  height: 100dvh;
-
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: var(--subpage-hero-height);
+  min-height: 0;
+  box-sizing: border-box;
 
   background:
     linear-gradient(rgba(6, 28, 43, 0.18), rgba(6, 28, 43, 0.24)),
@@ -1921,9 +1919,8 @@
 
 
   .contact-hero {
-    height: auto;
-    min-height: 100vh;
-    min-height: 100dvh;
+    height: var(--subpage-hero-height);
+    min-height: 0;
   }
 
   .contact-hero-content {
@@ -2152,9 +2149,8 @@
   }
 
   .contact-container .contact-hero {
-    height: auto;
-    min-height: 100vh;
-    min-height: 100dvh;
+    height: var(--subpage-hero-height);
+    min-height: 0;
     padding: 76px 0 30px;
   }
 

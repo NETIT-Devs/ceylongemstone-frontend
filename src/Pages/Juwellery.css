@@ -317,6 +317,11 @@
   overflow: hidden;
 }
 
+.gem-hero.jewellery-hero {
+  height: var(--subpage-hero-height);
+  min-height: 0;
+}
+
 .gem-hero-content {
   position: relative;
   z-index: 3;
@@ -2283,6 +2288,11 @@
     height: auto;
     min-height: 100vh;
     min-height: 100dvh;
+  }
+
+  .gem-hero.jewellery-hero {
+    height: var(--subpage-hero-height);
+    min-height: 0;
   }
 
   .gem-hero-content {

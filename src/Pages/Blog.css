@@ -8,13 +8,11 @@
 }
 
 .blog-page-hero {
-  min-height: 100vh;
-  min-height: 100dvh;
-  height: 100vh;
-  height: 100dvh;
+  min-height: 0;
+  height: var(--subpage-hero-height);
   background:
     linear-gradient(rgba(6, 28, 43, 0.18), rgba(6, 28, 43, 0.24)),
-    url("/blog12.jpg") center / cover no-repeat;
+    url("/bloghero3.jpg") center / cover no-repeat;
   display: flex;
   align-items: center;
   justify-content: center;
