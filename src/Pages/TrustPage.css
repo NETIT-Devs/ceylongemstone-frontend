@@ -11,7 +11,9 @@
   min-height: 100dvh;
   height: 100vh;
   height: 100dvh;
-  background: url("/certificatehero1.jpeg") center / cover no-repeat;
+  background:
+    linear-gradient(rgba(6, 28, 43, 0.18), rgba(6, 28, 43, 0.24)),
+    url("/contactherooo.jpg") center / cover no-repeat;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -277,7 +277,9 @@
 }
 
 .about-hero.our-story-hero {
-  background: url("/ourStoryHero.jpeg") center / cover no-repeat;
+  background:
+    linear-gradient(rgba(6, 28, 43, 0.18), rgba(6, 28, 43, 0.24)),
+    url("/ourrstoryheroo.jpg") center / cover no-repeat;
 }
 
 .about-hero.our-story-hero::after {

@@ -949,153 +949,37 @@ const Home = () => {
               <img
                 key={slide.id}
                 src={slide.image}
-                alt={slide.alt}
+                alt={slide.alt || "Ceylon Royal Gemstones Hero"}
                 className={`hero-slide-img ${activeHeroSlideIndex === idx ? "active" : ""}`}
                 loading={idx === 0 ? "eager" : "lazy"}
                 decoding="async"
                 onError={(e) => {
-                  if (!e.target.dataset.triedFallback) {
-                    e.target.dataset.triedFallback = "true";
-                    e.target.src = `/hero${idx + 1}.jpg`;
-                  }
+                  e.target.style.display = "none";
                 }}
               />
             ))}
           </div>
 
           {/* HERO SLIDE DOTS */}
-          <div className="hero-slide-dots">
-            {homeHeroSlides.map((slide, idx) => (
-              <span
-                key={slide.id}
-                className={`hero-dot ${activeHeroSlideIndex === idx ? "active" : ""}`}
-                onClick={() => setHeroSlideIndex(idx)}
-                title={slide.alt}
-                aria-label={`Slide ${idx + 1}`}
-              />
-            ))}
-          </div>
-
-
+          {homeHeroSlides.length > 1 && (
+            <div className="hero-slide-dots">
+              {homeHeroSlides.map((slide, idx) => (
+                <span
+                  key={slide.id}
+                  className={`hero-dot ${activeHeroSlideIndex === idx ? "active" : ""}`}
+                  onClick={() => setHeroSlideIndex(idx)}
+                  title={slide.alt}
+                  aria-label={`Slide ${idx + 1}`}
+                />
+              ))}
+            </div>
+          )}
 
           <div className="hero-overlay" />
 
           <div className="hero-glow glow-one" />
 
           <div className="hero-glow glow-two" />
-
-
-          <div className="hero-main-container center-layout">
-
-            <div className="hero-content home-hero-copy">
-
-
-              <motion.div
-                className="hero-badge"
-                initial={{
-                  opacity: 0,
-                  y: 20
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0
-                }}
-                transition={{
-                  duration: 0.8
-                }}
-              >
-
-                <span className="badge-dot" />
-
-                AUTHENTIC · RARE · TIMELESS
-
-              </motion.div>
-
-
-              <motion.h1
-                initial={{
-                  opacity: 0,
-                  y: 30
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0
-                }}
-                transition={{
-                  duration: 1,
-                  delay: 0.2
-                }}
-              >
-
-                Discover the
-
-                <br />
-
-                <span className="gold-gradient">
-                  Beauty Within
-                </span>
-
-              </motion.h1>
-
-
-              <motion.p
-                initial={{
-                  opacity: 0,
-                  y: 20
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0
-                }}
-                transition={{
-                  duration: 1,
-                  delay: 0.4
-                }}
-              >
-
-                Discover exceptional gemstones from Sri Lanka and the
-                <br />
-                world's finest origins.
-
-              </motion.p>
-
-
-              <motion.div
-                className="hero-actions"
-                initial={{
-                  opacity: 0,
-                  y: 20
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0
-                }}
-                transition={{
-                  duration: 1,
-                  delay: 0.6
-                }}
-              >
-
-                <a
-                  href="/Gemstones"
-                  className="btn-primary"
-                >
-                  Explore Collection &rarr;
-                </a>
-
-                <a
-                  href="/join-us"
-                  className="btn-primary"
-                >
-                  Join Us
-                </a>
-
-              </motion.div>
-
-            </div>
-
-          </div>
-
         </section>
 
 

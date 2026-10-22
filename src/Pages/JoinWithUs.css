@@ -18,7 +18,9 @@
   min-height: 100vh;
   min-height: 100dvh;
   height: auto;
-  background: url("/joinushero.jpg") center / cover no-repeat;
+  background:
+    linear-gradient(rgba(6, 28, 43, 0.18), rgba(6, 28, 43, 0.24)),
+    url("/joinusheroo.jpg") center / cover no-repeat;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -33,12 +35,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(6, 28, 43, 0.78) 0%,
-    rgba(6, 28, 43, 0.45) 45%,
-    rgba(6, 28, 43, 0.92) 100%
-  );
+  background: none;
   z-index: 1;
 }
 

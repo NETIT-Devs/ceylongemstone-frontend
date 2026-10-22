@@ -325,11 +325,15 @@
 }
 
 .gem-hero.jewellery-hero {
-  background: url("/juwelleryhero.jpg") center / cover no-repeat;
+  background:
+    linear-gradient(rgba(6, 28, 43, 0.18), rgba(6, 28, 43, 0.24)),
+    url("/juwelleryhero.jpg") center / cover no-repeat;
 }
 
 .gem-hero.gemstone-collection-hero {
-  background: url("/gemHero.jpeg") center / cover no-repeat;
+  background:
+    linear-gradient(rgba(6, 28, 43, 0.18), rgba(6, 28, 43, 0.24)),
+    url("/gemHero.jpeg") center / cover no-repeat;
 }
 
 .gem-hero.gemstone-collection-hero::after {
